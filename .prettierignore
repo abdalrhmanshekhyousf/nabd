@@ -5,3 +5,4 @@ coverage
 package-lock.json
 server/prisma/migrations
 server/uploads
+server/src/generated/

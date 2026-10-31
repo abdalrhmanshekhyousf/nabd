@@ -18,4 +18,5 @@ export const env = {
   isTest: nodeEnv === 'test',
   port,
   clientUrl: process.env.CLIENT_URL ?? 'http://localhost:5173',
+  databaseUrl: process.env.DATABASE_URL ?? '',
 } as const;

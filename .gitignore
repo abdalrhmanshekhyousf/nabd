@@ -15,6 +15,9 @@ coverage/
 # Uploads (logos, radiology images, reports)
 server/uploads/
 
+# Generated Prisma client
+server/src/generated/
+
 # Logs
 *.log
 npm-debug.log*

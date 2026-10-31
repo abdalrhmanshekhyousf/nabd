@@ -15,6 +15,7 @@ export default tseslint.config(
       '**/coverage/**',
       'server/prisma/migrations/**',
       'server/uploads/**',
+      'server/src/generated/**',
     ],
   },
 

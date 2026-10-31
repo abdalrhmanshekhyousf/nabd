@@ -1,0 +1,11 @@
+// Nabd database schema. Models are added in task 1.5.
+// Every model except Hospital carries a hospitalId and every query is scoped by it.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
