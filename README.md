@@ -18,6 +18,11 @@ nabd/
 │       ├── layouts/   # هياكل الصفحات
 │       └── pages/     # الصفحات
 ├── server/            # الباك إند: Node.js + Express + TypeScript + Prisma
+│   └── src/
+│       ├── routes/      # تعريف الروابط
+│       ├── controllers/ # استقبال الطلب والرد
+│       ├── services/    # منطق العمل والوصول للبيانات
+│       └── middleware/  # الأخطاء والصلاحيات
 ├── eslint.config.js   # إعداد ESLint موحّد للمجلدين
 ├── .prettierrc.json   # إعداد Prettier
 └── package.json       # npm workspaces

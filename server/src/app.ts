@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { env } from './config/env.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
-import { healthRouter } from './routes/health.js';
+import { healthRouter } from './routes/health.routes.js';
 
 // Built separately from index.ts so tests can use the app without opening a port.
 export function createApp() {
