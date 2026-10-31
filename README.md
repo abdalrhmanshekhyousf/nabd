@@ -51,8 +51,9 @@ nabd/
 
 ```bash
 npm install
+cp server/.env.example server/.env   # إعدادات السيرفر (اختياري)
 npm run dev:client   # الواجهة على http://localhost:5173
-npm run dev:server   # السيرفر (بعد التاسك 1.3)
+npm run dev:server   # السيرفر على http://localhost:4000 (فحص: /api/health)
 ```
 
 ## الأوامر · Scripts
@@ -62,6 +63,7 @@ npm run dev:server   # السيرفر (بعد التاسك 1.3)
 | `npm run dev:client`   | تشغيل الواجهة                |
 | `npm run dev:server`   | تشغيل السيرفر                |
 | `npm run build:client` | بناء الواجهة للإنتاج         |
+| `npm test -w server`   | تشغيل تستات السيرفر          |
 | `npm run lint`         | فحص كل الكود بـ ESLint       |
 | `npm run lint:fix`     | فحص وإصلاح تلقائي            |
 | `npm run format`       | تنسيق كل الملفات بـ Prettier |
