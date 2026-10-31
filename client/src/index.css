@@ -1,0 +1,23 @@
+@import 'tailwindcss';
+
+/*
+ * Nabd palette as Tailwind colors (bg-ink, text-pulse, ...).
+ * Task 1.7 moves these to CSS variables with light/dark themes.
+ */
+@theme {
+  --color-ink: #10223a;
+  --color-pulse: #e0344b;
+  --color-stable: #1f9e8a;
+  --color-steel: #5a6b80;
+  --color-clinic: #f5f7fa;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  @apply bg-clinic text-ink antialiased;
+}
