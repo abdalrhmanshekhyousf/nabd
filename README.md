@@ -58,6 +58,7 @@ nabd/
 npm install                          # بيولّد Prisma Client كمان
 cp server/.env.example server/.env   # وعدّل DATABASE_URL حسب PostgreSQL عندك
 npm run db:migrate -w server         # إنشاء الجداول
+npm run db:seed -w server            # مستشفى تجريبي ومدير
 npm run dev:client   # الواجهة على http://localhost:5173
 npm run dev:server   # السيرفر على http://localhost:4000 (فحص: /api/health)
 ```
@@ -68,23 +69,27 @@ npm run dev:server   # السيرفر على http://localhost:4000 (فحص: /api
 psql -U postgres -c "CREATE DATABASE nabd;"
 ```
 
+**حساب المدير التجريبي:** `admin@nabd.demo` / `Admin@12345` (بتتغيّر من `SEED_ADMIN_PASSWORD`).
+
 السيرفر بيفحص الاتصال بقاعدة البيانات أول ما يشتغل، وإذا ما قدر يوصل بيوقف برسالة واضحة.
 
 ## الأوامر · Scripts
 
-| الأمر                           | الوظيفة                              |
-| ------------------------------- | ------------------------------------ |
-| `npm run dev:client`            | تشغيل الواجهة                        |
-| `npm run dev:server`            | تشغيل السيرفر                        |
-| `npm run build:client`          | بناء الواجهة للإنتاج                 |
-| `npm test -w server`            | تشغيل تستات السيرفر                  |
-| `npm run db:migrate -w server`  | تطبيق تغييرات الـ schema على القاعدة |
-| `npm run db:generate -w server` | إعادة توليد Prisma Client            |
-| `npm run db:studio -w server`   | فتح Prisma Studio لتصفّح البيانات    |
-| `npm run lint`                  | فحص كل الكود بـ ESLint               |
-| `npm run lint:fix`              | فحص وإصلاح تلقائي                    |
-| `npm run format`                | تنسيق كل الملفات بـ Prettier         |
-| `npm run format:check`          | التأكد إن كل الملفات منسّقة          |
+| الأمر                           | الوظيفة                               |
+| ------------------------------- | ------------------------------------- |
+| `npm run dev:client`            | تشغيل الواجهة                         |
+| `npm run dev:server`            | تشغيل السيرفر                         |
+| `npm run build:client`          | بناء الواجهة للإنتاج                  |
+| `npm test -w server`            | تشغيل تستات السيرفر                   |
+| `npm run db:migrate -w server`  | تطبيق تغييرات الـ schema على القاعدة  |
+| `npm run db:seed -w server`     | تعبئة بيانات تجريبية                  |
+| `npm run db:reset -w server`    | مسح القاعدة وإعادة بنائها مع الـ seed |
+| `npm run db:generate -w server` | إعادة توليد Prisma Client             |
+| `npm run db:studio -w server`   | فتح Prisma Studio لتصفّح البيانات     |
+| `npm run lint`                  | فحص كل الكود بـ ESLint                |
+| `npm run lint:fix`              | فحص وإصلاح تلقائي                     |
+| `npm run format`                | تنسيق كل الملفات بـ Prettier          |
+| `npm run format:check`          | التأكد إن كل الملفات منسّقة           |
 
 ## قواعد الكود · Conventions
 
