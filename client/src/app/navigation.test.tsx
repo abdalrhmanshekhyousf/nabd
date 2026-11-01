@@ -1,13 +1,13 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { MotionGlobalConfig } from 'framer-motion';
-import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { INTRO_SEEN_KEY } from '@/hooks/useIntroSplash';
 import i18n from '@/i18n';
 import { useSessionStore } from '@/stores/sessionStore';
 import { NAV_BY_ROLE, navHref } from './navigation';
 import { canVisit, ROLE_HOME } from './roles';
-import { routes } from './router';
+import { renderApp } from '@/test/renderApp';
+import { BUILT_PAGES } from './router';
 import { ROLES, type Role } from './session';
 
 function signInAs(role: Role) {
@@ -25,11 +25,7 @@ function signInAs(role: Role) {
   });
 }
 
-function renderAt(path: string) {
-  const router = createMemoryRouter(routes, { initialEntries: [path] });
-  render(<RouterProvider router={router} />);
-  return router;
-}
+const renderAt = (path: string) => renderApp(path);
 
 const itemsOf = (role: Role) => NAV_BY_ROLE[role].flatMap((group) => group.items);
 
@@ -75,20 +71,25 @@ describe('sidebar per role', () => {
 });
 
 describe('placeholder pages', () => {
-  it.each(ROLES)('%s: every link opens a page with its title and plan phase', async (role) => {
-    signInAs(role);
-    for (const item of itemsOf(role).filter((entry) => entry.path)) {
-      const router = renderAt(navHref(role, item));
-      await waitFor(() => expect(router.state.location.pathname).toBe(navHref(role, item)));
+  it.each(ROLES)(
+    '%s: every link opens its page; unbuilt ones show the plan phase',
+    async (role) => {
+      signInAs(role);
+      for (const item of itemsOf(role).filter((entry) => entry.path)) {
+        const router = renderAt(navHref(role, item));
+        await waitFor(() => expect(router.state.location.pathname).toBe(navHref(role, item)));
 
-      const title = i18n.t(item.labelKey);
-      expect(await screen.findByRole('heading', { level: 1, name: title })).toBeInTheDocument();
-      expect(screen.getByText(`المرحلة ${item.phase}`)).toBeInTheDocument();
-      expect(screen.getByText('هالصفحة قيد البناء')).toBeInTheDocument();
-      router.dispose();
-      document.body.innerHTML = '';
-    }
-  });
+        const title = i18n.t(item.labelKey);
+        expect(await screen.findByRole('heading', { level: 1, name: title })).toBeInTheDocument();
+        if (!BUILT_PAGES[`${role}:${item.path}`]) {
+          expect(screen.getByText(`المرحلة ${item.phase}`)).toBeInTheDocument();
+          expect(screen.getByText('هالصفحة قيد البناء')).toBeInTheDocument();
+        }
+        router.dispose();
+        document.body.innerHTML = '';
+      }
+    },
+  );
 
   it("refuses another role's page", async () => {
     signInAs('PATIENT');

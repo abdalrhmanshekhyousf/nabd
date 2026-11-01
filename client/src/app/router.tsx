@@ -1,14 +1,17 @@
+import type { ReactElement } from 'react';
 import { Outlet, createBrowserRouter, type RouteObject } from 'react-router';
 import { NAV_BY_ROLE, type RouteHandle } from '@/app/navigation';
 import { ROLE_HOME } from '@/app/roles';
-import { ROLES } from '@/app/session';
+import { ROLES, type Role } from '@/app/session';
 import { HomeRedirect, PublicOnly, RequireAuth, RequireRole } from '@/components/auth/guards';
 import { AppShell } from '@/layouts/AppShell';
 import { RootLayout } from '@/layouts/RootLayout';
+import { HospitalSettingsPage } from '@/pages/admin/HospitalSettingsPage';
 import { ComingSoonPage } from '@/pages/ComingSoonPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
+import { RegisterPage } from '@/pages/RegisterPage';
 
 // Development-only pages; the dynamic import keeps them out of production bundles.
 const devRoutes: RouteObject[] = import.meta.env.DEV
@@ -21,6 +24,12 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
       },
     ]
   : [];
+
+// Sidebar pages that are built, by "ROLE:path". Every other link shows the
+// placeholder until its task lands.
+export const BUILT_PAGES: Partial<Record<`${Role}:${string}`, ReactElement>> = {
+  'ADMIN:settings': <HospitalSettingsPage />,
+};
 
 // One protected area per role (/admin, /doctor, ...): its dashboard plus a page
 // for every sidebar link. Pages not built yet show a placeholder (task 1.20).
@@ -42,7 +51,7 @@ const roleAreas: RouteObject[] = ROLES.map((role) => ({
       .filter((item) => item.path !== '')
       .map((item) => ({
         path: item.path,
-        element: <ComingSoonPage />,
+        element: BUILT_PAGES[`${role}:${item.path}`] ?? <ComingSoonPage />,
         handle: { titleKey: item.labelKey, phase: item.phase } satisfies RouteHandle,
       })),
   ],
@@ -59,6 +68,14 @@ export const routes: RouteObject[] = [
         element: (
           <PublicOnly>
             <LoginPage />
+          </PublicOnly>
+        ),
+      },
+      {
+        path: 'register',
+        element: (
+          <PublicOnly>
+            <RegisterPage />
           </PublicOnly>
         ),
       },

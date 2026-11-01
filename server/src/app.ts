@@ -7,6 +7,7 @@ import { env } from './config/env.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 import { authRouter } from './routes/auth.routes.js';
 import { healthRouter } from './routes/health.routes.js';
+import { hospitalRouter } from './routes/hospital.routes.js';
 import { meRouter } from './routes/me.routes.js';
 
 // Built separately from index.ts so tests can use the app without opening a port.
@@ -26,6 +27,7 @@ export function createApp() {
   app.use('/api/health', healthRouter);
   app.use('/api/auth', authRouter);
   app.use('/api/me', meRouter);
+  app.use('/api/hospital', hospitalRouter);
 
   app.use(notFound);
   app.use(errorHandler);

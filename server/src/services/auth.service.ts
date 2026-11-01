@@ -1,3 +1,4 @@
+import type { RegisterHospitalInput } from '@nabd/shared';
 import { env } from '../config/env.js';
 import { prisma } from '../lib/prisma.js';
 import { hashPassword, verifyPassword } from '../lib/password.js';
@@ -170,4 +171,35 @@ export async function logout(refreshToken: string | undefined) {
     where: { tokenHash: hashToken(refreshToken), revokedAt: null },
     data: { revokedAt: new Date() },
   });
+}
+
+/**
+ * Self-service sign-up of a new hospital (task 1.22): the hospital, its first
+ * admin and the admin's staff profile are created together, then the admin is
+ * signed straight in.
+ */
+export async function registerHospital(
+  { hospital, admin }: RegisterHospitalInput,
+  context: SessionContext,
+): Promise<AuthSession> {
+  const passwordHash = await hashPassword(admin.password);
+
+  const user = await prisma.$transaction(async (tx) => {
+    const created = await tx.hospital.create({ data: hospital });
+    return tx.user.create({
+      data: {
+        hospitalId: created.id,
+        role: 'ADMIN',
+        email: admin.email,
+        fullName: admin.fullName,
+        passwordHash,
+        lastLoginAt: new Date(),
+        staffProfile: { create: { hospitalId: created.id } },
+      },
+      select: userSelect,
+    });
+  });
+
+  const session = await startSession(user, context);
+  return { ...session, user: publicUser(user) };
 }
