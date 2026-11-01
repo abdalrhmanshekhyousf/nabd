@@ -6,6 +6,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { routes } from '@/app/router';
 import { INTRO_SEEN_KEY } from '@/hooks/useIntroSplash';
 import { initials } from '@/lib/initials';
+import { useSessionStore } from '@/stores/sessionStore';
 import { useThemeStore } from '@/stores/themeStore';
 
 function renderAt(path: string) {
@@ -22,6 +23,18 @@ afterAll(() => {
 });
 beforeEach(() => {
   sessionStorage.setItem(INTRO_SEEN_KEY, '1');
+  useSessionStore.setState({
+    status: 'authenticated',
+    user: {
+      id: 'u1',
+      email: 'admin@nabd.demo',
+      fullName: 'مدير المستشفى',
+      role: 'ADMIN',
+      language: 'AR',
+      theme: 'SYSTEM',
+      hospital: { id: 'h1', name: 'مستشفى نبض التجريبي', logoUrl: null },
+    },
+  });
   useThemeStore.setState({ theme: 'system' });
 });
 

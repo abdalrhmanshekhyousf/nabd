@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { Menu } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useMatches } from 'react-router';
-import type { SessionHospital, SessionUser } from '@/app/demoSession';
+import type { SessionHospital, SessionUser } from '@/app/session';
 import type { RouteHandle } from '@/app/navigation';
 import { LanguageToggle } from '@/components/language/LanguageToggle';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';

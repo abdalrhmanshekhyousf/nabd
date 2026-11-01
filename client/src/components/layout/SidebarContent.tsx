@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { SessionHospital } from '@/app/demoSession';
+import type { SessionHospital } from '@/app/session';
 import { HospitalBrand } from './HospitalBrand';
 import { PoweredBy } from './PoweredBy';
 import { SidebarNav } from './SidebarNav';

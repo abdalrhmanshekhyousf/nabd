@@ -1,4 +1,5 @@
 import axios, { type AxiosError, type AxiosRequestConfig } from 'axios';
+import type { AuthResponse } from '@/app/session';
 import i18n, { currentLanguage } from '@/i18n';
 import { getAccessToken, setAccessToken } from './accessToken';
 import { notify } from './notify';
@@ -17,12 +18,6 @@ declare module 'axios' {
 /** Shape of every error body from the Nabd API. */
 export type ApiErrorBody = {
   error: { code: string; message: string; details?: unknown; debug?: string };
-};
-
-export type AuthResponse = {
-  accessToken: string;
-  expiresIn: number;
-  user: unknown;
 };
 
 // One shared client for the whole app.
@@ -52,10 +47,18 @@ export function onSessionExpired(listener: () => void) {
   return () => sessionExpiredListeners.delete(listener);
 }
 
-let refreshing: Promise<string | null> | null = null;
+const refreshedListeners = new Set<(session: AuthResponse) => void>();
+
+/** Called with the fresh user whenever the session is renewed. */
+export function onSessionRefreshed(listener: (session: AuthResponse) => void) {
+  refreshedListeners.add(listener);
+  return () => refreshedListeners.delete(listener);
+}
+
+let refreshing: Promise<AuthResponse | null> | null = null;
 
 /**
- * Gets a new access token from the refresh cookie. Requests that fail at the same
+ * Renews the session from the refresh cookie (also used on start-up to restore it). Requests that fail at the same
  * moment share one refresh instead of each starting their own (which would also
  * trip the server's token-reuse protection).
  */
@@ -67,7 +70,8 @@ export function refreshSession() {
     })
     .then(({ data }) => {
       setAccessToken(data.accessToken);
-      return data.accessToken;
+      refreshedListeners.forEach((listener) => listener(data));
+      return data;
     })
     .catch(() => {
       setAccessToken(null);
@@ -102,8 +106,8 @@ api.interceptors.response.use(undefined, async (error: unknown) => {
   const config = error.config as AxiosRequestConfig | undefined;
 
   if (error.response?.status === 401 && config && !config.skipAuthRefresh && !config._retried) {
-    const token = await refreshSession();
-    if (token) {
+    const session = await refreshSession();
+    if (session) {
       config._retried = true;
       return api.request(config);
     }

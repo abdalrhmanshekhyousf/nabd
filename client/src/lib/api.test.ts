@@ -1,41 +1,21 @@
-import { AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios';
+import { AxiosError } from 'axios';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setLanguage } from '@/i18n';
+import { apiError, fakeApi, type FakeServer } from '@/test/fakeApi';
 import { getAccessToken, setAccessToken } from './accessToken';
 import { api, describeApiError, onSessionExpired } from './api';
 import { notify } from './notify';
 
 // A fake server: each test decides how the API answers.
-type Reply = { status: number; data?: unknown } | 'network-error';
-let server: (config: InternalAxiosRequestConfig) => Reply;
-let calls: InternalAxiosRequestConfig[];
-
-api.defaults.adapter = async (config) => {
-  calls.push(config);
-  const reply = server(config);
-  if (reply === 'network-error') {
-    throw new AxiosError('Network Error', AxiosError.ERR_NETWORK, config);
-  }
-  const response: AxiosResponse = {
-    data: reply.data,
-    status: reply.status,
-    statusText: '',
-    headers: {},
-    config,
-  };
-  if (reply.status < 400) return response;
-  throw new AxiosError('Request failed', AxiosError.ERR_BAD_RESPONSE, config, undefined, response);
-};
-
-const apiError = (status: number, code: string, message: string) => ({
-  status,
-  data: { error: { code, message } },
-});
+const fake = fakeApi(api);
+const calls = fake.calls;
+let server: FakeServer;
+fake.respond((config) => server(config));
 
 let toastError: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
-  calls = [];
+  calls.length = 0;
   setAccessToken(null);
   toastError = vi.spyOn(notify, 'error').mockReturnValue('id');
 });

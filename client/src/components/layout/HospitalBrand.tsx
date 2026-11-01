@@ -1,4 +1,4 @@
-import type { SessionHospital } from '@/app/demoSession';
+import type { SessionHospital } from '@/app/session';
 import { initials } from '@/lib/initials';
 
 // The hospital's own logo (uploaded by the admin in task 1.23), or a calm tile

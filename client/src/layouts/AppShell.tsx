@@ -1,19 +1,25 @@
 import { useState } from 'react';
-import { useLocation } from 'react-router';
-import { demoSession } from '@/app/demoSession';
+import { Navigate, useLocation } from 'react-router';
+import { LoadingScreen } from '@/components/brand/LoadingScreen';
 import { AnimatedOutlet } from '@/components/layout/AnimatedOutlet';
 import { MobileDrawer } from '@/components/layout/MobileDrawer';
 import { SidebarContent } from '@/components/layout/SidebarContent';
 import { TopBar } from '@/components/layout/TopBar';
+import { useSessionStore } from '@/stores/sessionStore';
 
 // Signed-in layout: hospital sidebar on the reading-start side (a drawer below lg),
-// top bar, and the page content. Session data is a placeholder until task 1.18.
+// top bar, and the page content.
 export function AppShell() {
-  const { user, hospital } = demoSession;
+  const { status, user } = useSessionStore();
   const { pathname } = useLocation();
   const [drawer, setDrawer] = useState({ open: false, path: pathname });
   // Following a link closes the drawer.
   const menuOpen = drawer.open && drawer.path === pathname;
+
+  // Route protection proper (login page, roles) comes in task 1.19.
+  if (status === 'loading') return <LoadingScreen />;
+  if (!user) return <Navigate to="/" replace />;
+  const { hospital } = user;
 
   return (
     <div className="flex min-h-dvh">

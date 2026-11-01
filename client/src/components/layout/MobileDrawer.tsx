@@ -3,7 +3,7 @@ import { X } from 'lucide-react';
 import { useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import type { SessionHospital } from '@/app/demoSession';
+import type { SessionHospital } from '@/app/session';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { useOpenCloseSound } from '@/hooks/useOpenCloseSound';
 import { currentLanguage, directionOf } from '@/i18n';
