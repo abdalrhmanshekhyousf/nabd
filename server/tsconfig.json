@@ -17,5 +17,5 @@
     "erasableSyntaxOnly": true,
     "strict": true
   },
-  "include": ["src", "tests", "prisma", "prisma.config.ts"]
+  "include": ["src", "tests", "prisma", "prisma.config.ts", "vitest.config.ts"]
 }

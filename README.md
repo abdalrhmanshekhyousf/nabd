@@ -63,11 +63,14 @@ npm run dev:client   # الواجهة على http://localhost:5173 (هيكل ا�
 npm run dev:server   # السيرفر على http://localhost:4000 (فحص: /api/health)
 ```
 
-قبل التشغيل لازم تعمل قاعدة بيانات فاضية اسمها `nabd` بـ PostgreSQL:
+قبل التشغيل لازم تعمل قاعدتين بيانات فاضيتين بـ PostgreSQL: `nabd` للتطوير و`nabd_test` للتستات (التستات بتبني جداولها لحالها):
 
 ```bash
 psql -U postgres -c "CREATE DATABASE nabd;"
+psql -U postgres -c "CREATE DATABASE nabd_test;"
 ```
+
+وبملف `server/.env` لازم تحط `JWT_ACCESS_SECRET` عشوائي (32 حرف أو أكتر)، والطريقة مكتوبة بـ `.env.example`.
 
 **حساب المدير التجريبي:** `admin@nabd.demo` / `Admin@12345` (بتتغيّر من `SEED_ADMIN_PASSWORD`).
 
@@ -90,6 +93,18 @@ psql -U postgres -c "CREATE DATABASE nabd;"
 | `npm run lint:fix`              | فحص وإصلاح تلقائي                     |
 | `npm run format`                | تنسيق كل الملفات بـ Prettier          |
 | `npm run format:check`          | التأكد إن كل الملفات منسّقة           |
+
+## الـ API
+
+| الرابط                   | الوظيفة                                                                    |
+| ------------------------ | -------------------------------------------------------------------------- |
+| `GET /api/health`        | فحص إن السيرفر شغّال                                                       |
+| `POST /api/auth/login`   | دخول بالإيميل وكلمة السر (و`hospitalId` إذا الإيميل موجود بأكتر من مستشفى) |
+| `POST /api/auth/refresh` | توكن دخول جديد من توكن التجديد (بالكوكي)، والتوكن القديم بيتلغى            |
+| `POST /api/auth/logout`  | تسجيل الخروج وإلغاء توكن التجديد                                           |
+
+- توكن الدخول (JWT) عمره 15 دقيقة وبينبعت بـ `Authorization: Bearer`. توكن التجديد عمره 30 يوم، بكوكي `httpOnly` ما بتقدر تقراه الصفحة، وبينحفظ منه بس الـ hash.
+- كل خطأ بيرجع بالشكل `{ "error": { "code": "...", "message": "..." } }`، والواجهة بتترجم الـ `code`.
 
 ## قواعد الكود · Conventions
 
