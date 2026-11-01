@@ -15,7 +15,9 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "erasableSyntaxOnly": true,
-    "strict": true
+    "strict": true,
+    // Shared schemas from source while developing; the build uses the compiled package.
+    "paths": { "@nabd/shared": ["../shared/src/index.ts"] }
   },
   "include": ["src", "tests", "prisma", "prisma.config.ts", "vitest.config.ts"]
 }

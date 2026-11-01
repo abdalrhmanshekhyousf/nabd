@@ -1,0 +1,24 @@
+import { z } from 'zod';
+
+// Building blocks for every form and request body. Messages are translation keys
+// (validation.*): the client shows them in the user's language; the server only
+// passes them along in error details.
+
+/** Trimmed, lower-cased email, so " Admin@Nabd.Demo" matches the stored one. */
+export const email = () =>
+  z
+    .string()
+    .trim()
+    .toLowerCase()
+    .min(1, 'validation.emailRequired')
+    .pipe(z.email('validation.emailInvalid').max(254, 'validation.tooLong'));
+
+/** A password typed to sign in (any non-empty value; strength rules are for new ones). */
+export const currentPassword = () =>
+  z.string().min(1, 'validation.passwordRequired').max(200, 'validation.tooLong');
+
+/** Required text, trimmed, with a maximum length. */
+export const requiredText = (max = 200) =>
+  z.string().trim().min(1, 'validation.required').max(max, 'validation.tooLong');
+
+export const id = () => z.uuid('validation.invalid');

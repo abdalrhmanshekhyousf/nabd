@@ -19,7 +19,8 @@
     "noFallthroughCasesInSwitch": true,
     "strict": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@nabd/shared": ["../shared/src/index.ts"]
     }
   },
   "include": ["src"]

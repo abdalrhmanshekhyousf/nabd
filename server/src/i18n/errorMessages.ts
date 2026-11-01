@@ -1,4 +1,4 @@
-import type { ErrorCode } from '../middleware/errorHandler.js';
+import type { ErrorCode } from '@nabd/shared';
 
 export type Language = 'ar' | 'en';
 

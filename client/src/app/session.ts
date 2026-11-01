@@ -1,20 +1,9 @@
 // Shapes of the signed-in session as the API returns them (POST /auth/login,
 // POST /auth/refresh, GET /me).
 
-export const ROLES = [
-  'ADMIN',
-  'DOCTOR',
-  'NURSE',
-  'PHARMACIST',
-  'LAB_TECHNICIAN',
-  'RADIOLOGIST',
-  'CLEANER',
-  'RECEPTIONIST',
-  'ACCOUNTANT',
-  'PATIENT',
-] as const;
+import type { Role } from '@nabd/shared';
 
-export type Role = (typeof ROLES)[number];
+export { ROLES, type Role } from '@nabd/shared';
 
 export type SessionHospital = { id: string; name: string; logoUrl: string | null };
 

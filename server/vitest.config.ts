@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
 // Tests run against a separate database so they never touch development data.
@@ -6,6 +7,11 @@ const testDatabaseUrl =
   'postgresql://postgres:postgres@localhost:5432/nabd_test?schema=public';
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@nabd/shared': fileURLToPath(new URL('../shared/src/index.ts', import.meta.url)),
+    },
+  },
   test: {
     env: {
       NODE_ENV: 'test',

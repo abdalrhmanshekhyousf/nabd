@@ -1,3 +1,4 @@
+import type { ErrorCode } from '@nabd/shared';
 import type { ErrorRequestHandler, Request, RequestHandler } from 'express';
 import { ZodError } from 'zod';
 import { env } from '../config/env.js';
@@ -5,18 +6,9 @@ import { Prisma } from '../generated/prisma/client.js';
 import { errorMessage, type Language } from '../i18n/errorMessages.js';
 import { CrossHospitalWriteError } from '../lib/scopedPrisma.js';
 
-// Stable, machine-readable error codes. The message sent with each one is
-// translated (see i18n/errorMessages.ts) into the language the client asked for.
-export type ErrorCode =
-  | 'NOT_FOUND'
-  | 'VALIDATION_ERROR'
-  | 'INVALID_CREDENTIALS'
-  | 'HOSPITAL_REQUIRED'
-  | 'ACCOUNT_DISABLED'
-  | 'INVALID_REFRESH_TOKEN'
-  | 'UNAUTHENTICATED'
-  | 'FORBIDDEN'
-  | 'INTERNAL_ERROR';
+// Error codes are shared with the client (@nabd/shared). The message sent with each
+// one is translated (see i18n/errorMessages.ts) into the language the client asked for.
+export type { ErrorCode };
 
 // Throw this from any route to send a specific status and code to the client.
 // `message` is for developers (logs, non-production responses), not for users.

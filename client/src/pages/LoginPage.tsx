@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { loginSchema, type LoginInput, type ValidationKey } from '@nabd/shared';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Activity,
@@ -16,7 +17,6 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useNavigate } from 'react-router';
-import { z } from 'zod';
 import { canVisit, ROLE_HOME } from '@/app/roles';
 import { ROLES, type AuthResponse, type Role } from '@/app/session';
 import type { LoginRedirectState } from '@/components/auth/guards';
@@ -25,25 +25,15 @@ import { NabdLogo } from '@/components/brand/NabdLogo';
 import { LanguageToggle } from '@/components/language/LanguageToggle';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import { Button, Input } from '@/components/ui';
-import type { Translation } from '@/i18n/locales/ar';
 import { api, describeApiError } from '@/lib/api';
 import { calm, calmSpring, enter } from '@/lib/motion';
 import { notify } from '@/lib/notify';
 import { startSession } from '@/lib/session';
 import { playSound } from '@/lib/sound';
 
-type AuthKey = `auth.${keyof Translation['auth']}`;
-
-// Messages are translation keys, so errors follow a language switch.
-const loginSchema = z.object({
-  email: z
-    .string()
-    .trim()
-    .min(1, 'auth.emailRequired' satisfies AuthKey)
-    .pipe(z.email('auth.emailInvalid' satisfies AuthKey)),
-  password: z.string().min(1, 'auth.passwordRequired' satisfies AuthKey),
-});
-type LoginValues = z.infer<typeof loginSchema>;
+// The same schema validates the request on the server (@nabd/shared). Its
+// messages are translation keys, so errors follow a language switch.
+type LoginValues = LoginInput;
 
 type HospitalChoice = { id: string; name: string };
 
@@ -120,7 +110,7 @@ export function LoginPage() {
     formState: { errors, isSubmitting },
   } = useForm<LoginValues>({ resolver: zodResolver(loginSchema) });
 
-  const fieldError = (message?: string) => (message ? t(message as AuthKey) : undefined);
+  const fieldError = (message?: string) => (message ? t(message as ValidationKey) : undefined);
 
   async function signIn(values: LoginValues, hospitalId?: string) {
     setServerError(null);

@@ -1,5 +1,5 @@
+import { loginSchema } from '@nabd/shared';
 import type { CookieOptions, Request, Response } from 'express';
-import { z } from 'zod';
 import { env } from '../config/env.js';
 import * as authService from '../services/auth.service.js';
 
@@ -12,13 +12,6 @@ const cookieOptions: CookieOptions = {
   sameSite: 'strict',
   path: '/api/auth',
 };
-
-const loginBody = z.object({
-  // Trim and lowercase before checking, so " Admin@Nabd.Demo" signs in too.
-  email: z.string().trim().toLowerCase().pipe(z.email().max(254)),
-  password: z.string().min(1).max(200),
-  hospitalId: z.uuid().optional(),
-});
 
 function context(req: Request) {
   return { userAgent: req.get('user-agent') };
@@ -37,7 +30,8 @@ function sendSession(res: Response, session: authService.AuthSession) {
 }
 
 export async function login(req: Request, res: Response) {
-  const input = loginBody.parse(req.body);
+  // Same rules as the login form (@nabd/shared).
+  const input = loginSchema.parse(req.body);
   sendSession(res, await authService.login(input, context(req)));
 }
 

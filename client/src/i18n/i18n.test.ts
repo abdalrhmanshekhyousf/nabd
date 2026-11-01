@@ -1,3 +1,4 @@
+import { VALIDATION_KEYS } from '@nabd/shared';
 import { describe, expect, it } from 'vitest';
 import { ar } from './locales/ar';
 import { en } from './locales/en';
@@ -39,6 +40,15 @@ describe('i18n', () => {
     expect(Object.keys(enKeys).sort()).toEqual(Object.keys(arKeys).sort());
     for (const value of [...Object.values(arKeys), ...Object.values(enKeys)]) {
       expect(typeof value === 'string' && value.trim().length > 0).toBe(true);
+    }
+  });
+
+  it('translates every validation message of the shared schemas', () => {
+    const arKeys = flatten(ar);
+    const enKeys = flatten(en);
+    for (const key of VALIDATION_KEYS) {
+      expect(arKeys[key], key).toEqual(expect.any(String));
+      expect(enKeys[key], key).toEqual(expect.any(String));
     }
   });
 });

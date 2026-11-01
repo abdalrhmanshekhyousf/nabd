@@ -5,6 +5,7 @@
   "type": "module",
   "description": "Nabd (نبض) — multi-hospital management platform",
   "workspaces": [
+    "shared",
     "client",
     "server"
   ],
@@ -16,7 +17,8 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "npm run test --workspaces --if-present"
+    "test": "npm run test --workspaces --if-present",
+    "build:shared": "npm run build --workspace shared"
   },
   "engines": {
     "node": ">=20"
