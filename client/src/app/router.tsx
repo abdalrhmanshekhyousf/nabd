@@ -6,6 +6,7 @@ import { ROLES, type Role } from '@/app/session';
 import { HomeRedirect, PublicOnly, RequireAuth, RequireRole } from '@/components/auth/guards';
 import { AppShell } from '@/layouts/AppShell';
 import { RootLayout } from '@/layouts/RootLayout';
+import { DepartmentsPage } from '@/pages/admin/DepartmentsPage';
 import { HospitalSettingsPage } from '@/pages/admin/HospitalSettingsPage';
 import { ComingSoonPage } from '@/pages/ComingSoonPage';
 import { DashboardPage } from '@/pages/DashboardPage';
@@ -28,6 +29,7 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
 // Sidebar pages that are built, by "ROLE:path". Every other link shows the
 // placeholder until its task lands.
 export const BUILT_PAGES: Partial<Record<`${Role}:${string}`, ReactElement>> = {
+  'ADMIN:departments': <DepartmentsPage />,
   'ADMIN:settings': <HospitalSettingsPage />,
 };
 

@@ -6,6 +6,7 @@ import morgan from 'morgan';
 import { env } from './config/env.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 import { authRouter } from './routes/auth.routes.js';
+import { departmentRouter } from './routes/department.routes.js';
 import { healthRouter } from './routes/health.routes.js';
 import { hospitalRouter } from './routes/hospital.routes.js';
 import { meRouter } from './routes/me.routes.js';
@@ -28,6 +29,7 @@ export function createApp() {
   app.use('/api/auth', authRouter);
   app.use('/api/me', meRouter);
   app.use('/api/hospital', hospitalRouter);
+  app.use('/api/departments', departmentRouter);
 
   app.use(notFound);
   app.use(errorHandler);

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  departmentSchema,
   hospitalInfoSchema,
   loginSchema,
   preferencesSchema,
@@ -125,6 +126,7 @@ describe('client output is valid server input', () => {
       },
     ],
     [hospitalInfoSchema, { name: 'x', address: 'y', phone: '0991234567', email: '' }],
+    [departmentSchema, { name: '  الطوارئ  ' }],
     [hospitalInfoSchema, { name: 'x', address: 'y', phone: '0991234567', email: 'I@X.co' }],
   ] as const;
 

@@ -28,6 +28,14 @@ const MESSAGES: Record<ErrorCode, Record<Language, string>> = {
   },
   UNAUTHENTICATED: { ar: 'سجّل دخولك لتكمل', en: 'Sign in to continue' },
   FORBIDDEN: { ar: 'ما عندك صلاحية لهالشي', en: 'You do not have access to this' },
+  DEPARTMENT_EXISTS: {
+    ar: 'في قسم بنفس الاسم بالمستشفى',
+    en: 'A department with this name already exists',
+  },
+  DEPARTMENT_IN_USE: {
+    ar: 'ما فيك تحذف قسم فيه غرف أو موظفين، انقلهم أو احذفهم أول',
+    en: 'This department still has rooms or staff; move or remove them first',
+  },
   FILE_REQUIRED: { ar: 'اختار ملف لترفعه', en: 'Choose a file to upload' },
   FILE_TOO_LARGE: {
     ar: 'الملف أكبر من المسموح (2 ميغا كحد أقصى)',
