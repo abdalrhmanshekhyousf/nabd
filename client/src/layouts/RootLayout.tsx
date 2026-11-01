@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useLocation, useOutlet } from 'react-router';
 import { IntroSplash } from '@/components/brand/IntroSplash';
+import { Toaster } from '@/components/feedback/Toaster';
 import { useApplyTheme } from '@/hooks/useApplyTheme';
 import { useIntroSplash } from '@/hooks/useIntroSplash';
 import { EASE_CALM } from '@/lib/motion';
@@ -25,6 +26,7 @@ export function RootLayout() {
           {outlet}
         </motion.div>
       </AnimatePresence>
+      <Toaster />
       <AnimatePresence>
         {intro.visible && <IntroSplash key="intro" onFinish={intro.finish} />}
       </AnimatePresence>

@@ -1,6 +1,7 @@
 import { Plus, Search } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import { LanguageToggle } from '@/components/language/LanguageToggle';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import {
@@ -157,6 +158,49 @@ export function UiGalleryPage() {
               {t('gallery.esiLevel', { level })}
             </StatusBadge>
           ))}
+        </div>
+      </Section>
+
+      <Section title={t('gallery.toasts')}>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => toast.success(t('gallery.toastSuccess'))}>
+            {t('gallery.showSuccess')}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() =>
+              toast.error(t('gallery.toastError'), { description: t('gallery.toastErrorDetail') })
+            }
+          >
+            {t('gallery.showError')}
+          </Button>
+          <Button variant="outline" onClick={() => toast.warning(t('gallery.toastWarning'))}>
+            {t('gallery.showWarning')}
+          </Button>
+          <Button variant="outline" onClick={() => toast.info(t('gallery.toastInfo'))}>
+            {t('gallery.showInfo')}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() =>
+              void toast.promise(new Promise((resolve) => setTimeout(resolve, 1500)), {
+                loading: t('gallery.toastSaving'),
+                success: t('gallery.toastSaved'),
+              })
+            }
+          >
+            {t('gallery.showPromise')}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() =>
+              toast(t('gallery.toastDeleted'), {
+                action: { label: t('gallery.undo'), onClick: () => undefined },
+              })
+            }
+          >
+            {t('gallery.showAction')}
+          </Button>
         </div>
       </Section>
 

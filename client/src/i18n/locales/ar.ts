@@ -13,6 +13,9 @@ export const ar = {
     cancel: 'إلغاء',
     save: 'حفظ',
   },
+  toast: {
+    region: 'الإشعارات المنبثقة',
+  },
   theme: {
     label: 'وضع العرض',
     light: 'فاتح',
@@ -78,6 +81,22 @@ export const ar = {
     cardTitle: 'غرفة العمليات 2',
     cardDescription: 'آخر تحديث قبل 3 دقايق',
     cardBody: 'الغرفة جاهزة لحجز جديد بعد ما خلص التعقيم.',
+    toasts: 'الرسائل المنبثقة',
+    toastSuccess: 'انحفظت بيانات المريض',
+    toastError: 'ما قدرنا نوصل للسيرفر',
+    toastErrorDetail: 'تأكد من الاتصال وجرّب مرة تانية.',
+    toastWarning: 'مخزون الأنسولين قرّب يخلص',
+    toastInfo: 'عندك اجتماع مع المدير الساعة 2',
+    toastSaving: 'عم نحفظ...',
+    toastSaved: 'انحفظ',
+    toastDeleted: 'انحذف الموعد',
+    undo: 'تراجع',
+    showSuccess: 'نجاح',
+    showError: 'خطأ',
+    showWarning: 'تحذير',
+    showInfo: 'معلومة',
+    showPromise: 'تحميل ثم نجاح',
+    showAction: 'مع زر تراجع',
   },
 };
 
