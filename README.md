@@ -57,7 +57,7 @@ nabd/
 ```bash
 npm install                          # بيولّد Prisma Client كمان
 cp server/.env.example server/.env   # وعدّل DATABASE_URL حسب PostgreSQL عندك
-npm run db:migrate -w server         # إنشاء الجداول (من التاسك 1.5)
+npm run db:migrate -w server         # إنشاء الجداول
 npm run dev:client   # الواجهة على http://localhost:5173
 npm run dev:server   # السيرفر على http://localhost:4000 (فحص: /api/health)
 ```

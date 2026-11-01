@@ -1,4 +1,4 @@
-// Nabd database schema. Models are added in task 1.5.
+// Nabd database schema.
 // Every model except Hospital carries a hospitalId and every query is scoped by it.
 
 generator client {
@@ -8,4 +8,289 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  DOCTOR
+  NURSE
+  PHARMACIST
+  LAB_TECHNICIAN
+  RADIOLOGIST
+  CLEANER
+  RECEPTIONIST
+  ACCOUNTANT
+  PATIENT
+}
+
+enum Language {
+  AR
+  EN
+}
+
+enum Theme {
+  LIGHT
+  DARK
+  SYSTEM
+}
+
+// Built-in departments the admin can add in one click. The UI translates them by
+// code; custom departments have no code and show their stored name.
+// A nurse's type (ER, OR, ward) follows the code of the department they work in.
+enum DepartmentCode {
+  EMERGENCY
+  OPERATIONS
+  INTERNAL_MEDICINE
+  NEUROLOGY
+  ORTHOPEDICS
+  CARDIOLOGY
+  PLASTIC_SURGERY
+  OPHTHALMOLOGY
+  GYNECOLOGY
+  LABORATORY
+  RADIOLOGY
+  PHARMACY
+}
+
+enum BedStatus {
+  EMPTY
+  RESERVED
+  OCCUPIED
+  CLEANING
+  OUT_OF_SERVICE
+}
+
+// Six states in one cycle; OUT_OF_SERVICE is set by the admin for maintenance.
+enum OperatingRoomStatus {
+  AVAILABLE
+  BOOKED
+  PREPARING
+  IN_SURGERY
+  AWAITING_STERILIZATION
+  STERILIZING
+  OUT_OF_SERVICE
+}
+
+enum DoctorStatus {
+  AVAILABLE
+  BUSY
+  ON_LEAVE
+}
+
+// Each radiologist is assigned one modality and only receives requests for it.
+enum RadiologyModality {
+  ENDOSCOPY
+  XRAY
+  CT
+  MRI
+  PANORAMIC
+  ECHO
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+// ─── Structure ────────────────────────────────────────────────────────────────
+
+model Hospital {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  name      String
+  address   String
+  phone     String
+  email     String?
+  logoUrl   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  departments    Department[]
+  rooms          Room[]
+  beds           Bed[]
+  operatingRooms OperatingRoom[]
+  users          User[]
+  doctorProfiles DoctorProfile[]
+  staffProfiles  StaffProfile[]
+  patients       Patient[]
+  refreshTokens  RefreshToken[]
+}
+
+model Department {
+  id         String          @id @default(uuid(7)) @db.Uuid
+  hospitalId String          @db.Uuid
+  name       String
+  code       DepartmentCode?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  hospital Hospital       @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  rooms    Room[]
+  staff    StaffProfile[]
+
+  @@unique([hospitalId, name])
+  @@unique([hospitalId, code])
+  @@index([hospitalId])
+}
+
+model Room {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  hospitalId   String   @db.Uuid
+  departmentId String   @db.Uuid
+  number       String
+  floor        Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  hospital   Hospital   @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  beds       Bed[]
+
+  @@unique([departmentId, number])
+  @@index([hospitalId])
+}
+
+model Bed {
+  id              String    @id @default(uuid(7)) @db.Uuid
+  hospitalId      String    @db.Uuid
+  roomId          String    @db.Uuid
+  label           String
+  status          BedStatus @default(EMPTY)
+  statusChangedAt DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  room     Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, label])
+  @@index([hospitalId, status])
+}
+
+model OperatingRoom {
+  id              String              @id @default(uuid(7)) @db.Uuid
+  hospitalId      String              @db.Uuid
+  name            String
+  status          OperatingRoomStatus @default(AVAILABLE)
+  statusChangedAt DateTime            @default(now())
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+
+  @@unique([hospitalId, name])
+  @@index([hospitalId, status])
+}
+
+// ─── Users ────────────────────────────────────────────────────────────────────
+
+// One table for all ten roles; role-specific details live in the profile tables.
+// Email is unique per hospital because a patient has a separate account in each
+// hospital they visit.
+model User {
+  id           String    @id @default(uuid(7)) @db.Uuid
+  hospitalId   String    @db.Uuid
+  role         Role
+  email        String
+  passwordHash String
+  fullName     String
+  phone        String?
+  language     Language  @default(AR)
+  theme        Theme     @default(SYSTEM)
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  hospital      Hospital       @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  staffProfile  StaffProfile?
+  doctorProfile DoctorProfile?
+  patient       Patient?
+  refreshTokens RefreshToken[]
+
+  @@unique([hospitalId, email])
+  @@index([hospitalId, role])
+  @@index([email])
+}
+
+// Employment details shared by every staff role (everyone except PATIENT).
+model StaffProfile {
+  id                String             @id @default(uuid(7)) @db.Uuid
+  hospitalId        String             @db.Uuid
+  userId            String             @unique @db.Uuid
+  departmentId      String?            @db.Uuid
+  salary            Decimal            @default(0) @db.Decimal(12, 2)
+  hiredAt           DateTime           @default(now()) @db.Date
+  // Only for RADIOLOGIST.
+  radiologyModality RadiologyModality?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  hospital   Hospital    @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+
+  @@index([hospitalId, departmentId])
+}
+
+// Doctor-only details, on top of their StaffProfile.
+model DoctorProfile {
+  id              String       @id @default(uuid(7)) @db.Uuid
+  hospitalId      String       @db.Uuid
+  userId          String       @unique @db.Uuid
+  specialty       String
+  status          DoctorStatus @default(AVAILABLE)
+  statusChangedAt DateTime     @default(now())
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([hospitalId, status])
+}
+
+// A patient may exist without a login: anonymous ER arrivals, or people registered
+// by reception. The account is linked later through userId.
+model Patient {
+  id          String    @id @default(uuid(7)) @db.Uuid
+  hospitalId  String    @db.Uuid
+  userId      String?   @unique @db.Uuid
+  fullName    String?
+  isAnonymous Boolean   @default(false)
+  gender      Gender?
+  dateOfBirth DateTime? @db.Date
+  phone       String?
+  nationalId  String?
+  bloodType   String?
+  address     String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([hospitalId, nationalId])
+  @@index([hospitalId])
+}
+
+// ─── System ───────────────────────────────────────────────────────────────────
+
+// Only a hash of the token is stored, so a leaked database cannot be used to log in.
+model RefreshToken {
+  id         String    @id @default(uuid(7)) @db.Uuid
+  hospitalId String    @db.Uuid
+  userId     String    @db.Uuid
+  tokenHash  String    @unique
+  userAgent  String?
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([hospitalId])
 }
