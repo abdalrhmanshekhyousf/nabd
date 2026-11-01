@@ -1,25 +1,27 @@
 import { Monitor, Moon, Sun } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useThemeStore, type ThemeChoice } from '@/stores/themeStore';
 
-// Placeholder labels until i18next is set up in task 1.11.
-const OPTIONS: { value: ThemeChoice; label: string; Icon: typeof Sun }[] = [
-  { value: 'light', label: 'فاتح', Icon: Sun },
-  { value: 'dark', label: 'داكن', Icon: Moon },
-  { value: 'system', label: 'حسب الجهاز', Icon: Monitor },
+const OPTIONS: { value: ThemeChoice; Icon: typeof Sun }[] = [
+  { value: 'light', Icon: Sun },
+  { value: 'dark', Icon: Moon },
+  { value: 'system', Icon: Monitor },
 ];
 
 export function ThemeToggle() {
+  const { t } = useTranslation();
   const theme = useThemeStore((state) => state.theme);
   const setTheme = useThemeStore((state) => state.setTheme);
 
   return (
     <div
       role="group"
-      aria-label="وضع العرض"
+      aria-label={t('theme.label')}
       className="inline-flex rounded-full border border-border bg-surface p-1"
     >
-      {OPTIONS.map(({ value, label, Icon }) => {
+      {OPTIONS.map(({ value, Icon }) => {
         const active = theme === value;
+        const label = t(`theme.${value}`);
         return (
           <button
             key={value}

@@ -10,17 +10,23 @@
     <meta name="description" content="Nabd — hospital management platform" />
     <title>نبض · Nabd</title>
     <script>
-      // Apply the theme before first paint to avoid a light flash in dark mode.
-      // The stored choice (light | dark | system) is managed by the theme switcher (task 1.10).
+      // Apply the saved theme and language before first paint, so dark mode has no
+      // light flash and English opens left-to-right without a jump. Keys match
+      // src/stores/themeStore.ts and src/i18n/index.ts.
       (function () {
-        var choice = 'system';
+        var theme = 'system';
+        var lang = 'ar';
         try {
-          choice = localStorage.getItem('nabd-theme') || 'system';
+          theme = localStorage.getItem('nabd-theme') || 'system';
+          lang = localStorage.getItem('nabd-lang') === 'en' ? 'en' : 'ar';
         } catch (e) {}
         var dark =
-          choice === 'dark' ||
-          (choice === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-        document.documentElement.classList.toggle('dark', dark);
+          theme === 'dark' ||
+          (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        var root = document.documentElement;
+        root.classList.toggle('dark', dark);
+        root.lang = lang;
+        root.dir = lang === 'ar' ? 'rtl' : 'ltr';
       })();
     </script>
   </head>

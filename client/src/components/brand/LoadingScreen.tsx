@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { LOGO_DOT, LOGO_STROKE_WIDTH, LOGO_TRACE, LOGO_VIEWBOX } from './logoGeometry';
 
 type LoadingScreenProps = {
@@ -8,11 +9,12 @@ type LoadingScreenProps = {
 // The heartbeat trace draws itself, then the dot keeps pulsing like a monitor
 // cursor. Pure CSS, so it runs even while the main thread is busy loading.
 export function LoadingScreen({ fullScreen = true }: LoadingScreenProps) {
+  const { t } = useTranslation();
+
   return (
     <div
       role="status"
-      // Placeholder text until i18next is set up in task 1.11.
-      aria-label="جاري التحميل"
+      aria-label={t('common.loading')}
       className={`flex items-center justify-center bg-background text-foreground ${
         fullScreen ? 'fixed inset-0 z-50' : 'h-full min-h-48 w-full'
       }`}
