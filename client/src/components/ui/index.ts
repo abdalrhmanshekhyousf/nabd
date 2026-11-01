@@ -7,5 +7,6 @@ export { Popover } from './Popover';
 export { Select, type SelectOption, type SelectProps } from './Select';
 export { Spinner } from './Spinner';
 export { StatusBadge, type StatusTone } from './StatusBadge';
+export { Switch } from './Switch';
 export { Table, type TableColumn } from './Table';
 export { Textarea, type TextareaProps } from './Textarea';

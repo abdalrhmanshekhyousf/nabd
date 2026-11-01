@@ -4,6 +4,7 @@ import { useId, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
+import { useOpenCloseSound } from '@/hooks/useOpenCloseSound';
 import { cn } from '@/lib/cn';
 import { calmSpring } from '@/lib/motion';
 
@@ -36,6 +37,7 @@ export function Modal({
   const descriptionId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
   useFocusTrap(panelRef, open, { onEscape: onClose });
+  useOpenCloseSound(open);
 
   return createPortal(
     <AnimatePresence>

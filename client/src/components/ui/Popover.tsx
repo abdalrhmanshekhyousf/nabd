@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { useOpenCloseSound } from '@/hooks/useOpenCloseSound';
 import { cn } from '@/lib/cn';
 import { calmSpring } from '@/lib/motion';
 
@@ -28,6 +29,7 @@ export function Popover({
   const panelId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  useOpenCloseSound(open);
 
   useEffect(() => {
     if (!open) return;

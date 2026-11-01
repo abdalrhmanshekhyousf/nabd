@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import type { SessionHospital } from '@/app/demoSession';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
+import { useOpenCloseSound } from '@/hooks/useOpenCloseSound';
 import { currentLanguage, directionOf } from '@/i18n';
 import { calmSpring } from '@/lib/motion';
 import { SidebarContent } from './SidebarContent';
@@ -21,6 +22,7 @@ export function MobileDrawer({ open, onClose, hospital }: MobileDrawerProps) {
   const { t } = useTranslation();
   const panelRef = useRef<HTMLDivElement>(null);
   useFocusTrap(panelRef, open, { onEscape: onClose });
+  useOpenCloseSound(open);
   const offscreen = directionOf(currentLanguage()) === 'rtl' ? '100%' : '-100%';
 
   return createPortal(

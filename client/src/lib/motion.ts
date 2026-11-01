@@ -49,7 +49,32 @@ export function withViewTransition(
   root.dataset.vt = kind;
 
   const transition = document.startViewTransition(() => flushSync(update));
+
+  // While a transition plays, the browser sends every click to <html>, so a quick
+  // second click would be lost. Pressing ends the animation at once and the click
+  // is handed to the element actually under the pointer.
+  let pressedAt: { x: number; y: number } | null = null;
+  const onPointerDown = (event: PointerEvent) => {
+    if (event.target !== root) return;
+    pressedAt = { x: event.clientX, y: event.clientY };
+    transition.skipTransition();
+  };
+  const onClick = (event: MouseEvent) => {
+    if (event.target !== root || !pressedAt) return;
+    const target = document.elementFromPoint(pressedAt.x, pressedAt.y);
+    pressedAt = null;
+    if (target instanceof HTMLElement && target !== root) {
+      event.stopPropagation();
+      target.click();
+    }
+  };
+  document.addEventListener('pointerdown', onPointerDown, true);
+  document.addEventListener('click', onClick, true);
+
   void transition.finished.finally(() => {
     delete root.dataset.vt;
+    document.removeEventListener('pointerdown', onPointerDown, true);
+    // The click of a press that ended the transition arrives just after it finishes.
+    window.setTimeout(() => document.removeEventListener('click', onClick, true), 1000);
   });
 }

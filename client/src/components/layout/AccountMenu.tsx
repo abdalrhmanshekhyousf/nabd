@@ -5,6 +5,7 @@ import type { SessionHospital, SessionUser } from '@/app/demoSession';
 import { Popover } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { initials } from '@/lib/initials';
+import { SoundSettings } from './SoundSettings';
 
 function Avatar({ name, className }: { name: string; className?: string }) {
   return (
@@ -40,6 +41,7 @@ export function AccountMenu({ user, hospital }: { user: SessionUser; hospital: S
               </p>
             </div>
           </div>
+          <SoundSettings />
           <div className="p-2">
             <button
               type="button"

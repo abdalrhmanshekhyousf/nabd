@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { calmSpring } from '@/lib/motion';
+import { playSound } from '@/lib/sound';
 import { Spinner } from './Spinner';
 
 const VARIANTS = {
@@ -44,6 +45,7 @@ export function Button({
   className,
   children,
   type = 'button',
+  onClick,
   ...props
 }: ButtonProps) {
   const { t } = useTranslation();
@@ -54,6 +56,10 @@ export function Button({
       type={type}
       disabled={inactive}
       aria-busy={loading || undefined}
+      onClick={(event) => {
+        playSound('tap');
+        onClick?.(event);
+      }}
       whileHover={inactive ? undefined : { y: -1 }}
       whileTap={inactive ? undefined : { scale: 0.97, y: 0 }}
       transition={calmSpring}

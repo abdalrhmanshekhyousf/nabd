@@ -2,6 +2,8 @@ import { Plus, Search } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { notify } from '@/lib/notify';
+import { playSound, type SoundName } from '@/lib/sound';
 import { LanguageToggle } from '@/components/language/LanguageToggle';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
 import {
@@ -39,6 +41,17 @@ const STAFF: StaffRow[] = [
   { id: '3', name: 'لينا خوري', role: 'nurse', status: 'available' },
   { id: '4', name: 'Omar Haddad', role: 'nurse', status: 'onLeave' },
 ];
+
+const SOUND_DEMOS = [
+  ['tap', 'gallery.soundTap'],
+  ['toggle', 'gallery.soundToggle'],
+  ['open', 'gallery.soundOpen'],
+  ['close', 'gallery.soundClose'],
+  ['success', 'gallery.soundSuccess'],
+  ['error', 'gallery.soundError'],
+  ['warning', 'gallery.soundWarning'],
+  ['notify', 'gallery.soundNotify'],
+] as const satisfies readonly (readonly [SoundName, `gallery.${string}`])[];
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -163,21 +176,21 @@ export function UiGalleryPage() {
 
       <Section title={t('gallery.toasts')}>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => toast.success(t('gallery.toastSuccess'))}>
+          <Button variant="outline" onClick={() => notify.success(t('gallery.toastSuccess'))}>
             {t('gallery.showSuccess')}
           </Button>
           <Button
             variant="outline"
             onClick={() =>
-              toast.error(t('gallery.toastError'), { description: t('gallery.toastErrorDetail') })
+              notify.error(t('gallery.toastError'), { description: t('gallery.toastErrorDetail') })
             }
           >
             {t('gallery.showError')}
           </Button>
-          <Button variant="outline" onClick={() => toast.warning(t('gallery.toastWarning'))}>
+          <Button variant="outline" onClick={() => notify.warning(t('gallery.toastWarning'))}>
             {t('gallery.showWarning')}
           </Button>
-          <Button variant="outline" onClick={() => toast.info(t('gallery.toastInfo'))}>
+          <Button variant="outline" onClick={() => notify.info(t('gallery.toastInfo'))}>
             {t('gallery.showInfo')}
           </Button>
           <Button
@@ -200,6 +213,23 @@ export function UiGalleryPage() {
             }
           >
             {t('gallery.showAction')}
+          </Button>
+        </div>
+      </Section>
+
+      <Section title={t('gallery.sounds')}>
+        <div className="flex flex-wrap gap-2">
+          {SOUND_DEMOS.map(([name, labelKey]) => (
+            <Button key={name} size="sm" variant="secondary" onClick={() => playSound(name)}>
+              {t(labelKey)}
+            </Button>
+          ))}
+          <Button
+            size="sm"
+            variant="danger"
+            onClick={() => notify.alert(t('gallery.urgentAlert'), { urgent: true })}
+          >
+            {t('gallery.soundUrgent')}
           </Button>
         </div>
       </Section>

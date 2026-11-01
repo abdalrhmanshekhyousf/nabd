@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { setLanguage } from '@/i18n';
 import { cn } from '@/lib/cn';
 import { calm, calmSpring, withViewTransition } from '@/lib/motion';
+import { playSound } from '@/lib/sound';
 
 type LanguageToggleProps = {
   /** Icon-sized button showing only the target language code (phone top bars). */
@@ -17,7 +18,10 @@ export function LanguageToggle({ compact = false }: LanguageToggleProps) {
   return (
     <motion.button
       type="button"
-      onClick={() => withViewTransition('language', () => void setLanguage(next))}
+      onClick={() => {
+        playSound('toggle');
+        withViewTransition('language', () => void setLanguage(next));
+      }}
       aria-label={t('language.switchToLabel')}
       whileTap={{ scale: 0.96 }}
       className={cn(

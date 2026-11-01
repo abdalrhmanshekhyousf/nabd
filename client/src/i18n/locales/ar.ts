@@ -42,6 +42,14 @@ export const ar = {
     logout: 'تسجيل الخروج',
     poweredBy: 'Powered by Nabd',
   },
+  sound: {
+    title: 'الأصوات',
+    enabled: 'تشغيل الأصوات',
+    enabledHint: 'رنين التنبيهات وأصوات الرسائل',
+    ui: 'أصوات الواجهة',
+    uiHint: 'نقرات خفيفة مع الأزرار والقوائم',
+    testAlert: 'جرّب رنين التنبيه العاجل',
+  },
   nav: {
     dashboard: 'لوحة التحكم',
     uiGallery: 'مكتبة المكوّنات',
@@ -132,6 +140,17 @@ export const ar = {
     showInfo: 'معلومة',
     showPromise: 'تحميل ثم نجاح',
     showAction: 'مع زر تراجع',
+    sounds: 'الأصوات',
+    soundTap: 'نقرة',
+    soundToggle: 'تبديل',
+    soundOpen: 'فتح',
+    soundClose: 'تسكير',
+    soundSuccess: 'نجاح',
+    soundError: 'خطأ',
+    soundWarning: 'تحذير',
+    soundNotify: 'إشعار',
+    soundUrgent: 'تنبيه عاجل',
+    urgentAlert: 'استدعاء عاجل: الإسعاف بحاجة طبيب قلبية',
   },
 };
 

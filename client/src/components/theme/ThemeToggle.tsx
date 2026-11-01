@@ -4,6 +4,7 @@ import { useId, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { calmSpring, withViewTransition } from '@/lib/motion';
+import { playSound } from '@/lib/sound';
 import { applyTheme } from '@/lib/theme';
 import { useThemeStore, type ThemeChoice } from '@/stores/themeStore';
 
@@ -28,6 +29,7 @@ export function ThemeToggle({ compact = false }: ThemeToggleProps) {
 
   const choose = (value: ThemeChoice, event: MouseEvent<HTMLButtonElement>) => {
     if (value === theme) return;
+    playSound('toggle');
     const box = event.currentTarget.getBoundingClientRect();
     // The new colors spread out in a circle from this button.
     withViewTransition(
