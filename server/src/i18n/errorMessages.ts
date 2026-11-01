@@ -28,6 +28,15 @@ const MESSAGES: Record<ErrorCode, Record<Language, string>> = {
   },
   UNAUTHENTICATED: { ar: 'سجّل دخولك لتكمل', en: 'Sign in to continue' },
   FORBIDDEN: { ar: 'ما عندك صلاحية لهالشي', en: 'You do not have access to this' },
+  FILE_REQUIRED: { ar: 'اختار ملف لترفعه', en: 'Choose a file to upload' },
+  FILE_TOO_LARGE: {
+    ar: 'الملف أكبر من المسموح (2 ميغا كحد أقصى)',
+    en: 'The file is too large (2 MB at most)',
+  },
+  UNSUPPORTED_FILE_TYPE: {
+    ar: 'نوع الملف مو مدعوم، استعمل صورة PNG أو JPG أو WebP',
+    en: 'Unsupported file type; use a PNG, JPG or WebP image',
+  },
   INTERNAL_ERROR: {
     ar: 'صار خطأ بالسيرفر، جرّب بعد شوي',
     en: 'Something went wrong on the server; try again shortly',

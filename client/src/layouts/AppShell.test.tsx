@@ -1,19 +1,15 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MotionGlobalConfig } from 'framer-motion';
-import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { routes } from '@/app/router';
 import { INTRO_SEEN_KEY } from '@/hooks/useIntroSplash';
 import { initials } from '@/lib/initials';
 import { useSessionStore } from '@/stores/sessionStore';
+import { renderApp } from '@/test/renderApp';
 import { useThemeStore } from '@/stores/themeStore';
 
-function renderAt(path: string) {
-  const router = createMemoryRouter(routes, { initialEntries: [path] });
-  render(<RouterProvider router={router} />);
-  return router;
-}
+// The app as main.tsx renders it (router + query client).
+const renderAt = renderApp;
 
 beforeAll(() => {
   MotionGlobalConfig.skipAnimations = true;

@@ -1,13 +1,12 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MotionGlobalConfig } from 'framer-motion';
-import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { routes } from '@/app/router';
 import type { SessionUser } from '@/app/session';
 import { INTRO_SEEN_KEY } from '@/hooks/useIntroSplash';
 import { api } from '@/lib/api';
 import { useSessionStore } from '@/stores/sessionStore';
+import { renderApp } from '@/test/renderApp';
 import { apiError, fakeApi } from '@/test/fakeApi';
 
 const fake = fakeApi(api);
@@ -24,11 +23,8 @@ function user(role: SessionUser['role']): SessionUser {
   };
 }
 
-function renderAt(path: string, state?: unknown) {
-  const router = createMemoryRouter(routes, { initialEntries: [{ pathname: path, state }] });
-  render(<RouterProvider router={router} />);
-  return router;
-}
+// The app as main.tsx renders it (router + query client).
+const renderAt = renderApp;
 
 const path = (router: ReturnType<typeof renderAt>) => router.state.location.pathname;
 

@@ -7,6 +7,11 @@ import { setSystemDarkMode } from './matchMedia';
 // jsdom has no matchMedia; this fake lets tests flip the device theme.
 vi.stubGlobal('matchMedia', setSystemDarkMode.matchMedia);
 
+// jsdom has no object URLs (used to show images fetched with the access token).
+let objectUrls = 0;
+URL.createObjectURL ??= () => `blob:test/${++objectUrls}`;
+URL.revokeObjectURL ??= () => undefined;
+
 afterEach(async () => {
   cleanup();
   await i18n.changeLanguage('ar');

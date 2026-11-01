@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 // Load server/.env when present; real environment variables always win.
 if (existsSync('.env')) {
@@ -36,4 +37,6 @@ export const env = {
   /** Short-lived on purpose; the client refreshes it silently (task 1.17). */
   accessTokenTtlSeconds: Number(process.env.ACCESS_TOKEN_TTL_SECONDS ?? 15 * 60),
   refreshTokenTtlDays,
+  /** Uploaded files (logos, images, reports). Never served directly, only via the API. */
+  uploadsDir: resolve(process.env.UPLOADS_DIR ?? 'uploads'),
 } as const;

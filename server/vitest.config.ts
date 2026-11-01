@@ -1,3 +1,5 @@
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
@@ -18,6 +20,8 @@ export default defineConfig({
       DATABASE_URL: testDatabaseUrl,
       JWT_ACCESS_SECRET: 'test-only-secret-that-is-long-enough-for-hs256',
       BCRYPT_ROUNDS: '4',
+      // Uploaded files of the tests go to a throwaway folder.
+      UPLOADS_DIR: join(tmpdir(), 'nabd-test-uploads'),
     },
     globalSetup: ['./tests/globalSetup.ts'],
     // Test files share one database; run them one after another.

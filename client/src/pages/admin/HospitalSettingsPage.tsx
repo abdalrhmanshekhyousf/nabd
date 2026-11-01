@@ -17,6 +17,7 @@ import {
   StatusBadge,
 } from '@/components/ui';
 import { queryKeys } from '@/app/queryKeys';
+import { LogoUploader } from '@/components/hospital/LogoUploader';
 import { api } from '@/lib/api';
 import { enter } from '@/lib/motion';
 import { notify } from '@/lib/notify';
@@ -40,8 +41,8 @@ function toForm(hospital: Hospital): HospitalInfoInput {
   };
 }
 
-// Admin: the hospital's name, address and contact details (task 1.22). The logo
-// joins this page in task 1.23.
+// Admin: the hospital logo (task 1.23) and its name, address and contact details
+// (task 1.22).
 export function HospitalSettingsPage() {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -81,8 +82,13 @@ export function HospitalSettingsPage() {
   const fieldError = (message?: string) => (message ? t(message as ValidationKey) : undefined);
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <motion.div {...enter(0)}>
+    <div className="mx-auto max-w-3xl space-y-6">
+      {hospital && (
+        <motion.div {...enter(0)}>
+          <LogoUploader hospital={hospital} />
+        </motion.div>
+      )}
+      <motion.div {...enter(1)}>
         <Card>
           <CardHeader
             title={t('settings.title')}

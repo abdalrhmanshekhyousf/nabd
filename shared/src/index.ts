@@ -6,6 +6,7 @@ export * from './schemas/auth.js';
 export * from './schemas/common.js';
 export * from './schemas/hospital.js';
 export * from './schemas/me.js';
+export * from './uploads.js';
 
 /** Translation keys used as validation messages (client: validation.*). */
 export const VALIDATION_KEYS = [

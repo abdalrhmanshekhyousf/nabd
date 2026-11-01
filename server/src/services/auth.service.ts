@@ -8,6 +8,7 @@ import {
   signAccessToken,
   type AccessTokenPayload,
 } from '../lib/tokens.js';
+import { publicLogoUrl } from '../lib/uploads.js';
 import { HttpError } from '../middleware/errorHandler.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -80,7 +81,15 @@ function publicUser(user: {
   hospital: { id: string; name: string; logoUrl: string | null };
 }): AuthSession['user'] {
   const { id, email, fullName, role, language, theme, hospital } = user;
-  return { id, email, fullName, role, language, theme, hospital };
+  return {
+    id,
+    email,
+    fullName,
+    role,
+    language,
+    theme,
+    hospital: { ...hospital, logoUrl: publicLogoUrl(hospital.logoUrl) },
+  };
 }
 
 /**
