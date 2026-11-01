@@ -103,6 +103,17 @@
   --animate-trace-draw: trace-draw 1.1s cubic-bezier(0.65, 0, 0.35, 1) forwards;
   --animate-dot-beat: dot-beat 1s ease-out 1.05s infinite;
   --animate-dot-ripple: dot-ripple 1s ease-out 1.05s infinite;
+  /* Login brand panel: a pulse sweeping along the monitor trace */
+  --animate-ecg-sweep: ecg-sweep 3.2s linear infinite;
+
+  @keyframes ecg-sweep {
+    from {
+      stroke-dashoffset: 0.16;
+    }
+    to {
+      stroke-dashoffset: -1.2;
+    }
+  }
 
   @keyframes trace-draw {
     to {
@@ -252,5 +263,9 @@ html[data-vt='language']::view-transition-new(root) {
   }
   .animate-dot-ripple {
     animation: none;
+  }
+  .animate-ecg-sweep {
+    animation: none;
+    opacity: 0;
   }
 }

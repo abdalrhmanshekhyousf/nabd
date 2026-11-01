@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { Navigate, useLocation } from 'react-router';
-import { LoadingScreen } from '@/components/brand/LoadingScreen';
+import { useLocation } from 'react-router';
 import { AnimatedOutlet } from '@/components/layout/AnimatedOutlet';
 import { MobileDrawer } from '@/components/layout/MobileDrawer';
 import { SidebarContent } from '@/components/layout/SidebarContent';
@@ -10,15 +9,14 @@ import { useSessionStore } from '@/stores/sessionStore';
 // Signed-in layout: hospital sidebar on the reading-start side (a drawer below lg),
 // top bar, and the page content.
 export function AppShell() {
-  const { status, user } = useSessionStore();
+  const user = useSessionStore((state) => state.user);
   const { pathname } = useLocation();
   const [drawer, setDrawer] = useState({ open: false, path: pathname });
   // Following a link closes the drawer.
   const menuOpen = drawer.open && drawer.path === pathname;
 
-  // Route protection proper (login page, roles) comes in task 1.19.
-  if (status === 'loading') return <LoadingScreen />;
-  if (!user) return <Navigate to="/" replace />;
+  // RequireAuth renders the shell only for a signed-in user.
+  if (!user) return null;
   const { hospital } = user;
 
   return (

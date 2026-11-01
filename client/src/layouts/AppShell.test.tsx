@@ -40,7 +40,7 @@ beforeEach(() => {
 
 describe('AppShell', () => {
   it('shows the hospital, navigation, page title and "Powered by Nabd"', async () => {
-    renderAt('/dashboard');
+    renderAt('/admin');
 
     expect(
       await screen.findByRole('heading', { level: 1, name: 'لوحة التحكم' }),
@@ -56,7 +56,7 @@ describe('AppShell', () => {
 
   it('opens the navigation drawer, traps focus in it and closes on Escape', async () => {
     const user = userEvent.setup();
-    renderAt('/dashboard');
+    renderAt('/admin');
 
     const openButton = await screen.findByRole('button', { name: 'فتح القائمة' });
     expect(openButton).toHaveAttribute('aria-expanded', 'false');
@@ -74,7 +74,7 @@ describe('AppShell', () => {
 
   it('closes the drawer when any link in it is tapped, even the current page', async () => {
     const user = userEvent.setup();
-    renderAt('/dashboard');
+    renderAt('/admin');
 
     await user.click(await screen.findByRole('button', { name: 'فتح القائمة' }));
     const drawer = screen.getByRole('dialog', { name: 'التنقل الرئيسي' });
@@ -87,7 +87,7 @@ describe('AppShell', () => {
 
   it('shows the empty notifications panel and closes it with Escape', async () => {
     const user = userEvent.setup();
-    renderAt('/dashboard');
+    renderAt('/admin');
 
     const bell = await screen.findByRole('button', { name: 'الإشعارات' });
     await user.click(bell);
@@ -101,7 +101,7 @@ describe('AppShell', () => {
 
   it('closes a menu when clicking outside it', async () => {
     const user = userEvent.setup();
-    renderAt('/dashboard');
+    renderAt('/admin');
 
     await user.click(await screen.findByRole('button', { name: 'الإشعارات' }));
     await user.click(screen.getByRole('heading', { level: 2 }));
@@ -111,7 +111,7 @@ describe('AppShell', () => {
 
   it('shows the user, role and hospital in the account menu', async () => {
     const user = userEvent.setup();
-    const router = renderAt('/dashboard');
+    const router = renderAt('/admin');
 
     await user.click(await screen.findByRole('button', { name: 'الحساب: مدير المستشفى' }));
     const panel = screen.getByRole('dialog', { name: 'الحساب: مدير المستشفى' });
@@ -119,12 +119,12 @@ describe('AppShell', () => {
     expect(within(panel).getByText(/المدير · مستشفى نبض التجريبي/)).toBeInTheDocument();
 
     await user.click(within(panel).getByRole('button', { name: 'تسجيل الخروج' }));
-    await waitFor(() => expect(router.state.location.pathname).toBe('/'));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
   });
 
   it('cycles the theme with the compact phone button', async () => {
     const user = userEvent.setup();
-    renderAt('/dashboard');
+    renderAt('/admin');
 
     const compact = await screen.findByRole('button', { name: 'وضع العرض: حسب الجهاز' });
     await user.click(compact);

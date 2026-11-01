@@ -59,7 +59,7 @@ npm install                          # بيولّد Prisma Client كمان
 cp server/.env.example server/.env   # وعدّل DATABASE_URL حسب PostgreSQL عندك
 npm run db:migrate -w server         # إنشاء الجداول
 npm run db:seed -w server            # مستشفى تجريبي ومدير
-npm run dev:client   # الواجهة على http://localhost:5173 (هيكل التطبيق: /dashboard)
+npm run dev:client   # الواجهة على http://localhost:5173 (صفحة الدخول: /login)
 npm run dev:server   # السيرفر على http://localhost:4000 (فحص: /api/health)
 ```
 
@@ -72,7 +72,8 @@ psql -U postgres -c "CREATE DATABASE nabd_test;"
 
 وبملف `server/.env` لازم تحط `JWT_ACCESS_SECRET` عشوائي (32 حرف أو أكتر)، والطريقة مكتوبة بـ `.env.example`.
 
-**حساب المدير التجريبي:** `admin@nabd.demo` / `Admin@12345` (بتتغيّر من `SEED_ADMIN_PASSWORD`).
+**الحسابات التجريبية:** بعد `npm run db:seed` في حساب لكل دور، وكلمة السر لكلهن `Admin@12345` (بتتغيّر من `SEED_PASSWORD`):
+`admin@nabd.demo`، `doctor@nabd.demo`، `nurse@nabd.demo`، `pharmacist@nabd.demo`، `lab@nabd.demo`، `radiology@nabd.demo`، `cleaner@nabd.demo`، `reception@nabd.demo`، `accountant@nabd.demo`، `patient@nabd.demo`. وبوقت التطوير صفحة الدخول فيها أزرار للدخول بأي واحد منهن.
 
 السيرفر بيفحص الاتصال بقاعدة البيانات أول ما يشتغل، وإذا ما قدر يوصل بيوقف برسالة واضحة.
 

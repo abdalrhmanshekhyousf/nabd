@@ -7,6 +7,8 @@ export type InputProps = Omit<ComponentProps<'input'>, 'children'> &
   Pick<FieldProps, 'label' | 'hint' | 'error'> & {
     /** Icon inside the field, on the reading-start side. */
     icon?: ReactNode;
+    /** Control inside the field on the reading-end side (e.g. show password). */
+    end?: ReactNode;
     containerClassName?: string;
   };
 
@@ -16,6 +18,7 @@ export function Input({
   hint,
   error,
   icon,
+  end,
   required,
   className,
   containerClassName,
@@ -38,9 +41,10 @@ export function Input({
           )}
           <input
             {...control}
-            className={cn(controlClasses, 'h-11 px-3', icon && 'ps-10', className)}
+            className={cn(controlClasses, 'h-11 px-3', icon && 'ps-10', end && 'pe-11', className)}
             {...props}
           />
+          {end && <span className="absolute inset-y-0 end-1 flex items-center">{end}</span>}
         </div>
       )}
     </Field>

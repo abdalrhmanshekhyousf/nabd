@@ -2,22 +2,28 @@ import { motion } from 'framer-motion';
 import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router';
-import { NAV_ITEMS } from '@/app/navigation';
+import { navItemsFor } from '@/app/navigation';
+import { ROLE_HOME } from '@/app/roles';
 import { cn } from '@/lib/cn';
 import { calmSpring } from '@/lib/motion';
+import { useSessionStore } from '@/stores/sessionStore';
 
 // Main links; the soft highlight slides to the active page.
 export function SidebarNav() {
   const { t } = useTranslation();
   const highlightId = useId();
+  const role = useSessionStore((state) => state.user?.role);
+  if (!role) return null;
 
   return (
     <nav aria-label={t('shell.mainNav')}>
       <ul className="space-y-1">
-        {NAV_ITEMS.map(({ to, labelKey, icon: Icon }) => (
+        {navItemsFor(role).map(({ to, labelKey, icon: Icon }) => (
           <li key={to}>
             <NavLink
               to={to}
+              // The dashboard link is active only on the dashboard itself.
+              end={to === ROLE_HOME[role]}
               className={({ isActive }) =>
                 cn(
                   'group relative flex h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors',
