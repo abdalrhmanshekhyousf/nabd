@@ -70,6 +70,11 @@ export const ar = {
     ACCOUNTANT: 'محاسب',
     PATIENT: 'مريض',
   },
+  apiErrors: {
+    network: 'ما قدرنا نوصل للسيرفر، تأكد من الاتصال وجرّب مرة تانية',
+    unknown: 'صار خطأ غير متوقع، جرّب مرة تانية',
+    sessionExpired: 'انتهت الجلسة، سجّل دخولك من جديد',
+  },
   errors: {
     notFound: 'الصفحة غير موجودة',
   },

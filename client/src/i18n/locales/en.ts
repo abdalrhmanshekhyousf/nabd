@@ -71,6 +71,11 @@ export const en: Translation = {
     ACCOUNTANT: 'Accountant',
     PATIENT: 'Patient',
   },
+  apiErrors: {
+    network: 'Could not reach the server; check your connection and try again',
+    unknown: 'Something unexpected went wrong; please try again',
+    sessionExpired: 'Your session has ended; please sign in again',
+  },
   errors: {
     notFound: 'Page not found',
   },

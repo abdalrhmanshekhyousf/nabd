@@ -106,7 +106,8 @@ psql -U postgres -c "CREATE DATABASE nabd_test;"
 | `PATCH /api/me/preferences` | حفظ لغة المستخدم ووضع العرض بحسابه (بدها توكن)                             |
 
 - توكن الدخول (JWT) عمره 15 دقيقة وبينبعت بـ `Authorization: Bearer`. توكن التجديد عمره 30 يوم، بكوكي `httpOnly` ما بتقدر تقراه الصفحة، وبينحفظ منه بس الـ hash.
-- كل خطأ بيرجع بالشكل `{ "error": { "code": "...", "message": "..." } }`، والواجهة بتترجم الـ `code`.
+- كل خطأ بيرجع بالشكل `{ "error": { "code": "...", "message": "..." } }`. الرسالة بلغة المستخدم حسب `Accept-Language`، والـ `code` ثابت للبرمجة.
+- بالواجهة كل الطلبات بتمرق من `api` بـ `client/src/lib/api.ts`: بيضيف التوكن واللغة، وبيجدد الجلسة ويعيد الطلب لحاله، وبيطلّع توست للأخطاء (إلا إذا بعتنا `skipErrorToast`). عنوان السيرفر بـ `VITE_API_URL` (شوف `client/.env.example`).
 
 ## قواعد الكود · Conventions
 

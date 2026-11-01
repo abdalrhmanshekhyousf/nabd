@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router';
 import type { SessionHospital, SessionUser } from '@/app/demoSession';
 import { Popover } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { setAccessToken } from '@/lib/accessToken';
+import { api } from '@/lib/api';
 import { initials } from '@/lib/initials';
 import { SoundSettings } from './SoundSettings';
 
@@ -45,9 +47,14 @@ export function AccountMenu({ user, hospital }: { user: SessionUser; hospital: S
           <div className="p-2">
             <button
               type="button"
-              onClick={() => {
+              onClick={async () => {
                 close();
-                // Until login exists (task 1.15) this just leaves the app area.
+                // Ends the session on the server (revokes the refresh cookie). Leaving
+                // must work even offline, so errors are ignored here.
+                await api
+                  .post('/auth/logout', undefined, { skipAuthRefresh: true, skipErrorToast: true })
+                  .catch(() => undefined);
+                setAccessToken(null);
                 void navigate('/');
               }}
               className="flex h-10 w-full items-center gap-3 rounded-lg px-3 text-sm text-danger transition-colors hover:bg-danger/10 focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:outline-none"
