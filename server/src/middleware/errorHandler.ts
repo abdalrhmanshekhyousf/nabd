@@ -1,6 +1,8 @@
 import type { ErrorRequestHandler, RequestHandler } from 'express';
 import { ZodError } from 'zod';
 import { env } from '../config/env.js';
+import { Prisma } from '../generated/prisma/client.js';
+import { CrossHospitalWriteError } from '../lib/scopedPrisma.js';
 
 // Stable, machine-readable error codes. The client translates them, so the
 // message here is only a developer-facing fallback.
@@ -11,6 +13,8 @@ export type ErrorCode =
   | 'HOSPITAL_REQUIRED'
   | 'ACCOUNT_DISABLED'
   | 'INVALID_REFRESH_TOKEN'
+  | 'UNAUTHENTICATED'
+  | 'FORBIDDEN'
   | 'INTERNAL_ERROR';
 
 // Throw this from any route to send a specific status and code to the client.
@@ -48,6 +52,17 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     res.status(err.status).json({
       error: { code: err.code, message: err.message, details: err.details },
     });
+    return;
+  }
+
+  // update/delete of a record that doesn't exist (or belongs to another hospital)
+  if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2025') {
+    res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Not found' } });
+    return;
+  }
+  if (err instanceof CrossHospitalWriteError) {
+    console.error(err);
+    res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Not allowed' } });
     return;
   }
 

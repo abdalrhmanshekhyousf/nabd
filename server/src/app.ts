@@ -7,6 +7,7 @@ import { env } from './config/env.js';
 import { errorHandler, notFound } from './middleware/errorHandler.js';
 import { authRouter } from './routes/auth.routes.js';
 import { healthRouter } from './routes/health.routes.js';
+import { meRouter } from './routes/me.routes.js';
 
 // Built separately from index.ts so tests can use the app without opening a port.
 export function createApp() {
@@ -20,9 +21,11 @@ export function createApp() {
     app.use(morgan(env.isProduction ? 'combined' : 'dev'));
   }
 
-  // Feature routers (auth, hospitals, staff...) are mounted here from task 1.5 on.
+  // Feature routers. Signed-in routes use `authenticate` (and `requireRole`), and
+  // query through req.db so every query stays inside the caller's hospital.
   app.use('/api/health', healthRouter);
   app.use('/api/auth', authRouter);
+  app.use('/api/me', meRouter);
 
   app.use(notFound);
   app.use(errorHandler);
