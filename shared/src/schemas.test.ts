@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  bedServiceSchema,
+  createBedSchema,
+  createRoomSchema,
   departmentSchema,
+  updateRoomSchema,
   hospitalInfoSchema,
   loginSchema,
   preferencesSchema,
@@ -127,6 +131,18 @@ describe('client output is valid server input', () => {
     ],
     [hospitalInfoSchema, { name: 'x', address: 'y', phone: '0991234567', email: '' }],
     [departmentSchema, { name: '  الطوارئ  ' }],
+    [
+      createRoomSchema,
+      {
+        departmentId: '0199a3d2-6c55-7000-8000-000000000001',
+        number: ' 101 ',
+        floor: null,
+        bedCount: 2,
+      },
+    ],
+    [updateRoomSchema, { number: 'A-2', floor: 3 }],
+    [createBedSchema, {}],
+    [bedServiceSchema, { outOfService: true }],
     [hospitalInfoSchema, { name: 'x', address: 'y', phone: '0991234567', email: 'I@X.co' }],
   ] as const;
 
@@ -137,4 +153,17 @@ describe('client output is valid server input', () => {
       expect(schema.parse(once)).toEqual(once);
     },
   );
+});
+
+describe('createRoomSchema', () => {
+  const base = { departmentId: '0199a3d2-6c55-7000-8000-000000000001', number: '101', floor: 1 };
+  it('limits the number of beds and checks the floor', () => {
+    expect(createRoomSchema.safeParse({ ...base, bedCount: 0 }).success).toBe(true);
+    expect(messages(createRoomSchema.safeParse({ ...base, bedCount: 21 }))).toEqual([
+      'validation.tooMany',
+    ]);
+    expect(messages(createRoomSchema.safeParse({ ...base, bedCount: 2, floor: 1.5 }))).toEqual([
+      'validation.invalid',
+    ]);
+  });
 });

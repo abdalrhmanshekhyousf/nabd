@@ -2,4 +2,5 @@
 export const queryKeys = {
   hospital: ['hospital'] as const,
   departments: ['departments'] as const,
+  rooms: (departmentId: string) => ['rooms', departmentId] as const,
 };

@@ -36,6 +36,22 @@ const MESSAGES: Record<ErrorCode, Record<Language, string>> = {
     ar: 'ما فيك تحذف قسم فيه غرف أو موظفين، انقلهم أو احذفهم أول',
     en: 'This department still has rooms or staff; move or remove them first',
   },
+  ROOM_EXISTS: {
+    ar: 'في غرفة بنفس الرقم بهالقسم',
+    en: 'A room with this number already exists in this department',
+  },
+  ROOM_IN_USE: {
+    ar: 'ما فيك تحذف غرفة فيها مرضى أو أسرّة محجوزة',
+    en: 'This room has occupied or reserved beds',
+  },
+  BED_EXISTS: {
+    ar: 'في سرير بنفس الاسم بهالغرفة',
+    en: 'A bed with this label already exists in this room',
+  },
+  BED_IN_USE: {
+    ar: 'هالسرير عليه مريض أو محجوز هلق',
+    en: 'This bed is occupied or reserved right now',
+  },
   FILE_REQUIRED: { ar: 'اختار ملف لترفعه', en: 'Choose a file to upload' },
   FILE_TOO_LARGE: {
     ar: 'الملف أكبر من المسموح (2 ميغا كحد أقصى)',
