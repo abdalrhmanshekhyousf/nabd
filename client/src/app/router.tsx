@@ -1,10 +1,11 @@
 import { Outlet, createBrowserRouter, type RouteObject } from 'react-router';
-import type { RouteHandle } from '@/app/navigation';
+import { NAV_BY_ROLE, type RouteHandle } from '@/app/navigation';
 import { ROLE_HOME } from '@/app/roles';
 import { ROLES } from '@/app/session';
 import { HomeRedirect, PublicOnly, RequireAuth, RequireRole } from '@/components/auth/guards';
 import { AppShell } from '@/layouts/AppShell';
 import { RootLayout } from '@/layouts/RootLayout';
+import { ComingSoonPage } from '@/pages/ComingSoonPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
@@ -21,8 +22,8 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
     ]
   : [];
 
-// One protected area per role (/admin, /doctor, ...). Its pages are added in
-// task 1.20; for now each area has its dashboard.
+// One protected area per role (/admin, /doctor, ...): its dashboard plus a page
+// for every sidebar link. Pages not built yet show a placeholder (task 1.20).
 const roleAreas: RouteObject[] = ROLES.map((role) => ({
   path: ROLE_HOME[role].slice(1),
   element: (
@@ -36,6 +37,14 @@ const roleAreas: RouteObject[] = ROLES.map((role) => ({
       element: <DashboardPage />,
       handle: { titleKey: 'nav.dashboard' } satisfies RouteHandle,
     },
+    ...NAV_BY_ROLE[role]
+      .flatMap((group) => group.items)
+      .filter((item) => item.path !== '')
+      .map((item) => ({
+        path: item.path,
+        element: <ComingSoonPage />,
+        handle: { titleKey: item.labelKey, phase: item.phase } satisfies RouteHandle,
+      })),
   ],
 }));
 

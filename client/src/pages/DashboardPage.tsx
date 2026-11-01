@@ -5,7 +5,7 @@ import { Card } from '@/components/ui';
 import { enter } from '@/lib/motion';
 import { useSessionStore } from '@/stores/sessionStore';
 
-// Empty dashboard; each role gets its own in task 1.19.
+// Empty dashboard shared by every role for now; each role's own content arrives with its tasks.
 export function DashboardPage() {
   const { t } = useTranslation();
   const fullName = useSessionStore((state) => state.user?.fullName ?? '');
