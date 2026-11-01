@@ -23,7 +23,7 @@ export function NabdLogo({ withWordmark = false, className = '' }: NabdLogoProps
         <circle {...LOGO_DOT} className="fill-pulse" />
       </svg>
       {withWordmark ? (
-        <span className="leading-none font-semibold">
+        <span className="leading-none font-semibold whitespace-nowrap">
           نبض <span className="font-normal text-muted">Nabd</span>
         </span>
       ) : (
