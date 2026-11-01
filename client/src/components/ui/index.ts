@@ -3,6 +3,7 @@ export { Card, CardBody, CardFooter, CardHeader } from './Card';
 export { Field } from './Field';
 export { Input, type InputProps } from './Input';
 export { Modal } from './Modal';
+export { Popover } from './Popover';
 export { Select, type SelectOption, type SelectProps } from './Select';
 export { Spinner } from './Spinner';
 export { StatusBadge, type StatusTone } from './StatusBadge';

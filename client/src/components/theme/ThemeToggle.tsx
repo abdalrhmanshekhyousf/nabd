@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Monitor, Moon, Sun } from 'lucide-react';
 import { useId, type MouseEvent } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -13,7 +13,14 @@ const OPTIONS: { value: ThemeChoice; Icon: typeof Sun }[] = [
   { value: 'system', Icon: Monitor },
 ];
 
-export function ThemeToggle() {
+type ThemeToggleProps = {
+  /** One button that cycles light, dark, system (for tight spaces like phone top bars). */
+  compact?: boolean;
+};
+
+const NEXT: Record<ThemeChoice, ThemeChoice> = { light: 'dark', dark: 'system', system: 'light' };
+
+export function ThemeToggle({ compact = false }: ThemeToggleProps) {
   const { t } = useTranslation();
   const pillId = useId();
   const theme = useThemeStore((state) => state.theme);
@@ -32,6 +39,33 @@ export function ThemeToggle() {
       { x: box.left + box.width / 2, y: box.top + box.height / 2 },
     );
   };
+
+  if (compact) {
+    const current = OPTIONS.find((option) => option.value === theme) ?? OPTIONS[2];
+    const label = t('theme.current', { mode: t(`theme.${theme}`) });
+    return (
+      <motion.button
+        type="button"
+        aria-label={label}
+        title={label}
+        onClick={(event) => choose(NEXT[theme], event)}
+        whileTap={{ scale: 0.92 }}
+        className="relative inline-flex size-9 items-center justify-center overflow-hidden rounded-full text-muted transition-colors hover:bg-surface-muted hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:outline-none"
+      >
+        <AnimatePresence mode="popLayout" initial={false}>
+          <motion.span
+            key={theme}
+            initial={{ rotate: -90, opacity: 0, scale: 0.6 }}
+            animate={{ rotate: 0, opacity: 1, scale: 1 }}
+            exit={{ rotate: 90, opacity: 0, scale: 0.6 }}
+            transition={calmSpring}
+          >
+            <current.Icon className="size-[18px]" aria-hidden="true" />
+          </motion.span>
+        </AnimatePresence>
+      </motion.button>
+    );
+  }
 
   return (
     <div

@@ -1,13 +1,11 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
-import { useEffect, useEffectEvent, useId, useRef, type ReactNode } from 'react';
+import { useId, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import { cn } from '@/lib/cn';
 import { calmSpring } from '@/lib/motion';
-
-const FOCUSABLE =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 const SIZES = { sm: 'sm:max-w-sm', md: 'sm:max-w-lg', lg: 'sm:max-w-2xl' } as const;
 
@@ -37,50 +35,7 @@ export function Modal({
   const titleId = useId();
   const descriptionId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
-  // Always calls the latest onClose without re-running the open/close effect.
-  const closeFromKeyboard = useEffectEvent(() => onClose());
-
-  useEffect(() => {
-    if (!open) return;
-    const opener = document.activeElement as HTMLElement | null;
-    const { overflow } = document.body.style;
-    document.body.style.overflow = 'hidden';
-
-    // Focus the first field (or the close button) once the panel is mounted.
-    const frame = requestAnimationFrame(() => {
-      const focusable = panelRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE);
-      const firstField = [...(focusable ?? [])].find((el) => el.dataset.modalClose === undefined);
-      (firstField ?? focusable?.[0])?.focus();
-    });
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.stopPropagation();
-        closeFromKeyboard();
-        return;
-      }
-      if (event.key !== 'Tab' || !panelRef.current) return;
-      const focusable = [...panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE)];
-      if (focusable.length === 0) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener('keydown', onKeyDown);
-
-    return () => {
-      cancelAnimationFrame(frame);
-      document.removeEventListener('keydown', onKeyDown);
-      document.body.style.overflow = overflow;
-      opener?.focus();
-    };
-  }, [open]);
+  useFocusTrap(panelRef, open, { onEscape: onClose });
 
   return createPortal(
     <AnimatePresence>
@@ -134,7 +89,7 @@ export function Modal({
               </div>
               <button
                 type="button"
-                data-modal-close
+                data-skip-autofocus
                 onClick={onClose}
                 aria-label={t('common.close')}
                 className="-m-1 inline-flex size-9 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"

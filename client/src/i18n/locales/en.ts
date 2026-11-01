@@ -21,10 +21,47 @@ export const en: Translation = {
     light: 'Light',
     dark: 'Dark',
     system: 'System',
+    current: 'Display mode: {{mode}}',
   },
   language: {
     switchTo: 'العربية',
     switchToLabel: 'Switch language to Arabic',
+    short: 'ع',
+  },
+  shell: {
+    openMenu: 'Open menu',
+    closeMenu: 'Close menu',
+    mainNav: 'Main navigation',
+    notifications: 'Notifications',
+    unread_one: 'One unread notification',
+    unread_other: '{{count}} unread notifications',
+    noNotifications: 'No new notifications',
+    notificationsHint:
+      'Emergency, operating room and request alerts will show up here in real time.',
+    account: 'Account',
+    logout: 'Log out',
+    poweredBy: 'Powered by Nabd',
+  },
+  nav: {
+    dashboard: 'Dashboard',
+    uiGallery: 'Component library',
+  },
+  dashboard: {
+    welcome: 'Welcome, {{name}}',
+    empty:
+      'Your dashboard is empty for now. Sections and tools will appear here as each phase lands.',
+  },
+  roles: {
+    ADMIN: 'Administrator',
+    DOCTOR: 'Doctor',
+    NURSE: 'Nurse',
+    PHARMACIST: 'Pharmacist',
+    LAB_TECHNICIAN: 'Lab technician',
+    RADIOLOGIST: 'Radiologist',
+    CLEANER: 'Cleaning & sterilization',
+    RECEPTIONIST: 'Receptionist',
+    ACCOUNTANT: 'Accountant',
+    PATIENT: 'Patient',
   },
   errors: {
     notFound: 'Page not found',
