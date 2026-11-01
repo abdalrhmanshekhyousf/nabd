@@ -80,6 +80,11 @@
 }
 
 /* Expose the tokens as Tailwind colors: bg-surface, text-muted, bg-esi-1, ... */
+/* Readex Pro covers Arabic and Latin with matching shapes and weights */
+@theme {
+  --font-sans: 'Readex Pro Variable', ui-sans-serif, system-ui, sans-serif;
+}
+
 @theme inline {
   --color-ink: var(--nabd-ink);
   --color-pulse: var(--nabd-pulse);
