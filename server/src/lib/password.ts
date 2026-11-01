@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 
-const SALT_ROUNDS = 12;
+// 12 in real use; tests lower it (vitest.config.ts) because each round doubles the work.
+const SALT_ROUNDS = Number(process.env.BCRYPT_ROUNDS ?? 12);
 
 export function hashPassword(plain: string) {
   return bcrypt.hash(plain, SALT_ROUNDS);

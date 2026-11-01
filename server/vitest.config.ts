@@ -11,6 +11,7 @@ export default defineConfig({
       NODE_ENV: 'test',
       DATABASE_URL: testDatabaseUrl,
       JWT_ACCESS_SECRET: 'test-only-secret-that-is-long-enough-for-hs256',
+      BCRYPT_ROUNDS: '4',
     },
     globalSetup: ['./tests/globalSetup.ts'],
     // Test files share one database; run them one after another.
