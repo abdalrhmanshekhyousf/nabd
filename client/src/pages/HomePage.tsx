@@ -5,8 +5,8 @@ export function HomePage() {
       <h1 className="text-4xl font-bold">
         نبض <span className="text-pulse">·</span> Nabd
       </h1>
-      <p className="text-steel">منصّة إدارة المستشفيات</p>
-      <span className="rounded-full bg-stable/10 px-3 py-1 text-sm text-stable">
+      <p className="text-muted">منصّة إدارة المستشفيات</p>
+      <span className="rounded-full bg-success/10 px-3 py-1 text-sm text-success">
         React · TypeScript · Tailwind · Router
       </span>
     </main>

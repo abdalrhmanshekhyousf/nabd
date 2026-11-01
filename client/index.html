@@ -6,6 +6,20 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="description" content="Nabd — hospital management platform" />
     <title>نبض · Nabd</title>
+    <script>
+      // Apply the theme before first paint to avoid a light flash in dark mode.
+      // The stored choice (light | dark | system) is managed by the theme switcher (task 1.10).
+      (function () {
+        var choice = 'system';
+        try {
+          choice = localStorage.getItem('nabd-theme') || 'system';
+        } catch (e) {}
+        var dark =
+          choice === 'dark' ||
+          (choice === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.classList.toggle('dark', dark);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

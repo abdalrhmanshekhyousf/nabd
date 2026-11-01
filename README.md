@@ -96,6 +96,7 @@ psql -U postgres -c "CREATE DATABASE nabd;"
 - كل الكود TypeScript بوضع `strict`.
 - ما في نص مكتوب مباشرة بالواجهة: كل النصوص بملفات الترجمة (`ar` و`en`) من التاسك 1.11.
 - كل جدول (ما عدا `Hospital`) فيه `hospitalId`، وكل استعلام بيتقيّد فيه.
+- الألوان من متغيرات الهوية بـ `client/src/index.css` بس (`bg-surface`، `text-muted`، `bg-danger`...)، وما في كود hex بالمكوّنات، مشان الوضع الداكن يشتغل لحاله.
 - المحرّر بينسّق تلقائياً عند الحفظ، وPrettier بيرتّب كلاسات Tailwind (إعدادات `.vscode` مرفقة).
 
 ## مراحل التنفيذ · Roadmap

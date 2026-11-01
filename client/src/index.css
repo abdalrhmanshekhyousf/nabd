@@ -1,15 +1,116 @@
 @import 'tailwindcss';
 
 /*
- * Nabd palette as Tailwind colors (bg-ink, text-pulse, ...).
- * Task 1.7 moves these to CSS variables with light/dark themes.
+ * Dark mode is driven by the `dark` class on <html> (set before first paint in
+ * index.html, and by the theme switcher from task 1.10), so switching is instant.
  */
-@theme {
-  --color-ink: #10223a;
-  --color-pulse: #e0344b;
-  --color-stable: #1f9e8a;
-  --color-steel: #5a6b80;
-  --color-clinic: #f5f7fa;
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Theme tokens. Components use the semantic names (bg-surface, text-muted,
+ * border-border, bg-danger...) and never raw hex values, so both modes stay in sync.
+ */
+:root {
+  color-scheme: light;
+
+  /* Brand palette (fixed in both modes) */
+  --nabd-ink: #10223a; /* حبر الليل */
+  --nabd-pulse: #e0344b; /* أحمر النبض */
+  --nabd-stable: #1f9e8a; /* أخضر الاستقرار */
+  --nabd-steel: #5a6b80; /* رمادي فولاذي */
+  --nabd-clinic: #f5f7fa; /* أبيض العيادة */
+
+  /* Surfaces and text */
+  --background: var(--nabd-clinic);
+  --surface: #ffffff;
+  --surface-muted: #ebeff4;
+  --foreground: var(--nabd-ink);
+  --muted: var(--nabd-steel);
+  --border: #dce2ea;
+  --ring: #3b82c4;
+
+  /* Actions and states */
+  --primary: var(--nabd-ink);
+  --primary-foreground: var(--nabd-clinic);
+  /* State colors are slightly deeper than the brand colors so small text keeps 4.5:1 contrast */
+  --danger: #c8283e;
+  --danger-foreground: #ffffff;
+  --success: #137a6b;
+  --success-foreground: #ffffff;
+  --warning: #a84d08;
+  --warning-foreground: #ffffff;
+  --info: #2f6fb3;
+  --info-foreground: #ffffff;
+
+  /* ESI triage levels (1 = most urgent) */
+  --esi-1: #d92d43;
+  --esi-2: #ea6a1f;
+  --esi-3: #e3b008;
+  --esi-4: #1f9e8a;
+  --esi-5: #2f6fb3;
+}
+
+.dark {
+  color-scheme: dark;
+
+  --background: var(--nabd-ink);
+  --surface: #172c47;
+  --surface-muted: #1f3756;
+  --foreground: var(--nabd-clinic);
+  --muted: #9aaabd;
+  --border: #29446a;
+  --ring: #6aa8e6;
+
+  --primary: var(--nabd-clinic);
+  --primary-foreground: var(--nabd-ink);
+  --danger: #f57285;
+  --danger-foreground: #10223a;
+  --success: #2fbca4;
+  --success-foreground: #10223a;
+  --warning: #f59e0b;
+  --warning-foreground: #10223a;
+  --info: #5b9be0;
+  --info-foreground: #10223a;
+
+  --esi-1: #f0566a;
+  --esi-2: #f5893f;
+  --esi-3: #f2c531;
+  --esi-4: #2fbca4;
+  --esi-5: #5b9be0;
+}
+
+/* Expose the tokens as Tailwind colors: bg-surface, text-muted, bg-esi-1, ... */
+@theme inline {
+  --color-ink: var(--nabd-ink);
+  --color-pulse: var(--nabd-pulse);
+  --color-stable: var(--nabd-stable);
+  --color-steel: var(--nabd-steel);
+  --color-clinic: var(--nabd-clinic);
+
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+
+  --color-esi-1: var(--esi-1);
+  --color-esi-2: var(--esi-2);
+  --color-esi-3: var(--esi-3);
+  --color-esi-4: var(--esi-4);
+  --color-esi-5: var(--esi-5);
 }
 
 html,
@@ -19,5 +120,5 @@ body,
 }
 
 body {
-  @apply bg-clinic text-ink antialiased;
+  @apply bg-background text-foreground antialiased;
 }
