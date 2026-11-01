@@ -32,7 +32,7 @@ export function Input({
       {(control) => (
         <div className="relative">
           {icon && (
-            <span className="pointer-events-none absolute inset-y-0 start-3 flex items-center text-muted [&>svg]:size-4">
+            <span className="pointer-events-none absolute inset-y-0 start-3 flex items-center text-muted transition-colors group-focus-within/field:text-accent [&>svg]:size-4">
               {icon}
             </span>
           )}

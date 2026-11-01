@@ -1,10 +1,24 @@
+import { motion, type HTMLMotionProps } from 'framer-motion';
 import type { ComponentProps, ReactNode } from 'react';
 import { cn } from '@/lib/cn';
+import { calmSpring } from '@/lib/motion';
 
-export function Card({ className, ...props }: ComponentProps<'section'>) {
+type CardProps = HTMLMotionProps<'section'> & {
+  /** Clickable cards lift softly on hover and settle on press. */
+  interactive?: boolean;
+};
+
+export function Card({ interactive = false, className, ...props }: CardProps) {
   return (
-    <section
-      className={cn('rounded-xl border border-border bg-surface shadow-sm', className)}
+    <motion.section
+      className={cn(
+        'rounded-xl border border-border bg-surface shadow-soft transition-shadow duration-300',
+        interactive && 'cursor-pointer hover:shadow-lifted',
+        className,
+      )}
+      whileHover={interactive ? { y: -3 } : undefined}
+      whileTap={interactive ? { y: 0, scale: 0.99 } : undefined}
+      transition={calmSpring}
       {...props}
     />
   );

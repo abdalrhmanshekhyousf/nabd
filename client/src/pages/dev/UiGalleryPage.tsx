@@ -212,7 +212,7 @@ export function UiGalleryPage() {
         </Section>
 
         <Section title={t('gallery.cards')}>
-          <Card>
+          <Card interactive>
             <CardHeader
               title={t('gallery.cardTitle')}
               description={t('gallery.cardDescription')}

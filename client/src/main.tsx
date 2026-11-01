@@ -1,3 +1,4 @@
+import { MotionConfig } from 'framer-motion';
 import { StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { RouterProvider } from 'react-router';
@@ -9,9 +10,12 @@ import '@/index.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {/* Shown while lazy pages or the session check (task 1.19) are loading */}
-    <Suspense fallback={<LoadingScreen />}>
-      <RouterProvider router={router} />
-    </Suspense>
+    {/* Framer Motion follows the device "reduce motion" setting everywhere */}
+    <MotionConfig reducedMotion="user">
+      {/* Shown while lazy pages or the session check (task 1.19) are loading */}
+      <Suspense fallback={<LoadingScreen />}>
+        <RouterProvider router={router} />
+      </Suspense>
+    </MotionConfig>
   </StrictMode>,
 );

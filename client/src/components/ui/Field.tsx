@@ -26,8 +26,12 @@ export function Field({ label, hint, error, required, className, children }: Fie
   const message = error ?? hint;
 
   return (
-    <div className={cn('flex flex-col gap-1.5', className)}>
-      <label htmlFor={id} className="text-sm font-medium text-foreground">
+    <div className={cn('group/field flex flex-col gap-1.5', className)}>
+      {/* The label takes the accent color while its control has focus */}
+      <label
+        htmlFor={id}
+        className="text-sm font-medium text-foreground transition-colors group-focus-within/field:text-accent"
+      >
         {label}
         {required && (
           <span className="ms-0.5 text-danger" aria-hidden="true">

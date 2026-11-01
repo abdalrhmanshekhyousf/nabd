@@ -64,7 +64,7 @@ export function Select({
             ))}
           </select>
           <ChevronDown
-            className="pointer-events-none absolute inset-y-0 end-3 my-auto size-4 text-muted"
+            className="pointer-events-none absolute inset-y-0 end-3 my-auto size-4 text-muted transition-colors group-focus-within/field:text-accent"
             aria-hidden="true"
           />
         </div>

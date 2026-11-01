@@ -4,6 +4,7 @@ import { useEffect, useEffectEvent, useId, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
+import { calmSpring } from '@/lib/motion';
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -86,7 +87,7 @@ export function Modal({
       {open && (
         <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
           <motion.div
-            className="absolute inset-0 bg-ink/60 backdrop-blur-[2px]"
+            className="absolute inset-0 bg-ink/45 backdrop-blur-sm"
             onClick={onClose}
             aria-hidden="true"
             initial={{ opacity: 0 }}
@@ -101,7 +102,7 @@ export function Modal({
             aria-labelledby={titleId}
             aria-describedby={description ? descriptionId : undefined}
             className={cn(
-              'relative flex max-h-[90dvh] w-full flex-col rounded-t-2xl border border-border bg-surface shadow-xl sm:rounded-2xl',
+              'relative flex max-h-[90dvh] w-full flex-col rounded-t-2xl border border-border bg-surface shadow-lifted sm:rounded-2xl',
               SIZES[size],
             )}
             initial={{ opacity: 0, y: 40, scale: 0.98 }}
@@ -113,7 +114,7 @@ export function Modal({
               scale: 0.98,
               transition: { duration: 0.18, ease: 'easeIn' },
             }}
-            transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+            transition={calmSpring}
           >
             {/* Grab handle hint on phones */}
             <div

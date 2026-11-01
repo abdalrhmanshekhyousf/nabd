@@ -2,15 +2,17 @@ import { motion, type HTMLMotionProps } from 'framer-motion';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
+import { calmSpring } from '@/lib/motion';
 import { Spinner } from './Spinner';
 
 const VARIANTS = {
-  primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
+  primary: 'bg-primary text-primary-foreground shadow-soft hover:bg-primary/88 hover:shadow-lifted',
   secondary: 'bg-surface-muted text-foreground hover:bg-border',
-  outline: 'border border-border bg-surface text-foreground hover:bg-surface-muted',
+  outline:
+    'border border-input bg-surface text-foreground hover:border-muted/40 hover:bg-surface-muted',
   ghost: 'text-foreground hover:bg-surface-muted',
-  danger: 'bg-danger text-danger-foreground hover:bg-danger/90',
-  success: 'bg-success text-success-foreground hover:bg-success/90',
+  danger: 'bg-danger text-danger-foreground shadow-soft hover:bg-danger/88 hover:shadow-lifted',
+  success: 'bg-success text-success-foreground shadow-soft hover:bg-success/88 hover:shadow-lifted',
 } as const;
 
 // md and lg meet the 44px minimum touch target.
@@ -52,10 +54,12 @@ export function Button({
       type={type}
       disabled={inactive}
       aria-busy={loading || undefined}
-      whileTap={inactive ? undefined : { scale: 0.97 }}
+      whileHover={inactive ? undefined : { y: -1 }}
+      whileTap={inactive ? undefined : { scale: 0.97, y: 0 }}
+      transition={calmSpring}
       className={cn(
-        'inline-flex shrink-0 items-center justify-center rounded-lg font-medium whitespace-nowrap transition-colors select-none',
-        'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none',
+        'inline-flex shrink-0 items-center justify-center rounded-lg font-medium whitespace-nowrap transition-[background-color,border-color,color,box-shadow,opacity] select-none',
+        'focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:outline-none',
         'disabled:cursor-not-allowed disabled:opacity-50',
         VARIANTS[variant],
         SIZES[size],

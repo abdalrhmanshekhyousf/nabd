@@ -20,14 +20,23 @@
   --nabd-steel: #5a6b80; /* رمادي فولاذي */
   --nabd-clinic: #f5f7fa; /* أبيض العيادة */
 
-  /* Surfaces and text */
+  /* Surfaces and text: soft layers, borders only as quiet separators */
   --background: var(--nabd-clinic);
   --surface: #ffffff;
-  --surface-muted: #ebeff4;
+  --surface-muted: #eef2f6;
   --foreground: var(--nabd-ink);
   --muted: var(--nabd-steel);
-  --border: #dce2ea;
-  --ring: #3b82c4;
+  --border: #e2e8ef;
+  --input: #cfd7e1; /* form controls need a clearer edge than separators */
+
+  /* Calm accent (brand stability green) for focus, selection and active items */
+  --accent: #137a6b;
+  --accent-soft: rgb(31 158 138 / 0.12);
+  --ring: rgb(31 158 138 / 0.45);
+
+  /* Soft, ink-tinted shadows instead of hard lines */
+  --shadow-soft: 0 1px 2px rgb(16 34 58 / 0.04), 0 2px 8px rgb(16 34 58 / 0.05);
+  --shadow-lifted: 0 2px 4px rgb(16 34 58 / 0.05), 0 12px 28px rgb(16 34 58 / 0.1);
 
   /* Actions and states */
   --primary: var(--nabd-ink);
@@ -53,15 +62,24 @@
 .dark {
   color-scheme: dark;
 
+  /* Slightly softer white than the brand clinic white: less glare on night shifts */
   --background: var(--nabd-ink);
-  --surface: #172c47;
-  --surface-muted: #1f3756;
-  --foreground: var(--nabd-clinic);
+  --surface: #172a44;
+  --surface-muted: #1e3352;
+  --foreground: #e6ecf3;
   --muted: #9aaabd;
-  --border: #29446a;
-  --ring: #6aa8e6;
+  --border: #243a58;
+  --input: #2f4868;
 
-  --primary: var(--nabd-clinic);
+  --accent: #3cc4ad;
+  --accent-soft: rgb(60 196 173 / 0.14);
+  --ring: rgb(60 196 173 / 0.5);
+
+  --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.2), 0 2px 8px rgb(0 0 0 / 0.18);
+  --shadow-lifted: 0 2px 4px rgb(0 0 0 / 0.25), 0 12px 28px rgb(0 0 0 / 0.3);
+
+  /* A soft light primary instead of bright white buttons */
+  --primary: #d3dde9;
   --primary-foreground: var(--nabd-ink);
   --danger: #f57285;
   --danger-foreground: #10223a;
@@ -79,7 +97,6 @@
   --esi-5: #5b9be0;
 }
 
-/* Expose the tokens as Tailwind colors: bg-surface, text-muted, bg-esi-1, ... */
 /* Readex Pro covers Arabic and Latin with matching shapes and weights */
 @theme {
   /* Loading screen (task 1.9): the trace draws in 1.1s, then the dot beats once a second */
@@ -118,8 +135,18 @@
     }
   }
   --font-sans: 'Readex Pro Variable', ui-sans-serif, system-ui, sans-serif;
+
+  /*
+   * One calm motion language for every CSS transition: a gentle ease-out that
+   * starts responsive and settles softly. Framer Motion uses the same curve
+   * (src/lib/motion.ts).
+   */
+  --ease-calm: cubic-bezier(0.22, 1, 0.36, 1);
+  --default-transition-duration: 200ms;
+  --default-transition-timing-function: var(--ease-calm);
 }
 
+/* Expose the tokens as Tailwind colors: bg-surface, text-muted, bg-esi-1, ... */
 @theme inline {
   --color-ink: var(--nabd-ink);
   --color-pulse: var(--nabd-pulse);
@@ -133,7 +160,13 @@
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-border: var(--border);
+  --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+
+  --shadow-soft: var(--shadow-soft);
+  --shadow-lifted: var(--shadow-lifted);
 
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
@@ -163,8 +196,52 @@ body {
   @apply bg-background text-foreground antialiased;
 }
 
-/* Respect reduced motion: show the finished logo without movement */
+/*
+ * Theme switch: the new colors spread in a circle from the button that was
+ * pressed (View Transitions API; browsers without it switch instantly).
+ */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+html[data-vt='theme']::view-transition-new(root) {
+  animation: theme-reveal 550ms var(--ease-calm);
+}
+@keyframes theme-reveal {
+  from {
+    clip-path: circle(0 at var(--vt-x, 50%) var(--vt-y, 0%));
+  }
+  to {
+    clip-path: circle(var(--vt-r, 150vmax) at var(--vt-x, 50%) var(--vt-y, 0%));
+  }
+}
+/* Language switch: a soft crossfade while the layout flips direction */
+html[data-vt='language']::view-transition-old(root) {
+  animation: vt-fade-out 180ms ease-in forwards;
+}
+html[data-vt='language']::view-transition-new(root) {
+  animation: vt-fade-in 320ms var(--ease-calm);
+}
+@keyframes vt-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes vt-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* Respect reduced motion: no decorative movement anywhere */
 @media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    transition-duration: 0.01ms !important;
+  }
   .animate-trace-draw {
     animation: none;
     stroke-dashoffset: 0;

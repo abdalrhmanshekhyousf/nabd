@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
+import { calm } from '@/lib/motion';
 
 export type TableColumn<Row> = {
   key: string;
@@ -59,15 +60,15 @@ export function Table<Row>({
   const rowMotion = (index: number) => ({
     initial: { opacity: 0, y: 6 },
     animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.2, delay: Math.min(index, 10) * 0.03 },
+    transition: { ...calm, delay: Math.min(index, 10) * 0.04 },
   });
 
   return (
     <>
-      <div className="hidden overflow-x-auto rounded-xl border border-border md:block">
+      <div className="hidden overflow-x-auto rounded-xl border border-border bg-surface shadow-soft md:block">
         <table className="w-full text-sm">
           <caption className="sr-only">{caption}</caption>
-          <thead className="bg-surface-muted text-muted">
+          <thead className="bg-surface-muted/60 text-muted">
             <tr>
               {columns.map((column) => (
                 <th
@@ -86,7 +87,10 @@ export function Table<Row>({
                 key={getRowKey(row)}
                 {...rowMotion(index)}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
-                className={cn(onRowClick && 'cursor-pointer hover:bg-surface-muted/60')}
+                className={cn(
+                  'transition-colors hover:bg-surface-muted/50',
+                  onRowClick && 'cursor-pointer',
+                )}
               >
                 {columns.map((column) => (
                   <td
@@ -109,7 +113,7 @@ export function Table<Row>({
             {...rowMotion(index)}
             onClick={onRowClick ? () => onRowClick(row) : undefined}
             className={cn(
-              'rounded-xl border border-border bg-surface p-4',
+              'rounded-xl border border-border bg-surface p-4 shadow-soft transition-[background-color,box-shadow]',
               onRowClick && 'cursor-pointer active:bg-surface-muted',
             )}
           >
