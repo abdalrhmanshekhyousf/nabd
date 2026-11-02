@@ -13,6 +13,7 @@ import { meRouter } from './routes/me.routes.js';
 import { operatingRoomRouter } from './routes/operatingRoom.routes.js';
 import { bedRouter, roomRouter } from './routes/room.routes.js';
 import { assignmentRouter } from './routes/assignment.routes.js';
+import { publicRouter } from './routes/public.routes.js';
 import { staffRouter } from './routes/staff.routes.js';
 
 // Built separately from index.ts so tests can use the app without opening a port.
@@ -31,6 +32,7 @@ export function createApp() {
   // query through req.db so every query stays inside the caller's hospital.
   app.use('/api/health', healthRouter);
   app.use('/api/auth', authRouter);
+  app.use('/api/public', publicRouter);
   app.use('/api/me', meRouter);
   app.use('/api/hospital', hospitalRouter);
   app.use('/api/departments', departmentRouter);

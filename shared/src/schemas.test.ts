@@ -5,6 +5,9 @@ import {
   staffFilterSchema,
   assignCleanerSchema,
   assignNurseSchema,
+  registerPatientSchema,
+  registerPatientFormSchema,
+  hospitalSearchSchema,
   updateStaffSchema,
   createBedSchema,
   createRoomSchema,
@@ -181,6 +184,19 @@ describe('client output is valid server input', () => {
         password: 'Strong1234',
       },
     ],
+    [
+      registerPatientSchema,
+      {
+        hospitalId: '0199a3d2-6c55-7000-8000-000000000001',
+        fullName: ' سارة ',
+        phone: '0991 234 567',
+        gender: 'FEMALE',
+        dateOfBirth: '',
+        email: 'Sara@Mail.Com',
+        password: 'Strong1234',
+      },
+    ],
+    [hospitalSearchSchema, { search: ' دار ' }],
     [assignNurseSchema, { departmentId: '0199a3d2-6c55-7000-8000-000000000001' }],
     [
       assignCleanerSchema,
@@ -322,5 +338,51 @@ describe('cleaner and nurse assignments', () => {
       password: 'Strong1234',
     });
     expect(cleaner.departmentId).toBeNull();
+  });
+});
+
+describe('registerPatientSchema', () => {
+  const patient = {
+    hospitalId: '0199a3d2-6c55-7000-8000-000000000001',
+    fullName: 'سارة',
+    phone: '0991234567',
+    gender: 'FEMALE',
+    dateOfBirth: '1990-05-17',
+    email: 'Sara@Mail.Com',
+    password: 'Strong1234',
+  };
+
+  it('accepts a patient and normalizes the email', () => {
+    const parsed = registerPatientSchema.parse(patient);
+    expect(parsed).toMatchObject({ email: 'sara@mail.com', dateOfBirth: '1990-05-17' });
+  });
+
+  it('requires a hospital, a gender and a phone', () => {
+    const result = registerPatientSchema.safeParse({
+      ...patient,
+      hospitalId: '',
+      gender: '',
+      phone: '',
+    });
+    expect([...new Set(result.error?.issues.map((issue) => issue.path[0]))].sort()).toEqual(
+      ['gender', 'hospitalId', 'phone'].sort(),
+    );
+  });
+
+  it('refuses a birth date in the future, too old or malformed', () => {
+    for (const dateOfBirth of ['2999-01-01', '1850-01-01', '17/05/1990', '1990-13-45']) {
+      expect(messages(registerPatientSchema.safeParse({ ...patient, dateOfBirth }))).toEqual([
+        'validation.dateInvalid',
+      ]);
+    }
+    expect(registerPatientSchema.parse({ ...patient, dateOfBirth: null }).dateOfBirth).toBeNull();
+  });
+
+  it('checks the password confirmation in the form', () => {
+    const result = registerPatientFormSchema.safeParse({
+      ...patient,
+      confirmPassword: 'Other1234',
+    });
+    expect(messages(result)).toEqual(['validation.passwordMismatch']);
   });
 });

@@ -239,12 +239,20 @@ export function LoginPage() {
               </motion.div>
             </form>
 
-            <p className="text-center text-sm text-muted">
-              {t('register.newHospital')}{' '}
-              <Link to="/register" className="font-medium text-accent hover:underline">
-                {t('register.registerLink')}
-              </Link>
-            </p>
+            <div className="space-y-1.5 text-center text-sm text-muted">
+              <p>
+                {t('register.patient')}{' '}
+                <Link to="/register/patient" className="font-medium text-accent hover:underline">
+                  {t('register.patientLink')}
+                </Link>
+              </p>
+              <p>
+                {t('register.newHospital')}{' '}
+                <Link to="/register" className="font-medium text-accent hover:underline">
+                  {t('register.registerLink')}
+                </Link>
+              </p>
+            </div>
 
             {import.meta.env.DEV && (
               <details className="group rounded-xl border border-dashed border-border p-3 text-sm">

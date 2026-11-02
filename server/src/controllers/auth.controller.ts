@@ -1,4 +1,4 @@
-import { loginSchema, registerHospitalSchema } from '@nabd/shared';
+import { loginSchema, registerHospitalSchema, registerPatientSchema } from '@nabd/shared';
 import type { CookieOptions, Request, Response } from 'express';
 import { env } from '../config/env.js';
 import * as authService from '../services/auth.service.js';
@@ -55,4 +55,10 @@ export async function register(req: Request, res: Response) {
   const input = registerHospitalSchema.parse(req.body);
   res.status(201);
   sendSession(res, await authService.registerHospital(input, context(req)));
+}
+
+export async function registerPatient(req: Request, res: Response) {
+  const input = registerPatientSchema.parse(req.body);
+  res.status(201);
+  sendSession(res, await authService.registerPatient(input, context(req)));
 }

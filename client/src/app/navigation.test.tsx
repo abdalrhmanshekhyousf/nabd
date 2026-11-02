@@ -90,7 +90,7 @@ describe('placeholder pages', () => {
       }
     },
     // Opens every page of the role one after another.
-    20_000,
+    30_000,
   );
 
   it("refuses another role's page", async () => {

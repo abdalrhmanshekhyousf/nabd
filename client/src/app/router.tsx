@@ -16,6 +16,7 @@ import { ComingSoonPage } from '@/pages/ComingSoonPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
+import { PatientRegisterPage } from '@/pages/PatientRegisterPage';
 import { RegisterPage } from '@/pages/RegisterPage';
 
 // Development-only pages; the dynamic import keeps them out of production bundles.
@@ -86,6 +87,14 @@ export const routes: RouteObject[] = [
         element: (
           <PublicOnly>
             <RegisterPage />
+          </PublicOnly>
+        ),
+      },
+      {
+        path: 'register/patient',
+        element: (
+          <PublicOnly>
+            <PatientRegisterPage />
           </PublicOnly>
         ),
       },

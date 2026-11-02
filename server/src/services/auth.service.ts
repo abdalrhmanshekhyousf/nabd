@@ -1,4 +1,5 @@
-import type { RegisterHospitalInput } from '@nabd/shared';
+import type { RegisterHospitalInput, RegisterPatientInput } from '@nabd/shared';
+import { Prisma } from '../generated/prisma/client.js';
 import { env } from '../config/env.js';
 import { prisma } from '../lib/prisma.js';
 import { hashPassword, verifyPassword } from '../lib/password.js';
@@ -211,4 +212,50 @@ export async function registerHospital(
 
   const session = await startSession(user, context);
   return { ...session, user: publicUser(user) };
+}
+
+/**
+ * A patient opens their own account at the hospital they chose (task 1.30): the
+ * login and the patient record are created together, then they are signed in.
+ * The same email may already have an account at another hospital; each
+ * hospital keeps its own patients.
+ */
+export async function registerPatient(
+  { hospitalId, password, ...patient }: RegisterPatientInput,
+  context: SessionContext,
+): Promise<AuthSession> {
+  const hospital = await prisma.hospital.findUnique({ where: { id: hospitalId } });
+  if (!hospital) throw new HttpError(404, 'NOT_FOUND', 'Hospital not found');
+
+  const passwordHash = await hashPassword(password);
+  try {
+    const user = await prisma.user.create({
+      data: {
+        hospitalId,
+        role: 'PATIENT',
+        email: patient.email,
+        fullName: patient.fullName,
+        phone: patient.phone,
+        passwordHash,
+        lastLoginAt: new Date(),
+        patient: {
+          create: {
+            hospitalId,
+            fullName: patient.fullName,
+            phone: patient.phone,
+            gender: patient.gender,
+            dateOfBirth: patient.dateOfBirth ? new Date(patient.dateOfBirth) : null,
+          },
+        },
+      },
+      select: userSelect,
+    });
+    const session = await startSession(user, context);
+    return { ...session, user: publicUser(user) };
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      throw new HttpError(409, 'EMAIL_TAKEN', patient.email);
+    }
+    throw error;
+  }
 }
