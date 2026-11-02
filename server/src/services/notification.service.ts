@@ -9,6 +9,7 @@ import type { Prisma } from '../generated/prisma/client.js';
 import type { Role } from '../generated/prisma/enums.js';
 import type { ScopedPrisma } from '../lib/scopedPrisma.js';
 import { emitTo, rooms } from '../realtime/realtime.js';
+import { HttpError } from '../middleware/errorHandler.js';
 
 /**
  * Who should get it: named people, everyone with a role, or everyone with a
@@ -102,4 +103,26 @@ export async function listNotifications(db: ScopedPrisma, userId: string, take =
     db.notification.count({ where: { userId, readAt: null } }),
   ]);
   return { notifications: rows.map(toItem), unread };
+}
+
+/** Marks one of my notifications read (task 2.4). Someone else's is "not found". */
+export async function markRead(db: ScopedPrisma, userId: string, id: string) {
+  // Only unread ones change, so the first time it was read is kept.
+  const { count } = await db.notification.updateMany({
+    where: { id, userId, readAt: null },
+    data: { readAt: new Date() },
+  });
+  if (count === 0 && !(await db.notification.count({ where: { id, userId } }))) {
+    throw new HttpError(404, 'NOT_FOUND', 'Notification not found');
+  }
+  return { unread: await db.notification.count({ where: { userId, readAt: null } }) };
+}
+
+/** Marks all my notifications read. */
+export async function markAllRead(db: ScopedPrisma, userId: string) {
+  await db.notification.updateMany({
+    where: { userId, readAt: null },
+    data: { readAt: new Date() },
+  });
+  return { unread: 0 };
 }

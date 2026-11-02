@@ -239,3 +239,86 @@ describe('POST /api/dev/notify (development only)', () => {
     expect((await request(app).post('/api/dev/notify').send({})).status).toBe(401);
   });
 });
+
+describe('marking notifications read', () => {
+  async function withInbox() {
+    const h = await hospital();
+    const me = await h.person('NURSE');
+    const other = await h.person('NURSE');
+    const [first, second] = await Promise.all(
+      ['CLEANING_REQUEST', 'LOW_STOCK'].map(async (type) => {
+        const [sent] = await sendNotification(h.db, h.id, {
+          to: { userIds: [me.id] },
+          type: type as 'CLEANING_REQUEST',
+        });
+        return sent;
+      }),
+    );
+    const [theirs] = await sendNotification(h.db, h.id, {
+      to: { userIds: [other.id] },
+      type: 'COMPLAINT',
+    });
+    const as = (token: string) => ({
+      read: (id: string) =>
+        request(app).patch(`/api/notifications/${id}/read`).set('Authorization', `Bearer ${token}`),
+      readAll: () =>
+        request(app).post('/api/notifications/read-all').set('Authorization', `Bearer ${token}`),
+    });
+    return { me, other, first, second, theirs, mine: as(me.token) };
+  }
+
+  it('marks one read and returns what is left unread', async () => {
+    const { first, mine } = await withInbox();
+
+    const res = await mine.read(first.id);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ unread: 1 });
+    expect(
+      (await prisma.notification.findUnique({ where: { id: first.id } }))?.readAt,
+    ).not.toBeNull();
+  });
+
+  it('keeps the first time it was read', async () => {
+    const { first, mine } = await withInbox();
+    await mine.read(first.id);
+    const firstRead = (await prisma.notification.findUnique({ where: { id: first.id } }))?.readAt;
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect((await mine.read(first.id)).status).toBe(200);
+
+    expect((await prisma.notification.findUnique({ where: { id: first.id } }))?.readAt).toEqual(
+      firstRead,
+    );
+  });
+
+  it('marks all of mine read, and never someone else’s', async () => {
+    const { me, theirs, mine } = await withInbox();
+
+    expect((await mine.read(theirs.id)).status).toBe(404);
+    const res = await mine.readAll();
+
+    expect(res.body).toEqual({ unread: 0 });
+    expect(await prisma.notification.count({ where: { userId: me.id, readAt: null } })).toBe(0);
+    expect((await prisma.notification.findUnique({ where: { id: theirs.id } }))?.readAt).toBeNull();
+  });
+
+  it('tells my other open tabs to update their bell', async () => {
+    const { me, first, mine } = await withInbox();
+    const socket = connectClient(url, {
+      auth: { token: me.token },
+      transports: ['websocket'],
+      reconnection: false,
+      forceNew: true,
+    });
+    sockets.push(socket);
+    const refreshed: string[][][] = [];
+    socket.on('refresh', ({ queryKeys }: { queryKeys: string[][] }) => refreshed.push(queryKeys));
+    await new Promise((resolve) => socket.once('ready', resolve));
+
+    await mine.read(first.id);
+    await settle();
+
+    expect(refreshed).toEqual([[['notifications']]]);
+  });
+});

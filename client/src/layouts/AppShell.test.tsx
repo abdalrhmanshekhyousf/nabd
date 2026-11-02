@@ -88,10 +88,10 @@ describe('AppShell', () => {
     const bell = await screen.findByRole('button', { name: 'الإشعارات' });
     await user.click(bell);
     expect(bell).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByText('ما في إشعارات جديدة')).toBeInTheDocument();
+    expect(await screen.findByText('ما في إشعارات لسا')).toBeInTheDocument();
 
     await user.keyboard('{Escape}');
-    await waitFor(() => expect(screen.queryByText('ما في إشعارات جديدة')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText('ما في إشعارات لسا')).not.toBeInTheDocument());
     expect(bell).toHaveFocus();
   });
 
@@ -102,7 +102,7 @@ describe('AppShell', () => {
     await user.click(await screen.findByRole('button', { name: 'الإشعارات' }));
     await user.click(screen.getByRole('heading', { level: 2 }));
 
-    await waitFor(() => expect(screen.queryByText('ما في إشعارات جديدة')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText('ما في إشعارات لسا')).not.toBeInTheDocument());
   });
 
   it('shows the user, role and hospital in the account menu', async () => {

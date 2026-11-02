@@ -380,9 +380,17 @@ export const en: Translation = {
     closeMenu: 'Close menu',
     mainNav: 'Main navigation',
     notifications: 'Notifications',
+    // Same keys as Arabic, which has six plural forms; English uses one/other.
+    unread_zero: 'No unread notifications',
     unread_one: 'One unread notification',
+    unread_two: '{{count}} unread notifications',
+    unread_few: '{{count}} unread notifications',
+    unread_many: '{{count}} unread notifications',
     unread_other: '{{count}} unread notifications',
-    noNotifications: 'No new notifications',
+    noNotifications: 'No notifications yet',
+    markAllRead: 'Mark all as read',
+    unreadMark: 'Unread',
+    urgentMark: 'Urgent',
     notificationsHint:
       'Emergency, operating room and request alerts will show up here in real time.',
     account: 'Account',

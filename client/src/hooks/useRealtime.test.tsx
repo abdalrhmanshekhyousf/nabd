@@ -69,6 +69,9 @@ beforeEach(() => {
         ? { status: 200, data: { accessToken: 'fresh-token', expiresIn: 900, user: ADMIN } }
         : { status: 401, data: { error: { code: 'INVALID_REFRESH_TOKEN', message: 'x' } } };
     }
+    if (config.url === '/notifications') {
+      return { status: 200, data: { notifications: [], unread: 0 } };
+    }
     return { status: 200, data: {} };
   });
 });
