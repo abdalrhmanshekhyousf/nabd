@@ -2,6 +2,7 @@ import { createStaffSchema, staffFilterSchema, updateStaffSchema } from '@nabd/s
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 import { session } from '../middleware/auth.js';
+import { syncUserRooms } from '../realtime/realtime.js';
 import * as staffService from '../services/staff.service.js';
 
 const idParam = z.object({ id: z.uuid() });
@@ -22,12 +23,16 @@ export async function update(req: Request, res: Response) {
   const { auth, db } = session(req);
   const { id } = idParam.parse(req.params);
   const input = updateStaffSchema.parse(req.body);
-  res.json({ member: await staffService.updateStaff(db, auth.hospitalId, id, input) });
+  const member = await staffService.updateStaff(db, auth.hospitalId, id, input);
+  // A new role, department or a suspension changes what they may hear live.
+  await syncUserRooms(id);
+  res.json({ member });
 }
 
 export async function remove(req: Request, res: Response) {
   const { db } = session(req);
   const { id } = idParam.parse(req.params);
   await staffService.deleteStaff(db, id);
+  await syncUserRooms(id);
   res.status(204).end();
 }
