@@ -135,6 +135,7 @@ psql -U postgres -c "CREATE DATABASE nabd_test;"
 | `GET /api/assignments`                         | توزيع الفرق: الأقسام، والممرضين مع قسم كل واحد، وعمال النظافة مع الأقسام اللي بيغطّوها (المدير بس)                        |
 | `PUT /api/assignments/nurses/:id`              | نقل ممرض لقسم تاني، ونوعه بيتبع القسم (المدير بس)                                                                         |
 | `PUT /api/assignments/cleaners/:id`            | تحديد كل الأقسام اللي بيغطّيها عامل النظافة (`departmentIds`، ممكن تكون فاضية) (المدير بس)                                |
+| `GET /api/notifications`                       | آخر إشعاراتي مع عدد غير المقروء (لأي مستخدم مسجّل، وكل واحد بيشوف إشعاراته بس)                                            |
 
 - توكن الدخول (JWT) عمره 15 دقيقة وبينبعت بـ `Authorization: Bearer`. توكن التجديد عمره 30 يوم، بكوكي `httpOnly` ما بتقدر تقراه الصفحة، وبينحفظ منه بس الـ hash.
 - كل خطأ بيرجع بالشكل `{ "error": { "code": "...", "message": "..." } }`. الرسالة بلغة المستخدم حسب `Accept-Language`، والـ `code` ثابت للبرمجة.
@@ -155,6 +156,8 @@ Socket.io شغّال على نفس منفذ الـ API. الاتصال بياخ�
 | `department:<departmentId>` | موظفين القسم، وعمال النظافة اللي بيغطّوه               |
 
 بالسيرفر: `emitTo(rooms.department(id), 'event', payload)` من `server/src/realtime/realtime.ts`. ولما المدير بيغيّر دور موظف أو قسمه أو بيوقفه، غرفه بتتحدث فوراً (`syncUserRooms`).
+
+**الإشعارات:** أي ميزة بتبعت إشعار عن طريق `sendNotification(db, hospitalId, { to, type, data, link })` من `server/src/services/notification.service.ts`. المستلمين (`to`) يا أشخاص محددين `{ userIds }`، يا دور كامل `{ role }`، يا دور بقسم `{ role, departmentId }`. الإشعار بينحفظ لكل مستلم، وبيوصله لحظياً بحدث `notification`. أنواع الإشعارات واللي منها عاجل بـ `shared/src/notifications.ts`، والنص بيكتبه كل مستخدم بلغته من النوع والتفاصيل.
 
 ## قواعد الكود · Conventions
 

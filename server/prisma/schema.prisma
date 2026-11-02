@@ -94,6 +94,28 @@ enum Gender {
   FEMALE
 }
 
+// Matches NOTIFICATION_TYPES in @nabd/shared (task 2.2).
+enum NotificationType {
+  DOCTOR_CALL
+  OPERATION_POSTPONED
+  OPERATION_ENDED
+  CLEANING_REQUEST
+  BED_DISCHARGED
+  LAB_RESULT
+  IMAGING_RESULT
+  CONSULTATION_REQUEST
+  CONSULTATION_REPLY
+  LOW_STOCK
+  LEAVE_REQUEST
+  PURCHASE_REQUEST
+  REQUEST_DECIDED
+  MEETING_REQUEST
+  COMPLAINT
+  MEDICATION_REMINDER
+  FOLLOW_UP_REMINDER
+  APPOINTMENT_CANCELLED
+}
+
 // ─── Structure ────────────────────────────────────────────────────────────────
 
 model Hospital {
@@ -116,6 +138,7 @@ model Hospital {
   patients           Patient[]
   refreshTokens      RefreshToken[]
   cleanerAssignments CleanerAssignment[]
+  notifications      Notification[]
 }
 
 model Department {
@@ -211,6 +234,7 @@ model User {
   patient            Patient?
   refreshTokens      RefreshToken[]
   cleanerAssignments CleanerAssignment[]
+  notifications      Notification[]
 
   @@unique([hospitalId, email])
   @@index([hospitalId, role])
@@ -295,6 +319,27 @@ model Patient {
 }
 
 // ─── System ───────────────────────────────────────────────────────────────────
+
+// One row per recipient, so each person has their own unread list (task 2.2).
+// The sentence is written by the client from the type and data, in the
+// reader's language.
+model Notification {
+  id         String           @id @default(uuid(7)) @db.Uuid
+  hospitalId String           @db.Uuid
+  userId     String           @db.Uuid
+  type       NotificationType
+  data       Json             @default("{}")
+  urgent     Boolean          @default(false)
+  link       String?
+  readAt     DateTime?
+  createdAt  DateTime         @default(now())
+
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+  @@index([hospitalId])
+}
 
 // Only a hash of the token is stored, so a leaked database cannot be used to log in.
 model RefreshToken {

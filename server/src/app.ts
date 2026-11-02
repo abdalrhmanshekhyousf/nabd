@@ -13,6 +13,7 @@ import { meRouter } from './routes/me.routes.js';
 import { operatingRoomRouter } from './routes/operatingRoom.routes.js';
 import { bedRouter, roomRouter } from './routes/room.routes.js';
 import { assignmentRouter } from './routes/assignment.routes.js';
+import { notificationRouter } from './routes/notification.routes.js';
 import { publicRouter } from './routes/public.routes.js';
 import { staffRouter } from './routes/staff.routes.js';
 
@@ -41,6 +42,7 @@ export function createApp() {
   app.use('/api/operating-rooms', operatingRoomRouter);
   app.use('/api/staff', staffRouter);
   app.use('/api/assignments', assignmentRouter);
+  app.use('/api/notifications', notificationRouter);
 
   app.use(notFound);
   app.use(errorHandler);

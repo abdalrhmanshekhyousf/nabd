@@ -1,6 +1,7 @@
 // @nabd/shared: one definition of every input rule and shared constant, used by
 // the client forms and the server routes alike.
 export * from './errors.js';
+export * from './notifications.js';
 export * from './roles.js';
 export * from './schemas/auth.js';
 export * from './schemas/common.js';
