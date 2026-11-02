@@ -1,7 +1,9 @@
+import { QueryClientProvider } from '@tanstack/react-query';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { MotionGlobalConfig } from 'framer-motion';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { queryClient } from '@/app/queryClient';
 import { INTRO_SEEN_KEY } from '@/hooks/useIntroSplash';
 import { RootLayout } from '@/layouts/RootLayout';
 import { INTRO_DURATION_MS } from './IntroSplash';
@@ -10,7 +12,12 @@ function renderApp() {
   const router = createMemoryRouter([
     { path: '/', element: <RootLayout />, children: [{ index: true, element: <p>app</p> }] },
   ]);
-  return render(<RouterProvider router={router} />);
+  // Wrapped like main.tsx wraps the app.
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>,
+  );
 }
 
 const splash = () => screen.queryByTestId('intro-splash');

@@ -1,4 +1,5 @@
 import type { Server as HttpServer } from 'node:http';
+import { REALTIME_EVENTS, type RefreshPayload } from '@nabd/shared';
 import jwt from 'jsonwebtoken';
 import { Server } from 'socket.io';
 import { env } from '../config/env.js';
@@ -100,6 +101,11 @@ export function attachRealtime(httpServer: HttpServer) {
 /** Sends an event to one or more rooms. Does nothing while Socket.io is not running. */
 export function emitTo(room: string | string[], event: string, payload: unknown) {
   io?.to(room).emit(event, payload);
+}
+
+/** Tells open screens in these rooms that some data changed, so they fetch it again. */
+export function emitRefresh(room: string | string[], queryKeys: RefreshPayload['queryKeys']) {
+  emitTo(room, REALTIME_EVENTS.refresh, { queryKeys } satisfies RefreshPayload);
 }
 
 /**

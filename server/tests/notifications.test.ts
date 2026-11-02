@@ -207,3 +207,35 @@ describe('notification types', () => {
     expect([...NOTIFICATION_TYPES].sort()).toEqual(Object.values(NotificationType).sort());
   });
 });
+
+describe('POST /api/dev/notify (development only)', () => {
+  it('sends me a sample urgent notification and a refresh, live', async () => {
+    const h = await hospital();
+    const me = await h.person('NURSE');
+    const socket = connectClient(url, {
+      auth: { token: me.token },
+      transports: ['websocket'],
+      reconnection: false,
+      forceNew: true,
+    });
+    sockets.push(socket);
+    const heard: string[] = [];
+    socket.on('notification', (n: { type: string; urgent: boolean }) =>
+      heard.push(`${n.type}:${n.urgent}`),
+    );
+    socket.on('refresh', ({ queryKeys }: { queryKeys: string[][] }) =>
+      heard.push(`refresh:${queryKeys.flat().join(',')}`),
+    );
+    await new Promise((resolve) => socket.once('ready', resolve));
+
+    const res = await request(app)
+      .post('/api/dev/notify')
+      .set('Authorization', `Bearer ${me.token}`)
+      .send({ urgent: true });
+    await settle();
+
+    expect(res.status).toBe(201);
+    expect(heard).toEqual(['DOCTOR_CALL:true', 'refresh:notifications']);
+    expect((await request(app).post('/api/dev/notify').send({})).status).toBe(401);
+  });
+});

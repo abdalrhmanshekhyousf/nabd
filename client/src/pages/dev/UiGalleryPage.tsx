@@ -1,7 +1,8 @@
-import { Plus, Search } from 'lucide-react';
+import { BellRing, Plus, Search, Siren } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { api } from '@/lib/api';
 import { notify } from '@/lib/notify';
 import { playSound, type SoundName } from '@/lib/sound';
 import { LanguageToggle } from '@/components/language/LanguageToggle';
@@ -230,6 +231,29 @@ export function UiGalleryPage() {
             onClick={() => notify.alert(t('gallery.urgentAlert'), { urgent: true })}
           >
             {t('gallery.soundUrgent')}
+          </Button>
+        </div>
+      </Section>
+
+      {/* The server sends these over the live connection (task 2.3). */}
+      <Section title={t('gallery.liveNotifications')}>
+        <p className="text-sm text-muted">{t('gallery.liveHint')}</p>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            variant="secondary"
+            icon={<BellRing className="size-4" />}
+            onClick={() => void api.post('/dev/notify', { urgent: false })}
+          >
+            {t('gallery.sendNormal')}
+          </Button>
+          <Button
+            size="sm"
+            variant="danger"
+            icon={<Siren className="size-4" />}
+            onClick={() => void api.post('/dev/notify', { urgent: true })}
+          >
+            {t('gallery.sendUrgent')}
           </Button>
         </div>
       </Section>

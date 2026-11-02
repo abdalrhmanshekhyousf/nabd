@@ -159,6 +159,8 @@ Socket.io شغّال على نفس منفذ الـ API. الاتصال بياخ�
 
 **الإشعارات:** أي ميزة بتبعت إشعار عن طريق `sendNotification(db, hospitalId, { to, type, data, link })` من `server/src/services/notification.service.ts`. المستلمين (`to`) يا أشخاص محددين `{ userIds }`، يا دور كامل `{ role }`، يا دور بقسم `{ role, departmentId }`. الإشعار بينحفظ لكل مستلم، وبيوصله لحظياً بحدث `notification`. أنواع الإشعارات واللي منها عاجل بـ `shared/src/notifications.ts`، والنص بيكتبه كل مستخدم بلغته من النوع والتفاصيل.
 
+**بالواجهة:** الاتصال بيفتح لحاله لما حدا يسجّل دخول وبيتسكّر لما يطلع (`client/src/hooks/useRealtime.ts`). كل إشعار بيطلع كتوست بلغة المستخدم، والعاجل بيرن. ولما يتغيّر شي بالسيرفر، `emitRefresh(room, [['operating-rooms']])` بيخلّي الشاشات المفتوحة تجيب البيانات من جديد. ولتجرّب الإشعارات بوضع التطوير، في زرّين بـ `/dev/ui` (المسار `POST /api/dev/notify` ما بينضاف بالإنتاج).
+
 ## قواعد الكود · Conventions
 
 - كل الكود TypeScript بوضع `strict`.

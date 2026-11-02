@@ -4,10 +4,13 @@ import { Toaster } from '@/components/feedback/Toaster';
 import { AnimatedOutlet } from '@/components/layout/AnimatedOutlet';
 import { useApplyTheme } from '@/hooks/useApplyTheme';
 import { useIntroSplash } from '@/hooks/useIntroSplash';
+import { useRealtime } from '@/hooks/useRealtime';
 
 export function RootLayout() {
   useApplyTheme();
   const intro = useIntroSplash();
+  // Live notifications on every page while someone is signed in (task 2.3).
+  useRealtime();
 
   return (
     <div className="min-h-full">

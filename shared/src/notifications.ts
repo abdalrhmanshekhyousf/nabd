@@ -50,4 +50,12 @@ export type NotificationItem = {
 /** Socket.io event names shared by server and client. */
 export const REALTIME_EVENTS = {
   notification: 'notification',
+  /** Data changed on the server: open screens showing it fetch it again (task 2.3). */
+  refresh: 'refresh',
 } as const;
+
+/**
+ * Payload of the refresh event: TanStack Query key prefixes to fetch again,
+ * e.g. [['operating-rooms']] or [['rooms', departmentId]].
+ */
+export type RefreshPayload = { queryKeys: string[][] };
