@@ -12,6 +12,7 @@ import { hospitalRouter } from './routes/hospital.routes.js';
 import { meRouter } from './routes/me.routes.js';
 import { operatingRoomRouter } from './routes/operatingRoom.routes.js';
 import { bedRouter, roomRouter } from './routes/room.routes.js';
+import { staffRouter } from './routes/staff.routes.js';
 
 // Built separately from index.ts so tests can use the app without opening a port.
 export function createApp() {
@@ -35,6 +36,7 @@ export function createApp() {
   app.use('/api/rooms', roomRouter);
   app.use('/api/beds', bedRouter);
   app.use('/api/operating-rooms', operatingRoomRouter);
+  app.use('/api/staff', staffRouter);
 
   app.use(notFound);
   app.use(errorHandler);

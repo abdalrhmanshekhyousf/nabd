@@ -9,6 +9,7 @@ export * from './schemas/hospital.js';
 export * from './schemas/me.js';
 export * from './schemas/operatingRoom.js';
 export * from './schemas/room.js';
+export * from './schemas/staff.js';
 export * from './uploads.js';
 
 /** Translation keys used as validation messages (client: validation.*). */

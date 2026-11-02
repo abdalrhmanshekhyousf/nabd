@@ -4,4 +4,5 @@ export const queryKeys = {
   departments: ['departments'] as const,
   rooms: (departmentId: string) => ['rooms', departmentId] as const,
   operatingRooms: ['operating-rooms'] as const,
+  staff: ['staff'] as const,
 };

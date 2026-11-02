@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   bedServiceSchema,
+  createStaffSchema,
   createBedSchema,
   createRoomSchema,
   departmentSchema,
@@ -147,6 +148,21 @@ describe('client output is valid server input', () => {
     [bedServiceSchema, { outOfService: true }],
     [operatingRoomSchema, { name: ' غرفة العمليات 1 ' }],
     [operatingRoomServiceSchema, { outOfService: false }],
+    [
+      createStaffSchema,
+      {
+        fullName: ' د. ريم ',
+        phone: '',
+        role: 'DOCTOR',
+        departmentId: '0199a3d2-6c55-7000-8000-000000000001',
+        specialty: 'قلبية',
+        radiologyModality: 'XRAY',
+        salary: 1500000,
+        email: 'Reem@Amal.Org',
+        password: 'Strong1234',
+      },
+    ],
+
     [hospitalInfoSchema, { name: 'x', address: 'y', phone: '0991234567', email: 'I@X.co' }],
   ] as const;
 
@@ -169,5 +185,47 @@ describe('createRoomSchema', () => {
     expect(messages(createRoomSchema.safeParse({ ...base, bedCount: 2, floor: 1.5 }))).toEqual([
       'validation.invalid',
     ]);
+  });
+});
+
+describe('createStaffSchema', () => {
+  const base = {
+    fullName: 'x',
+    phone: null,
+    departmentId: null,
+    specialty: null,
+    radiologyModality: null,
+    salary: 0,
+    email: 'a@b.co',
+    password: 'Strong1234',
+  };
+  const issues = (data: object) => {
+    const result = createStaffSchema.safeParse({ ...base, ...data });
+    return result.error?.issues.map((i) => `${i.path.join('.')}:${i.message}`) ?? [];
+  };
+
+  it('asks each role for what it needs', () => {
+    expect(issues({ role: 'DOCTOR' })).toEqual([
+      'departmentId:validation.required',
+      'specialty:validation.required',
+    ]);
+    expect(issues({ role: 'NURSE' })).toEqual(['departmentId:validation.required']);
+    expect(issues({ role: 'RADIOLOGIST' })).toEqual(['radiologyModality:validation.required']);
+    expect(issues({ role: 'ACCOUNTANT' })).toEqual([]);
+  });
+
+  it('drops details that do not apply to the role', () => {
+    const parsed = createStaffSchema.parse({
+      ...base,
+      role: 'CLEANER',
+      specialty: 'x',
+      radiologyModality: 'CT',
+    });
+    expect(parsed).toMatchObject({ specialty: null, radiologyModality: null });
+  });
+
+  it('refuses admin and patient roles', () => {
+    expect(issues({ role: 'ADMIN' })).toEqual(['role:validation.required']);
+    expect(issues({ role: 'PATIENT' })).toEqual(['role:validation.required']);
   });
 });
