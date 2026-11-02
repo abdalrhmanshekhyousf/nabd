@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   bedServiceSchema,
   createStaffSchema,
+  staffFilterSchema,
+  updateStaffSchema,
   createBedSchema,
   createRoomSchema,
   departmentSchema,
@@ -149,6 +151,21 @@ describe('client output is valid server input', () => {
     [operatingRoomSchema, { name: ' غرفة العمليات 1 ' }],
     [operatingRoomServiceSchema, { outOfService: false }],
     [
+      updateStaffSchema,
+      {
+        fullName: 'لينا',
+        phone: null,
+        role: 'NURSE',
+        departmentId: '0199a3d2-6c55-7000-8000-000000000001',
+        specialty: null,
+        radiologyModality: null,
+        salary: 900000,
+        email: 'Lina@Amal.Org',
+        password: '',
+        isActive: true,
+      },
+    ],
+    [
       createStaffSchema,
       {
         fullName: ' د. ريم ',
@@ -227,5 +244,41 @@ describe('createStaffSchema', () => {
   it('refuses admin and patient roles', () => {
     expect(issues({ role: 'ADMIN' })).toEqual(['role:validation.required']);
     expect(issues({ role: 'PATIENT' })).toEqual(['role:validation.required']);
+  });
+});
+
+describe('updateStaffSchema', () => {
+  const base = {
+    fullName: 'x',
+    phone: null,
+    role: 'ACCOUNTANT',
+    departmentId: null,
+    specialty: null,
+    radiologyModality: null,
+    salary: 0,
+    email: 'a@b.co',
+    isActive: true,
+  };
+
+  it('keeps the password when left empty and checks a new one', () => {
+    expect(updateStaffSchema.parse({ ...base, password: '' }).password).toBeNull();
+    expect(updateStaffSchema.parse({ ...base, password: null }).password).toBeNull();
+    expect(updateStaffSchema.parse({ ...base, password: 'Strong1234' }).password).toBe(
+      'Strong1234',
+    );
+    expect(updateStaffSchema.safeParse({ ...base, password: 'weak' }).success).toBe(false);
+  });
+
+  it('applies the same role rules as adding', () => {
+    const result = updateStaffSchema.safeParse({ ...base, role: 'DOCTOR', password: '' });
+    expect(result.error?.issues.map((i) => i.path[0])).toEqual(['departmentId', 'specialty']);
+  });
+});
+
+describe('staffFilterSchema', () => {
+  it('accepts an empty filter and refuses unknown roles', () => {
+    expect(staffFilterSchema.parse({})).toEqual({});
+    expect(staffFilterSchema.parse({ search: '  لينا ' }).search).toBe('لينا');
+    expect(staffFilterSchema.safeParse({ role: 'ADMIN' }).success).toBe(false);
   });
 });

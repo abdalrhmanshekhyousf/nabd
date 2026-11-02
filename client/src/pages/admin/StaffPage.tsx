@@ -4,13 +4,15 @@ import {
   RADIOLOGY_MODALITIES,
   ROLES_NEEDING_DEPARTMENT,
   STAFF_ROLES,
-  type CreateStaffData,
-  type CreateStaffInput,
+  updateStaffSchema,
   type RadiologyModality,
   type Role,
+  type StaffRole,
+  type UpdateStaffData,
+  type UpdateStaffInput,
   type ValidationKey,
 } from '@nabd/shared';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Banknote,
@@ -21,15 +23,20 @@ import {
   KeyRound,
   Lock,
   Mail,
+  Pencil,
   Phone,
+  Search,
   Stethoscope,
+  Trash2,
   UserPlus,
   UserRound,
   Users,
+  X,
 } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { Controller, useForm, useWatch, type Resolver } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router';
 import { queryKeys } from '@/app/queryKeys';
 import { departmentLabel, type Department } from '@/components/departments/departmentDisplay';
 import {
@@ -39,6 +46,7 @@ import {
   Modal,
   Select,
   StatusBadge,
+  Switch,
   Table,
   type StatusTone,
   type TableColumn,
@@ -63,6 +71,7 @@ export type StaffMember = {
 };
 
 type Credentials = { name: string; email: string; password: string };
+type DialogTarget = { mode: 'create' } | { mode: 'edit'; member: StaffMember } | null;
 
 const ROLE_TONE: Partial<Record<Role, StatusTone>> = {
   ADMIN: 'info',
@@ -106,69 +115,96 @@ function Reveal({ show, children }: { show: boolean; children: ReactNode }) {
   );
 }
 
-function AddStaffDialog({
-  open,
+function blankValues(): UpdateStaffInput {
+  return {
+    fullName: '',
+    phone: '',
+    role: '' as StaffRole,
+    departmentId: null,
+    specialty: '',
+    radiologyModality: null,
+    salary: 0,
+    email: '',
+    password: '',
+    isActive: true,
+  };
+}
+
+function memberValues(member: StaffMember): UpdateStaffInput {
+  return {
+    fullName: member.fullName,
+    phone: member.phone ?? '',
+    role: member.role as StaffRole,
+    departmentId: member.department?.id ?? null,
+    specialty: member.specialty ?? '',
+    radiologyModality: member.radiologyModality,
+    salary: member.salary,
+    email: member.email,
+    password: '',
+    isActive: member.isActive,
+  };
+}
+
+/**
+ * The form inside the add/edit dialog. It only exists while the dialog is open,
+ * so each opening starts from fresh values (blank, or the employee's).
+ */
+function StaffForm({
+  member,
   departments,
-  onClose,
-  onCreated,
+  onCancel,
+  onSaved,
 }: {
-  open: boolean;
+  member: StaffMember | null;
   departments: Department[];
-  onClose: () => void;
-  onCreated: (credentials: Credentials) => void;
+  onCancel: () => void;
+  onSaved: (credentials: Credentials | null) => void;
 }) {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const [showPassword, setShowPassword] = useState(false);
+  const editing = member !== null;
 
   const {
     register,
     handleSubmit,
-    reset,
     setError,
     setValue,
     control,
     formState: { errors, isSubmitting },
-  } = useForm<CreateStaffInput, unknown, CreateStaffData>({
-    resolver: zodResolver(createStaffSchema),
+  } = useForm<UpdateStaffInput, unknown, UpdateStaffData>({
+    // Adding requires a password; editing keeps the current one when left empty.
+    resolver: zodResolver(editing ? updateStaffSchema : createStaffSchema) as Resolver<
+      UpdateStaffInput,
+      unknown,
+      UpdateStaffData
+    >,
+    defaultValues: member ? memberValues(member) : blankValues(),
   });
 
-  useEffect(() => {
-    if (open) {
-      reset({
-        fullName: '',
-        phone: '',
-        role: '' as CreateStaffInput['role'],
-        departmentId: null,
-        specialty: '',
-        radiologyModality: null,
-        salary: 0,
-        email: '',
-        password: '',
-      });
-    }
-  }, [open, reset]);
-
   const role = useWatch({ control, name: 'role' });
-
-  // The password goes back to hidden whenever the dialog closes.
-  function close() {
-    setShowPassword(false);
-    onClose();
-  }
   const needsDepartment = ROLES_NEEDING_DEPARTMENT.includes(role);
 
   const onSubmit = handleSubmit(
     async (values) => {
       try {
-        await api.post('/staff', values, { skipErrorToast: true });
+        if (member) {
+          await api.patch(`/staff/${member.id}`, values, { skipErrorToast: true });
+          notify.success(t('staff.saved', { name: values.fullName }));
+        } else {
+          await api.post('/staff', values, { skipErrorToast: true });
+          notify.success(t('staff.created', { name: values.fullName }));
+        }
         await Promise.all([
-          queryClient.invalidateQueries({ queryKey: queryKeys.staff }),
+          queryClient.invalidateQueries({ queryKey: ['staff'] }),
           queryClient.invalidateQueries({ queryKey: queryKeys.departments }),
         ]);
-        notify.success(t('staff.created', { name: values.fullName }));
-        setShowPassword(false);
-        onCreated({ name: values.fullName, email: values.email, password: values.password });
+        // A new account, or a new password, is handed over with the credentials card.
+        onSaved(
+          values.password
+            ? { name: values.fullName, email: values.email, password: values.password }
+            : null,
+        );
       } catch (error) {
         const { code, message } = describeApiError(error);
         setError(code === 'EMAIL_TAKEN' ? 'email' : 'fullName', { message });
@@ -184,157 +220,165 @@ function AddStaffDialog({
   }));
 
   return (
-    <Modal
-      open={open}
-      onClose={close}
-      title={t('staff.addTitle')}
-      size="lg"
-      footer={
-        <>
-          <Button variant="ghost" onClick={close}>
-            {t('common.cancel')}
-          </Button>
-          <Button
-            type="submit"
-            form="staff-form"
-            loading={isSubmitting}
-            icon={<UserPlus className="size-4" />}
-          >
-            {t('staff.create')}
-          </Button>
-        </>
-      }
-    >
-      <form id="staff-form" noValidate onSubmit={onSubmit} className="space-y-6">
-        <Section title={t('staff.sectionPersonal')}>
-          <Input
-            label={t('staff.fullName')}
-            icon={<UserRound />}
-            required
-            error={errorText(errors.fullName?.message, t)}
-            {...register('fullName')}
-          />
-          <Input
-            label={`${t('staff.phone')} (${t('staff.optional')})`}
-            icon={<Phone />}
-            type="tel"
-            inputMode="tel"
-            dir="ltr"
-            error={errorText(errors.phone?.message, t)}
-            {...register('phone')}
-          />
-        </Section>
+    <form id="staff-form" noValidate onSubmit={onSubmit} className="space-y-6">
+      <Section title={t('staff.sectionPersonal')}>
+        <Input
+          label={t('staff.fullName')}
+          icon={<UserRound />}
+          required
+          error={errorText(errors.fullName?.message, t)}
+          {...register('fullName')}
+        />
+        <Input
+          label={`${t('staff.phone')} (${t('staff.optional')})`}
+          icon={<Phone />}
+          type="tel"
+          inputMode="tel"
+          dir="ltr"
+          error={errorText(errors.phone?.message, t)}
+          {...register('phone')}
+        />
+      </Section>
 
-        <Section title={t('staff.sectionJob')}>
-          <Select
-            label={t('staff.role')}
-            placeholder={t('staff.chooseRole')}
-            required
-            options={STAFF_ROLES.map((value) => ({ value, label: t(`roles.${value}`) }))}
-            error={errorText(errors.role?.message, t)}
-            {...register('role')}
-          />
-          <Select
-            label={
-              needsDepartment
-                ? t('staff.department')
-                : `${t('staff.department')} (${t('staff.optional')})`
-            }
-            placeholder={needsDepartment ? t('staff.chooseDepartment') : t('staff.noDepartment')}
-            required={needsDepartment}
-            options={departmentOptions}
-            error={errorText(errors.departmentId?.message, t)}
-            hint={departments.length === 0 ? t('staff.noDepartmentsHint') : undefined}
-            {...register('departmentId', { setValueAs: emptyToNull })}
-          />
-          <div className="sm:col-span-2">
-            <Reveal show={role === 'DOCTOR'}>
-              <Input
-                label={t('staff.specialty')}
-                placeholder={t('staff.specialtyPlaceholder')}
-                icon={<Stethoscope />}
-                required
-                error={errorText(errors.specialty?.message, t)}
-                {...register('specialty')}
-              />
-            </Reveal>
-            <Reveal show={role === 'RADIOLOGIST'}>
-              <Select
-                label={t('staff.modality')}
-                placeholder={t('staff.chooseModality')}
-                required
-                options={RADIOLOGY_MODALITIES.map((value) => ({
-                  value,
-                  label: t(`modalities.${value}`),
-                }))}
-                error={errorText(errors.radiologyModality?.message, t)}
-                {...register('radiologyModality', { setValueAs: emptyToNull })}
-              />
-            </Reveal>
-          </div>
-          <Input
-            label={t('staff.salary')}
-            icon={<Banknote />}
-            type="number"
-            inputMode="numeric"
-            min={0}
-            step={1000}
-            dir="ltr"
-            lang={i18n.language}
-            error={errorText(errors.salary?.message, t)}
-            {...register('salary', { valueAsNumber: true })}
-          />
-        </Section>
-
-        <Section title={t('staff.sectionLogin')}>
-          <Input
-            label={t('staff.email')}
-            icon={<Mail />}
-            type="email"
-            autoComplete="off"
-            dir="ltr"
-            required
-            error={errorText(errors.email?.message, t)}
-            {...register('email')}
-          />
-          <div className="space-y-2">
+      <Section title={t('staff.sectionJob')}>
+        <Select
+          label={t('staff.role')}
+          placeholder={t('staff.chooseRole')}
+          required
+          options={STAFF_ROLES.map((value) => ({ value, label: t(`roles.${value}`) }))}
+          error={errorText(errors.role?.message, t)}
+          {...register('role')}
+        />
+        <Select
+          label={
+            needsDepartment
+              ? t('staff.department')
+              : `${t('staff.department')} (${t('staff.optional')})`
+          }
+          placeholder={needsDepartment ? t('staff.chooseDepartment') : t('staff.noDepartment')}
+          required={needsDepartment}
+          options={departmentOptions}
+          error={errorText(errors.departmentId?.message, t)}
+          hint={departments.length === 0 ? t('staff.noDepartmentsHint') : undefined}
+          {...register('departmentId', { setValueAs: emptyToNull })}
+        />
+        <div className="sm:col-span-2">
+          <Reveal show={role === 'DOCTOR'}>
             <Input
-              label={t('staff.password')}
-              hint={t('register.passwordHint')}
-              icon={<Lock />}
-              type={showPassword ? 'text' : 'password'}
-              autoComplete="new-password"
-              dir="ltr"
+              label={t('staff.specialty')}
+              placeholder={t('staff.specialtyPlaceholder')}
+              icon={<Stethoscope />}
               required
-              error={errorText(errors.password?.message, t)}
-              end={
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((value) => !value)}
-                  aria-label={t(showPassword ? 'auth.hidePassword' : 'auth.showPassword')}
-                  aria-pressed={showPassword}
-                  className="inline-flex size-9 items-center justify-center rounded-md text-muted transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:outline-none"
-                >
-                  {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                </button>
-              }
-              {...register('password')}
+              error={errorText(errors.specialty?.message, t)}
+              {...register('specialty')}
             />
-            <Button
-              size="sm"
-              variant="ghost"
-              icon={<KeyRound className="size-4" />}
-              onClick={() => {
-                setValue('password', generatePassword(), { shouldValidate: true });
-                setShowPassword(true);
-              }}
-            >
-              {t('staff.generate')}
-            </Button>
+          </Reveal>
+          <Reveal show={role === 'RADIOLOGIST'}>
+            <Select
+              label={t('staff.modality')}
+              placeholder={t('staff.chooseModality')}
+              required
+              options={RADIOLOGY_MODALITIES.map((value) => ({
+                value,
+                label: t(`modalities.${value}`),
+              }))}
+              error={errorText(errors.radiologyModality?.message, t)}
+              {...register('radiologyModality', { setValueAs: emptyToNull })}
+            />
+          </Reveal>
+        </div>
+        <Input
+          label={t('staff.salary')}
+          icon={<Banknote />}
+          type="number"
+          inputMode="numeric"
+          min={0}
+          step={1000}
+          dir="ltr"
+          lang={i18n.language}
+          error={errorText(errors.salary?.message, t)}
+          {...register('salary', { valueAsNumber: true })}
+        />
+      </Section>
+
+      <Section title={t('staff.sectionLogin')}>
+        <Input
+          label={t('staff.email')}
+          icon={<Mail />}
+          type="email"
+          autoComplete="off"
+          dir="ltr"
+          required
+          error={errorText(errors.email?.message, t)}
+          {...register('email')}
+        />
+        <div className="space-y-2">
+          <Input
+            label={editing ? t('staff.newPassword') : t('staff.password')}
+            hint={editing ? t('staff.newPasswordHint') : t('register.passwordHint')}
+            icon={<Lock />}
+            type={showPassword ? 'text' : 'password'}
+            autoComplete="new-password"
+            dir="ltr"
+            required={!editing}
+            error={errorText(errors.password?.message, t)}
+            end={
+              <button
+                type="button"
+                onClick={() => setShowPassword((value) => !value)}
+                aria-label={t(showPassword ? 'auth.hidePassword' : 'auth.showPassword')}
+                aria-pressed={showPassword}
+                className="inline-flex size-9 items-center justify-center rounded-md text-muted transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:outline-none"
+              >
+                {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+            }
+            {...register('password')}
+          />
+          <Button
+            size="sm"
+            variant="ghost"
+            icon={<KeyRound className="size-4" />}
+            onClick={() => {
+              setValue('password', generatePassword(), { shouldValidate: true });
+              setShowPassword(true);
+            }}
+          >
+            {t('staff.generate')}
+          </Button>
+        </div>
+        {editing && (
+          <div className="sm:col-span-2">
+            <Controller
+              control={control}
+              name="isActive"
+              render={({ field }) => (
+                <Switch
+                  checked={field.value}
+                  onChange={field.onChange}
+                  label={t('staff.active')}
+                  description={t('staff.activeHint')}
+                />
+              )}
+            />
           </div>
-        </Section>
-      </form>
-    </Modal>
+        )}
+      </Section>
+
+      {/* Actions stay visible at the bottom while the form scrolls. */}
+      <div className="sticky bottom-0 -mx-4 -mb-4 flex flex-col-reverse gap-2 border-t border-border bg-surface p-4 sm:-mx-5 sm:-mb-5 sm:flex-row sm:justify-end sm:px-5">
+        <Button variant="ghost" onClick={onCancel}>
+          {t('common.cancel')}
+        </Button>
+        <Button
+          type="submit"
+          loading={isSubmitting}
+          icon={editing ? <Check className="size-4" /> : <UserPlus className="size-4" />}
+        >
+          {editing ? t('staff.save') : t('staff.create')}
+        </Button>
+      </div>
+    </form>
   );
 }
 
@@ -410,21 +454,146 @@ function CredentialsDialog({
   );
 }
 
-// Admin: the hospital's employees (task 1.27: adding them; search, filters, editing
-// and removal come in task 1.28).
+/** Search box, role and department filters, kept in the URL. */
+function StaffFilters({
+  departments,
+  search,
+  role,
+  departmentId,
+  onChange,
+}: {
+  departments: Department[];
+  search: string;
+  role: string;
+  departmentId: string;
+  onChange: (changes: Record<string, string>) => void;
+}) {
+  const { t } = useTranslation();
+  const [text, setText] = useState(search);
+
+  // Wait for a short pause in typing before searching.
+  useEffect(() => {
+    if (text.trim() === search) return;
+    const timer = window.setTimeout(() => onChange({ search: text.trim() }), 300);
+    return () => window.clearTimeout(timer);
+  }, [text, search, onChange]);
+
+  const active = Boolean(search || role || departmentId);
+
+  return (
+    <div className="grid gap-3 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end">
+      <Input
+        label={t('staff.searchLabel')}
+        placeholder={t('staff.search')}
+        icon={<Search />}
+        type="search"
+        value={text}
+        onChange={(event) => setText(event.target.value)}
+      />
+      <Select
+        label={t('staff.filterRole')}
+        placeholder={t('staff.allRoles')}
+        options={STAFF_ROLES.map((value) => ({ value, label: t(`roles.${value}`) }))}
+        value={role}
+        onChange={(event) => onChange({ role: event.target.value })}
+      />
+      <Select
+        label={t('staff.filterDepartment')}
+        placeholder={t('staff.allDepartments')}
+        options={departments.map((department) => ({
+          value: department.id,
+          label: departmentLabel(department, t),
+        }))}
+        value={departmentId}
+        onChange={(event) => onChange({ departmentId: event.target.value })}
+      />
+      <AnimatePresence>
+        {active && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+          >
+            <Button
+              variant="ghost"
+              icon={<X className="size-4" />}
+              onClick={() => {
+                setText('');
+                onChange({ search: '', role: '', departmentId: '' });
+              }}
+            >
+              {t('staff.clearFilters')}
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// Admin: the hospital's employees: add (task 1.27), search, filter, edit and
+// remove (task 1.28).
 export function StaffPage() {
   const { t, i18n } = useTranslation();
-  const [adding, setAdding] = useState(false);
+  const queryClient = useQueryClient();
+  const [params, setParams] = useSearchParams();
+  const [target, setTarget] = useState<DialogTarget>(null);
+  const [deleting, setDeleting] = useState<StaffMember | null>(null);
   const [credentials, setCredentials] = useState<Credentials | null>(null);
 
+  const filter = {
+    search: params.get('search') ?? '',
+    role: params.get('role') ?? '',
+    departmentId: params.get('department') ?? '',
+  };
+  const filtering = Boolean(filter.search || filter.role || filter.departmentId);
+
   const { data: staff, isPending } = useQuery({
-    queryKey: queryKeys.staff,
-    queryFn: async () => (await api.get<{ staff: StaffMember[] }>('/staff')).data.staff,
+    queryKey: queryKeys.staff(filter),
+    queryFn: async () =>
+      (
+        await api.get<{ staff: StaffMember[] }>('/staff', {
+          params: {
+            search: filter.search || undefined,
+            role: filter.role || undefined,
+            departmentId: filter.departmentId || undefined,
+          },
+        })
+      ).data.staff,
+    // Keep showing the last results while new ones load, instead of flashing.
+    placeholderData: keepPreviousData,
   });
   const { data: departments = [] } = useQuery({
     queryKey: queryKeys.departments,
     queryFn: async () =>
       (await api.get<{ departments: Department[] }>('/departments')).data.departments,
+  });
+
+  function updateFilter(changes: Record<string, string>) {
+    setParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        for (const [key, value] of Object.entries(changes)) {
+          const param = key === 'departmentId' ? 'department' : key;
+          if (value) next.set(param, value);
+          else next.delete(param);
+        }
+        return next;
+      },
+      { replace: true },
+    );
+  }
+
+  const remove = useMutation({
+    mutationFn: async (member: StaffMember) => api.delete(`/staff/${member.id}`),
+    onSuccess: async (_result, member) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['staff'] }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.departments }),
+      ]);
+      notify.success(t('staff.deleted', { name: member.fullName }));
+    },
+    onSettled: () => setDeleting(null),
   });
 
   const money = new Intl.NumberFormat(i18n.language);
@@ -434,7 +603,14 @@ export function StaffPage() {
       header: t('staff.colName'),
       cell: (member) => (
         <div className="min-w-0">
-          <p className="font-medium text-foreground">{member.fullName}</p>
+          <p className="flex flex-wrap items-center gap-2 font-medium text-foreground">
+            {member.fullName}
+            {!member.isActive && (
+              <StatusBadge tone="danger" dot={false}>
+                {t('staff.suspended')}
+              </StatusBadge>
+            )}
+          </p>
           <p dir="ltr" className="truncate text-start text-xs text-muted">
             {member.email}
           </p>
@@ -462,7 +638,38 @@ export function StaffPage() {
       header: t('staff.colSalary'),
       cell: (member) => <span dir="ltr">{money.format(member.salary)}</span>,
     },
+    {
+      key: 'actions',
+      header: t('staff.colActions'),
+      className: 'w-24',
+      // The admin's own account is managed elsewhere.
+      cell: (member) =>
+        member.role === 'ADMIN' ? null : (
+          <div className="flex justify-end gap-1 md:justify-start">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="size-9 text-muted hover:text-foreground"
+              aria-label={t('staff.edit', { name: member.fullName })}
+              onClick={() => setTarget({ mode: 'edit', member })}
+            >
+              <Pencil className="size-4" />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="size-9 text-muted hover:bg-danger/10 hover:text-danger"
+              aria-label={t('staff.delete', { name: member.fullName })}
+              onClick={() => setDeleting(member)}
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          </div>
+        ),
+    },
   ];
+
+  const editingMember = target?.mode === 'edit' ? target.member : null;
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -471,22 +678,47 @@ export function StaffPage() {
           <h2 className="text-xl font-bold text-foreground">{t('staff.title')}</h2>
           <p className="text-sm text-muted">{t('staff.description')}</p>
         </div>
-        <Button icon={<UserPlus className="size-4" />} onClick={() => setAdding(true)}>
+        <Button
+          icon={<UserPlus className="size-4" />}
+          onClick={() => setTarget({ mode: 'create' })}
+        >
           {t('staff.add')}
         </Button>
       </motion.div>
 
-      <motion.div {...enter(1)} className="space-y-3">
+      <motion.div {...enter(1)}>
+        <StaffFilters
+          departments={departments}
+          search={filter.search}
+          role={filter.role}
+          departmentId={filter.departmentId}
+          onChange={updateFilter}
+        />
+      </motion.div>
+
+      <motion.div {...enter(2)} className="space-y-3">
         {staff && staff.length > 0 && (
-          <p className="text-xs text-muted">{t('staff.count', { count: staff.length })}</p>
+          <p className="text-xs text-muted" aria-live="polite">
+            {filtering
+              ? t('staff.results', { count: staff.length })
+              : t('staff.count', { count: staff.length })}
+          </p>
         )}
         {!isPending && staff?.length === 0 ? (
           <Card className="flex flex-col items-center gap-3 px-6 py-12 text-center">
             <span className="flex size-14 items-center justify-center rounded-2xl bg-accent-soft text-accent">
-              <Users className="size-7" aria-hidden="true" />
+              {filtering ? (
+                <Search className="size-7" aria-hidden="true" />
+              ) : (
+                <Users className="size-7" aria-hidden="true" />
+              )}
             </span>
-            <p className="font-semibold text-foreground">{t('staff.emptyTitle')}</p>
-            <p className="text-sm text-muted">{t('staff.emptyBody')}</p>
+            <p className="font-semibold text-foreground">
+              {filtering ? t('staff.noResults') : t('staff.emptyTitle')}
+            </p>
+            <p className="text-sm text-muted">
+              {filtering ? t('staff.noResultsHint') : t('staff.emptyBody')}
+            </p>
           </Card>
         ) : (
           <Table
@@ -499,16 +731,52 @@ export function StaffPage() {
         )}
       </motion.div>
 
-      <AddStaffDialog
-        open={adding}
-        departments={departments}
-        onClose={() => setAdding(false)}
-        onCreated={(created) => {
-          setAdding(false);
-          setCredentials(created);
-        }}
-      />
+      <Modal
+        open={target !== null}
+        onClose={() => setTarget(null)}
+        title={
+          editingMember
+            ? t('staff.editTitle', { name: editingMember.fullName })
+            : t('staff.addTitle')
+        }
+        size="lg"
+      >
+        {target && (
+          <StaffForm
+            member={editingMember}
+            departments={departments}
+            onCancel={() => setTarget(null)}
+            onSaved={(handOver) => {
+              setTarget(null);
+              if (handOver) setCredentials(handOver);
+            }}
+          />
+        )}
+      </Modal>
+
       <CredentialsDialog credentials={credentials} onClose={() => setCredentials(null)} />
+
+      <Modal
+        open={deleting !== null}
+        onClose={() => setDeleting(null)}
+        title={deleting ? t('staff.deleteTitle', { name: deleting.fullName }) : ''}
+        description={t('staff.deleteBody')}
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setDeleting(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              variant="danger"
+              loading={remove.isPending}
+              onClick={() => deleting && remove.mutate(deleting)}
+            >
+              {deleting ? t('staff.delete', { name: deleting.fullName }) : ''}
+            </Button>
+          </>
+        }
+      />
     </div>
   );
 }

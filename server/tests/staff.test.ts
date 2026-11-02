@@ -168,3 +168,167 @@ describe('GET /api/staff', () => {
     expect(names).not.toContain('مريض');
   });
 });
+
+describe('GET /api/staff filters', () => {
+  it('searches name, email and phone, and filters by role and department', async () => {
+    const admin = await as('ADMIN');
+    await admin.post(
+      '/api/staff',
+      employee({ fullName: 'لينا خوري', role: 'NURSE', departmentId: admin.departmentId }),
+    );
+    await admin.post('/api/staff', employee({ fullName: 'Omar Haddad', phone: '0991 222 333' }));
+    await admin.post(
+      '/api/staff',
+      employee({ fullName: 'سامر', email: 'samer.lab@x.co', role: 'LAB_TECHNICIAN' }),
+    );
+
+    const names = async (query: string) =>
+      (await admin.get(`/api/staff?${query}`)).body.staff.map(
+        (s: { fullName: string }) => s.fullName,
+      );
+
+    expect(await names(`search=${encodeURIComponent('لينا')}`)).toEqual(['لينا خوري']);
+    expect(await names('search=omar')).toEqual(['Omar Haddad']);
+    expect(await names('search=222')).toEqual(['Omar Haddad']);
+    expect(await names('search=SAMER.LAB')).toEqual(['سامر']);
+    expect(await names('role=NURSE')).toEqual(['لينا خوري']);
+    expect(await names(`departmentId=${admin.departmentId}`)).toEqual(['لينا خوري']);
+    expect((await admin.get('/api/staff?role=ADMIN')).status).toBe(400);
+  });
+});
+
+describe('PATCH and DELETE /api/staff/:id', () => {
+  const update = (overrides: Record<string, unknown>) => ({
+    fullName: 'لينا خوري',
+    phone: null,
+    role: 'NURSE',
+    departmentId: null,
+    specialty: null,
+    radiologyModality: null,
+    salary: 900000,
+    email: 'lina@amal.org',
+    password: '',
+    isActive: true,
+    ...overrides,
+  });
+
+  async function withNurse() {
+    const admin = await as('ADMIN');
+    const second = await prisma.department.create({
+      data: { hospitalId: admin.hospitalId, name: 'القلبية' },
+    });
+    const { member } = (
+      await admin.post(
+        '/api/staff',
+        employee({ email: 'lina@amal.org', role: 'NURSE', departmentId: admin.departmentId }),
+      )
+    ).body;
+    const auth = `Bearer ${signAccessToken({ sub: 'x', hospitalId: admin.hospitalId, role: 'ADMIN' })}`;
+    const patch = (body: object, id = member.id) =>
+      request(app).patch(`/api/staff/${id}`).set('Authorization', auth).send(body);
+    const remove = (id = member.id) =>
+      request(app).delete(`/api/staff/${id}`).set('Authorization', auth);
+    return { admin, member, second, patch, remove };
+  }
+
+  const login = (password: string) =>
+    request(app).post('/api/auth/login').send({ email: 'lina@amal.org', password });
+
+  it('edits details and moves the employee to another department', async () => {
+    const { member, second, patch } = await withNurse();
+
+    const res = await patch(
+      update({ fullName: 'لينا الخوري', departmentId: second.id, salary: 1100000 }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body.member).toMatchObject({
+      id: member.id,
+      fullName: 'لينا الخوري',
+      department: { id: second.id },
+      salary: 1100000,
+    });
+  });
+
+  it('turns a nurse into a doctor and back, keeping the doctor profile in step', async () => {
+    const { member, second, patch } = await withNurse();
+
+    const doctor = await patch(
+      update({ role: 'DOCTOR', departmentId: second.id, specialty: 'قلبية' }),
+    );
+    expect(doctor.body.member).toMatchObject({
+      role: 'DOCTOR',
+      specialty: 'قلبية',
+      doctorStatus: 'AVAILABLE',
+    });
+
+    const nurse = await patch(
+      update({ role: 'NURSE', departmentId: second.id, specialty: 'قلبية' }),
+    );
+    expect(nurse.body.member).toMatchObject({ role: 'NURSE', specialty: null, doctorStatus: null });
+    expect(await prisma.doctorProfile.count({ where: { userId: member.id } })).toBe(0);
+  });
+
+  it('a new password replaces the old one and ends open sessions', async () => {
+    const { admin, patch } = await withNurse();
+    const agent = request.agent(app);
+    await agent.post('/api/auth/login').send({ email: 'lina@amal.org', password: 'Strong1234' });
+
+    await patch(update({ departmentId: admin.departmentId, password: 'NewPass5678' }));
+
+    expect((await login('Strong1234')).status).toBe(401);
+    expect((await login('NewPass5678')).status).toBe(200);
+    expect((await agent.post('/api/auth/refresh')).status).toBe(401);
+  });
+
+  it('leaving the password empty keeps it', async () => {
+    const { admin, patch } = await withNurse();
+    await patch(update({ departmentId: admin.departmentId, password: '' }));
+    expect((await login('Strong1234')).status).toBe(200);
+  });
+
+  it('a suspended employee cannot sign in until reactivated', async () => {
+    const { admin, patch } = await withNurse();
+
+    await patch(update({ departmentId: admin.departmentId, isActive: false }));
+    const blocked = await login('Strong1234');
+    await patch(update({ departmentId: admin.departmentId, isActive: true }));
+
+    expect(blocked.body.error.code).toBe('ACCOUNT_DISABLED');
+    expect((await login('Strong1234')).status).toBe(200);
+  });
+
+  it('refuses an email used by someone else', async () => {
+    const { admin, patch } = await withNurse();
+    await admin.post('/api/staff', employee({ email: 'taken@amal.org' }));
+
+    const res = await patch(update({ departmentId: admin.departmentId, email: 'taken@amal.org' }));
+
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('EMAIL_TAKEN');
+  });
+
+  it('deletes an employee with their login', async () => {
+    const { member, remove } = await withNurse();
+
+    expect((await remove()).status).toBe(204);
+    expect(await prisma.user.findUnique({ where: { id: member.id } })).toBeNull();
+    expect((await login('Strong1234')).status).toBe(401);
+  });
+
+  it('never touches admins or another hospital', async () => {
+    const { admin, patch, remove } = await withNurse();
+    const other = await as('ADMIN');
+    const theirs = (await other.post('/api/staff', employee())).body.member;
+    const adminUser = await prisma.user.findFirst({
+      where: { hospitalId: admin.hospitalId, role: 'ADMIN' },
+    });
+
+    for (const id of [theirs.id, adminUser!.id]) {
+      // Valid data, so the refusal can only come from who the account belongs to.
+      expect((await patch(update({ role: 'ACCOUNTANT' }), id)).status).toBe(404);
+      expect((await remove(id)).status).toBe(404);
+    }
+    expect(await prisma.user.findUnique({ where: { id: theirs.id } })).not.toBeNull();
+  });
+});

@@ -1,4 +1,4 @@
-import type { CreateStaffData } from '@nabd/shared';
+import type { CreateStaffData, StaffFilter, UpdateStaffData } from '@nabd/shared';
 import { Prisma } from '../generated/prisma/client.js';
 import { hashPassword } from '../lib/password.js';
 import type { ScopedPrisma } from '../lib/scopedPrisma.js';
@@ -36,14 +36,115 @@ function toPublic({ staffProfile, doctorProfile, ...user }: StaffRow) {
   };
 }
 
-/** Everyone who works in the hospital (not patients), newest first. */
-export async function listStaff(db: ScopedPrisma) {
+/**
+ * Everyone who works in the hospital (not patients), newest first, optionally
+ * narrowed by a search over name, email and phone, a role and a department.
+ */
+export async function listStaff(db: ScopedPrisma, filter: StaffFilter = {}) {
+  const contains = filter.search
+    ? { contains: filter.search, mode: 'insensitive' as const }
+    : undefined;
   const staff = await db.user.findMany({
-    where: { role: { not: 'PATIENT' } },
+    where: {
+      role: filter.role ?? { not: 'PATIENT' },
+      ...(filter.departmentId && { staffProfile: { departmentId: filter.departmentId } }),
+      ...(contains && { OR: [{ fullName: contains }, { email: contains }, { phone: contains }] }),
+    },
     select: staffSelect,
     orderBy: { createdAt: 'desc' },
   });
   return staff.map(toPublic);
+}
+
+/** Only employees are managed here: never admins or patients. */
+async function requireEmployee(db: ScopedPrisma, id: string) {
+  const user = await db.user.findUnique({ where: { id }, select: { role: true } });
+  if (!user || user.role === 'ADMIN' || user.role === 'PATIENT') {
+    throw new HttpError(404, 'NOT_FOUND', 'Employee not found');
+  }
+}
+
+async function requireDepartment(db: ScopedPrisma, departmentId: string | null) {
+  if (!departmentId) return;
+  const department = await db.department.findUnique({
+    where: { id: departmentId },
+    select: { id: true },
+  });
+  if (!department) throw new HttpError(404, 'NOT_FOUND', 'Department not found');
+}
+
+/**
+ * Edits an employee (task 1.28). A new password or a suspension ends every open
+ * session of that employee at once, so an old password stops working everywhere.
+ */
+export async function updateStaff(
+  db: ScopedPrisma,
+  hospitalId: string,
+  id: string,
+  input: UpdateStaffData,
+) {
+  await requireEmployee(db, id);
+  await requireDepartment(db, input.departmentId);
+  const passwordHash = input.password ? await hashPassword(input.password) : undefined;
+
+  try {
+    const user = await db.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id },
+        data: {
+          fullName: input.fullName,
+          phone: input.phone,
+          role: input.role,
+          email: input.email,
+          isActive: input.isActive,
+          ...(passwordHash && { passwordHash }),
+        },
+      });
+      await tx.staffProfile.upsert({
+        where: { userId: id },
+        update: {
+          departmentId: input.departmentId,
+          salary: input.salary,
+          radiologyModality: input.radiologyModality,
+        },
+        create: {
+          hospitalId,
+          userId: id,
+          departmentId: input.departmentId,
+          salary: input.salary,
+          radiologyModality: input.radiologyModality,
+        },
+      });
+      if (input.role === 'DOCTOR') {
+        await tx.doctorProfile.upsert({
+          where: { userId: id },
+          update: { specialty: input.specialty ?? '' },
+          create: { hospitalId, userId: id, specialty: input.specialty ?? '' },
+        });
+      } else {
+        await tx.doctorProfile.deleteMany({ where: { userId: id } });
+      }
+      if (passwordHash || !input.isActive) {
+        await tx.refreshToken.updateMany({
+          where: { userId: id, revokedAt: null },
+          data: { revokedAt: new Date() },
+        });
+      }
+      return tx.user.findUniqueOrThrow({ where: { id }, select: staffSelect });
+    });
+    return toPublic(user);
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      throw new HttpError(409, 'EMAIL_TAKEN', input.email);
+    }
+    throw error;
+  }
+}
+
+/** Removes an employee and their login (profiles and sessions go with them). */
+export async function deleteStaff(db: ScopedPrisma, id: string) {
+  await requireEmployee(db, id);
+  await db.user.delete({ where: { id } });
 }
 
 /**

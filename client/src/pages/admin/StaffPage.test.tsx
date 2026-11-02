@@ -61,9 +61,49 @@ beforeEach(() => {
       });
       return { status: 201, data: { member: staff[0] } };
     }
-    return { status: 200, data: { staff } };
+    const id = config.url?.match(/^\/staff\/(.+)$/)?.[1];
+    if (id && config.method === 'patch') {
+      const body = JSON.parse(config.data as string);
+      const index = staff.findIndex((member) => member.id === id);
+      staff[index] = { ...staff[index], ...body };
+      return { status: 200, data: { member: staff[index] } };
+    }
+    if (id && config.method === 'delete') {
+      staff = staff.filter((member) => member.id !== id);
+      return { status: 204, data: '' };
+    }
+    const { search = '', role, departmentId } = (config.params ?? {}) as Record<string, string>;
+    return {
+      status: 200,
+      data: {
+        staff: staff.filter(
+          (member) =>
+            member.fullName.includes(search) &&
+            (!role || member.role === role) &&
+            (!departmentId || member.department?.id === departmentId),
+        ),
+      },
+    };
   });
 });
+
+function member(overrides: Partial<StaffMember>): StaffMember {
+  return {
+    id: 's1',
+    fullName: 'لينا',
+    email: 'lina@amal.org',
+    phone: null,
+    role: 'NURSE',
+    isActive: true,
+    department: CARDIOLOGY,
+    salary: 900000,
+    radiologyModality: null,
+    specialty: null,
+    ...overrides,
+  };
+}
+
+const staffCalls = () => fake.calls.filter((c) => c.url === '/staff' && c.method === 'get');
 
 async function openDialog() {
   const user = userEvent.setup();
@@ -163,5 +203,102 @@ describe('StaffPage', () => {
     await user.click(within(dialog).getByRole('button', { name: 'إضافة الموظف' }));
 
     expect(await within(dialog).findByText('في حساب بهالإيميل بالمستشفى')).toBeInTheDocument();
+  });
+
+  it('searches after a pause in typing and filters by role, keeping both in the URL', async () => {
+    staff = [
+      member({ id: 's1', fullName: 'لينا' }),
+      member({ id: 's2', fullName: 'سامر', role: 'ACCOUNTANT', department: null }),
+    ];
+    renderApp('/admin/staff');
+    const user = userEvent.setup();
+    const table = await screen.findByRole('table', { name: 'قائمة الموظفين' });
+    expect(within(table).getByText('سامر')).toBeInTheDocument();
+
+    await user.type(screen.getByRole('searchbox', { name: 'بحث' }), 'لي');
+    await waitFor(() => expect(within(table).queryByText('سامر')).toBeNull());
+    expect(staffCalls().at(-1)!.params).toMatchObject({ search: 'لي' });
+    expect(screen.getByText('النتائج: 1')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'مسح الفلاتر' }));
+    expect(await within(table).findByText('سامر')).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByRole('combobox', { name: 'الدور' }), 'ACCOUNTANT');
+    await waitFor(() => expect(within(table).queryByText('لينا')).toBeNull());
+    expect(staffCalls().at(-1)!.params).toMatchObject({ role: 'ACCOUNTANT' });
+  });
+
+  it('reads the filters from the URL and explains when nothing matches', async () => {
+    staff = [member({})];
+    renderApp('/admin/staff?search=xyz');
+
+    expect(await screen.findByText('ما في موظفين بهالبحث')).toBeInTheDocument();
+    expect(screen.getByRole('searchbox', { name: 'بحث' })).toHaveValue('xyz');
+  });
+
+  it('edits an employee without touching the password, and can suspend them', async () => {
+    staff = [member({})];
+    renderApp('/admin/staff');
+    const user = userEvent.setup();
+    await user.click(
+      within(await screen.findByRole('table', { name: 'قائمة الموظفين' })).getByRole('button', {
+        name: 'تعديل لينا',
+      }),
+    );
+    const dialog = await screen.findByRole('dialog', { name: 'تعديل بيانات لينا' });
+
+    expect(within(dialog).getByLabelText(/الاسم الكامل/)).toHaveValue('لينا');
+    await user.clear(within(dialog).getByLabelText(/الاسم الكامل/));
+    await user.type(within(dialog).getByLabelText(/الاسم الكامل/), 'لينا الخوري');
+    await user.click(within(dialog).getByRole('switch', { name: /الحساب مفعّل/ }));
+    await user.click(within(dialog).getByRole('button', { name: 'حفظ التغييرات' }));
+
+    await waitFor(() => expect(fake.calls.some((c) => c.method === 'patch')).toBe(true));
+    const patch = fake.calls.find((c) => c.method === 'patch')!;
+    expect(patch.url).toBe('/staff/s1');
+    expect(JSON.parse(patch.data as string)).toMatchObject({
+      fullName: 'لينا الخوري',
+      password: null,
+      isActive: false,
+      departmentId: CARDIOLOGY.id,
+    });
+    const table = screen.getByRole('table', { name: 'قائمة الموظفين' });
+    expect(await within(table).findByText('موقوف')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: /بيانات دخول/ })).toBeNull();
+  });
+
+  it('hands over a new password set while editing', async () => {
+    staff = [member({})];
+    renderApp('/admin/staff');
+    const user = userEvent.setup();
+    await user.click(
+      within(await screen.findByRole('table', { name: 'قائمة الموظفين' })).getByRole('button', {
+        name: 'تعديل لينا',
+      }),
+    );
+    const dialog = await screen.findByRole('dialog', { name: 'تعديل بيانات لينا' });
+
+    await user.type(within(dialog).getByLabelText(/كلمة سر جديدة/), 'NewPass5678');
+    await user.click(within(dialog).getByRole('button', { name: 'حفظ التغييرات' }));
+
+    const credentials = await screen.findByRole('dialog', { name: 'بيانات دخول لينا' });
+    expect(within(credentials).getByText('NewPass5678')).toBeInTheDocument();
+  });
+
+  it('deletes an employee after confirming', async () => {
+    staff = [member({})];
+    renderApp('/admin/staff');
+    const user = userEvent.setup();
+    await user.click(
+      within(await screen.findByRole('table', { name: 'قائمة الموظفين' })).getByRole('button', {
+        name: 'حذف لينا',
+      }),
+    );
+    const confirm = await screen.findByRole('dialog', { name: 'حذف لينا؟' });
+
+    await user.click(within(confirm).getByRole('button', { name: 'حذف لينا' }));
+
+    expect(await screen.findByText('لسا ما في موظفين')).toBeInTheDocument();
+    expect(fake.calls.some((c) => c.method === 'delete' && c.url === '/staff/s1')).toBe(true);
   });
 });

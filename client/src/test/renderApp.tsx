@@ -6,7 +6,10 @@ import { routes } from '@/app/router';
 
 /** Renders the real routes at `path`, wrapped like main.tsx wraps the app. */
 export function renderApp(path: string, state?: unknown) {
-  const router = createMemoryRouter(routes, { initialEntries: [{ pathname: path, state }] });
+  const [pathname, search = ''] = path.split('?');
+  const router = createMemoryRouter(routes, {
+    initialEntries: [{ pathname, search: search && `?${search}`, state }],
+  });
   render(
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
