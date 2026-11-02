@@ -8,6 +8,8 @@ export type FieldProps = {
   hint?: string;
   error?: string;
   required?: boolean;
+  /** Keeps the label for screen readers only, where the row already says what it is. */
+  hideLabel?: boolean;
   className?: string;
   /** Receives the ids to wire the control to its label, hint and error. */
   children: (control: {
@@ -20,7 +22,15 @@ export type FieldProps = {
 
 // Label + control + hint/error, wired for screen readers. Used by Input, Textarea
 // and Select; works with React Hook Form by passing its error message.
-export function Field({ label, hint, error, required, className, children }: FieldProps) {
+export function Field({
+  label,
+  hint,
+  error,
+  required,
+  hideLabel,
+  className,
+  children,
+}: FieldProps) {
   const id = useId();
   const messageId = `${id}-message`;
   const message = error ?? hint;
@@ -30,7 +40,10 @@ export function Field({ label, hint, error, required, className, children }: Fie
       {/* The label takes the accent color while its control has focus */}
       <label
         htmlFor={id}
-        className="text-sm font-medium text-foreground transition-colors group-focus-within/field:text-accent"
+        className={cn(
+          'text-sm font-medium text-foreground transition-colors group-focus-within/field:text-accent',
+          hideLabel && 'sr-only',
+        )}
       >
         {label}
         {required && (

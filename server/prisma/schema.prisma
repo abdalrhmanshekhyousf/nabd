@@ -106,15 +106,16 @@ model Hospital {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  departments    Department[]
-  rooms          Room[]
-  beds           Bed[]
-  operatingRooms OperatingRoom[]
-  users          User[]
-  doctorProfiles DoctorProfile[]
-  staffProfiles  StaffProfile[]
-  patients       Patient[]
-  refreshTokens  RefreshToken[]
+  departments        Department[]
+  rooms              Room[]
+  beds               Bed[]
+  operatingRooms     OperatingRoom[]
+  users              User[]
+  doctorProfiles     DoctorProfile[]
+  staffProfiles      StaffProfile[]
+  patients           Patient[]
+  refreshTokens      RefreshToken[]
+  cleanerAssignments CleanerAssignment[]
 }
 
 model Department {
@@ -125,9 +126,10 @@ model Department {
   createdAt  DateTime        @default(now())
   updatedAt  DateTime        @updatedAt
 
-  hospital Hospital       @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  hospital Hospital            @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
   rooms    Room[]
   staff    StaffProfile[]
+  cleaners CleanerAssignment[]
 
   @@unique([hospitalId, name])
   @@unique([hospitalId, code])
@@ -203,11 +205,12 @@ model User {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  hospital      Hospital       @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  staffProfile  StaffProfile?
-  doctorProfile DoctorProfile?
-  patient       Patient?
-  refreshTokens RefreshToken[]
+  hospital           Hospital            @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  staffProfile       StaffProfile?
+  doctorProfile      DoctorProfile?
+  patient            Patient?
+  refreshTokens      RefreshToken[]
+  cleanerAssignments CleanerAssignment[]
 
   @@unique([hospitalId, email])
   @@index([hospitalId, role])
@@ -231,6 +234,22 @@ model StaffProfile {
   user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   department Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
 
+  @@index([hospitalId, departmentId])
+}
+
+// A cleaner works across several departments (task 1.29); one row per department.
+model CleanerAssignment {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  hospitalId   String   @db.Uuid
+  userId       String   @db.Uuid
+  departmentId String   @db.Uuid
+  createdAt    DateTime @default(now())
+
+  hospital   Hospital   @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, departmentId])
   @@index([hospitalId, departmentId])
 }
 

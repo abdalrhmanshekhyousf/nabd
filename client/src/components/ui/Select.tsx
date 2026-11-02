@@ -7,7 +7,7 @@ import { Field, type FieldProps } from './Field';
 export type SelectOption = { value: string; label: string; disabled?: boolean };
 
 export type SelectProps = Omit<ComponentProps<'select'>, 'children'> &
-  Pick<FieldProps, 'label' | 'hint' | 'error'> & {
+  Pick<FieldProps, 'label' | 'hint' | 'error' | 'hideLabel'> & {
     options: SelectOption[];
     /** Empty first option, e.g. "Choose a department". */
     placeholder?: string;
@@ -20,6 +20,7 @@ export function Select({
   label,
   hint,
   error,
+  hideLabel,
   options,
   placeholder,
   required,
@@ -38,6 +39,7 @@ export function Select({
       hint={hint}
       error={error}
       required={required}
+      hideLabel={hideLabel}
       className={containerClassName}
     >
       {(control) => (

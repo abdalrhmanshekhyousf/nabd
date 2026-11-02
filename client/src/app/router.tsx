@@ -11,6 +11,7 @@ import { HospitalSettingsPage } from '@/pages/admin/HospitalSettingsPage';
 import { OperatingRoomsPage } from '@/pages/admin/OperatingRoomsPage';
 import { RoomsPage } from '@/pages/admin/RoomsPage';
 import { StaffPage } from '@/pages/admin/StaffPage';
+import { AssignmentsPage } from '@/pages/admin/AssignmentsPage';
 import { ComingSoonPage } from '@/pages/ComingSoonPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { LoginPage } from '@/pages/LoginPage';
@@ -36,6 +37,7 @@ export const BUILT_PAGES: Partial<Record<`${Role}:${string}`, ReactElement>> = {
   'ADMIN:rooms': <RoomsPage />,
   'ADMIN:operating-rooms': <OperatingRoomsPage />,
   'ADMIN:staff': <StaffPage />,
+  'ADMIN:assignments': <AssignmentsPage />,
   'ADMIN:settings': <HospitalSettingsPage />,
 };
 

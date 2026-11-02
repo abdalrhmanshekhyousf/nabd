@@ -57,6 +57,7 @@ beforeEach(() => {
         id: `s${staff.length + 1}`,
         isActive: true,
         department: body.departmentId ? CARDIOLOGY : null,
+        cleanerDepartments: [],
         ...body,
       });
       return { status: 201, data: { member: staff[0] } };
@@ -99,6 +100,7 @@ function member(overrides: Partial<StaffMember>): StaffMember {
     salary: 900000,
     radiologyModality: null,
     specialty: null,
+    cleanerDepartments: [],
     ...overrides,
   };
 }
@@ -191,6 +193,7 @@ describe('StaffPage', () => {
         salary: 0,
         radiologyModality: null,
         specialty: null,
+        cleanerDepartments: [],
       },
     ];
     renderApp('/admin/staff');
@@ -300,5 +303,28 @@ describe('StaffPage', () => {
 
     expect(await screen.findByText('لسا ما في موظفين')).toBeInTheDocument();
     expect(fake.calls.some((c) => c.method === 'delete' && c.url === '/staff/s1')).toBe(true);
+  });
+
+  it('sends cleaners to the assignments page and lists every department they cover', async () => {
+    staff = [
+      member({
+        id: 's9',
+        fullName: 'أبو أحمد',
+        role: 'CLEANER',
+        department: null,
+        cleanerDepartments: [CARDIOLOGY, { id: 'd2', name: 'جناح الأطفال', code: null }],
+      }),
+    ];
+    renderApp('/admin/staff');
+    const table = await screen.findByRole('table', { name: 'قائمة الموظفين' });
+    expect(within(table).getByText('القلبية، جناح الأطفال')).toBeInTheDocument();
+
+    const { user, dialog } = await openDialog();
+    await user.selectOptions(within(dialog).getByLabelText(/الدور/), 'CLEANER');
+
+    expect(within(dialog).queryByRole('combobox', { name: /القسم/ })).toBeNull();
+    expect(
+      within(dialog).getByRole('link', { name: 'أقسام عامل النظافة بتتحدد من صفحة توزيع الفرق' }),
+    ).toHaveAttribute('href', '/admin/assignments');
   });
 });

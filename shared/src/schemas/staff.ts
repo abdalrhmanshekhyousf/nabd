@@ -29,6 +29,9 @@ export type RadiologyModality = (typeof RADIOLOGY_MODALITIES)[number];
 /** Doctors and nurses always belong to a department (a nurse's work follows it). */
 export const ROLES_NEEDING_DEPARTMENT: readonly StaffRole[] = ['DOCTOR', 'NURSE'];
 
+/** Cleaners cover several departments, set on the assignments page (task 1.29). */
+export const ROLES_WITH_MANY_DEPARTMENTS: readonly StaffRole[] = ['CLEANER'];
+
 export const MAX_SALARY = 1_000_000_000;
 
 /** An optional phone number: an empty field becomes null. */
@@ -84,6 +87,7 @@ function checkRoleDetails(staff: RoleDetails, context: z.RefinementCtx) {
 function dropOtherRoleDetails<T extends RoleDetails>(staff: T): T {
   return {
     ...staff,
+    departmentId: ROLES_WITH_MANY_DEPARTMENTS.includes(staff.role) ? null : staff.departmentId,
     specialty: staff.role === 'DOCTOR' ? staff.specialty : null,
     radiologyModality: staff.role === 'RADIOLOGIST' ? staff.radiologyModality : null,
   };
@@ -108,6 +112,17 @@ export const updateStaffSchema = z
   .superRefine(checkRoleDetails)
   .transform(dropOtherRoleDetails);
 
+/** PUT /assignments/nurses/:id: the one department a nurse works in (task 1.29). */
+export const assignNurseSchema = z.object({ departmentId: id() });
+
+/** PUT /assignments/cleaners/:id: every department a cleaner covers; may be empty. */
+export const assignCleanerSchema = z.object({
+  departmentIds: z
+    .array(id())
+    .max(100, 'validation.tooMany')
+    .transform((ids) => [...new Set(ids)]),
+});
+
 /** GET /staff query: free-text search plus role and department filters. */
 export const staffFilterSchema = z.object({
   search: z.string().trim().max(100).optional(),
@@ -120,3 +135,5 @@ export type CreateStaffData = z.output<typeof createStaffSchema>;
 export type UpdateStaffInput = z.input<typeof updateStaffSchema>;
 export type UpdateStaffData = z.output<typeof updateStaffSchema>;
 export type StaffFilter = z.infer<typeof staffFilterSchema>;
+export type AssignNurseInput = z.infer<typeof assignNurseSchema>;
+export type AssignCleanerInput = z.infer<typeof assignCleanerSchema>;

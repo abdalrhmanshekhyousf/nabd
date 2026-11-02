@@ -3,6 +3,7 @@ import {
   createStaffSchema,
   RADIOLOGY_MODALITIES,
   ROLES_NEEDING_DEPARTMENT,
+  ROLES_WITH_MANY_DEPARTMENTS,
   STAFF_ROLES,
   updateStaffSchema,
   type RadiologyModality,
@@ -23,6 +24,7 @@ import {
   KeyRound,
   Lock,
   Mail,
+  Network,
   Pencil,
   Phone,
   Search,
@@ -36,7 +38,7 @@ import {
 import { useEffect, useState, type ReactNode } from 'react';
 import { Controller, useForm, useWatch, type Resolver } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { queryKeys } from '@/app/queryKeys';
 import { departmentLabel, type Department } from '@/components/departments/departmentDisplay';
 import {
@@ -68,6 +70,8 @@ export type StaffMember = {
   salary: number;
   radiologyModality: RadiologyModality | null;
   specialty: string | null;
+  /** Only cleaners: every department they cover (task 1.29). */
+  cleanerDepartments: Pick<Department, 'id' | 'name' | 'code'>[];
 };
 
 type Credentials = { name: string; email: string; password: string };
@@ -249,19 +253,33 @@ function StaffForm({
           error={errorText(errors.role?.message, t)}
           {...register('role')}
         />
-        <Select
-          label={
-            needsDepartment
-              ? t('staff.department')
-              : `${t('staff.department')} (${t('staff.optional')})`
-          }
-          placeholder={needsDepartment ? t('staff.chooseDepartment') : t('staff.noDepartment')}
-          required={needsDepartment}
-          options={departmentOptions}
-          error={errorText(errors.departmentId?.message, t)}
-          hint={departments.length === 0 ? t('staff.noDepartmentsHint') : undefined}
-          {...register('departmentId', { setValueAs: emptyToNull })}
-        />
+        {ROLES_WITH_MANY_DEPARTMENTS.includes(role) ? (
+          // Cleaners cover several departments, chosen on the assignments page.
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium text-foreground">{t('staff.department')}</span>
+            <Link
+              to="/admin/assignments"
+              className="flex min-h-11 items-center gap-2 rounded-lg border border-dashed border-border px-3 text-sm text-muted transition-colors hover:border-accent/50 hover:text-accent"
+            >
+              <Network className="size-4 shrink-0" aria-hidden="true" />
+              {t('staff.cleanerHint')}
+            </Link>
+          </div>
+        ) : (
+          <Select
+            label={
+              needsDepartment
+                ? t('staff.department')
+                : `${t('staff.department')} (${t('staff.optional')})`
+            }
+            placeholder={needsDepartment ? t('staff.chooseDepartment') : t('staff.noDepartment')}
+            required={needsDepartment}
+            options={departmentOptions}
+            error={errorText(errors.departmentId?.message, t)}
+            hint={departments.length === 0 ? t('staff.noDepartmentsHint') : undefined}
+            {...register('departmentId', { setValueAs: emptyToNull })}
+          />
+        )}
         <div className="sm:col-span-2">
           <Reveal show={role === 'DOCTOR'}>
             <Input
@@ -631,7 +649,12 @@ export function StaffPage() {
     {
       key: 'department',
       header: t('staff.colDepartment'),
-      cell: (member) => (member.department ? departmentLabel(member.department, t) : '—'),
+      cell: (member) => {
+        const covered = member.department ? [member.department] : member.cleanerDepartments;
+        return covered.length > 0
+          ? covered.map((department) => departmentLabel(department, t)).join('، ')
+          : '—';
+      },
     },
     {
       key: 'salary',

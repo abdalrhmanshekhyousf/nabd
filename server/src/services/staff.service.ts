@@ -20,12 +20,16 @@ const staffSelect = {
     },
   },
   doctorProfile: { select: { specialty: true, status: true } },
+  cleanerAssignments: {
+    select: { department: { select: { id: true, name: true, code: true } } },
+    orderBy: { createdAt: 'asc' },
+  },
 } as const satisfies Prisma.UserSelect;
 
 type StaffRow = Prisma.UserGetPayload<{ select: typeof staffSelect }>;
 
 /** A flat shape for the client; the salary leaves the database as a Decimal. */
-function toPublic({ staffProfile, doctorProfile, ...user }: StaffRow) {
+function toPublic({ staffProfile, doctorProfile, cleanerAssignments, ...user }: StaffRow) {
   return {
     ...user,
     department: staffProfile?.department ?? null,
@@ -33,6 +37,8 @@ function toPublic({ staffProfile, doctorProfile, ...user }: StaffRow) {
     radiologyModality: staffProfile?.radiologyModality ?? null,
     specialty: doctorProfile?.specialty ?? null,
     doctorStatus: doctorProfile?.status ?? null,
+    // A cleaner covers several departments (task 1.29).
+    cleanerDepartments: cleanerAssignments.map((assignment) => assignment.department),
   };
 }
 
@@ -47,8 +53,17 @@ export async function listStaff(db: ScopedPrisma, filter: StaffFilter = {}) {
   const staff = await db.user.findMany({
     where: {
       role: filter.role ?? { not: 'PATIENT' },
-      ...(filter.departmentId && { staffProfile: { departmentId: filter.departmentId } }),
-      ...(contains && { OR: [{ fullName: contains }, { email: contains }, { phone: contains }] }),
+      AND: [
+        filter.departmentId
+          ? {
+              OR: [
+                { staffProfile: { departmentId: filter.departmentId } },
+                { cleanerAssignments: { some: { departmentId: filter.departmentId } } },
+              ],
+            }
+          : {},
+        contains ? { OR: [{ fullName: contains }, { email: contains }, { phone: contains }] } : {},
+      ],
     },
     select: staffSelect,
     orderBy: { createdAt: 'desc' },
@@ -123,6 +138,9 @@ export async function updateStaff(
         });
       } else {
         await tx.doctorProfile.deleteMany({ where: { userId: id } });
+      }
+      if (input.role !== 'CLEANER') {
+        await tx.cleanerAssignment.deleteMany({ where: { userId: id } });
       }
       if (passwordHash || !input.isActive) {
         await tx.refreshToken.updateMany({

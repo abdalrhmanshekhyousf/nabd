@@ -3,6 +3,8 @@ import {
   bedServiceSchema,
   createStaffSchema,
   staffFilterSchema,
+  assignCleanerSchema,
+  assignNurseSchema,
   updateStaffSchema,
   createBedSchema,
   createRoomSchema,
@@ -179,7 +181,16 @@ describe('client output is valid server input', () => {
         password: 'Strong1234',
       },
     ],
-
+    [assignNurseSchema, { departmentId: '0199a3d2-6c55-7000-8000-000000000001' }],
+    [
+      assignCleanerSchema,
+      {
+        departmentIds: [
+          '0199a3d2-6c55-7000-8000-000000000001',
+          '0199a3d2-6c55-7000-8000-000000000001',
+        ],
+      },
+    ],
     [hospitalInfoSchema, { name: 'x', address: 'y', phone: '0991234567', email: 'I@X.co' }],
   ] as const;
 
@@ -280,5 +291,36 @@ describe('staffFilterSchema', () => {
     expect(staffFilterSchema.parse({})).toEqual({});
     expect(staffFilterSchema.parse({ search: '  لينا ' }).search).toBe('لينا');
     expect(staffFilterSchema.safeParse({ role: 'ADMIN' }).success).toBe(false);
+  });
+});
+
+describe('cleaner and nurse assignments', () => {
+  const A = '0199a3d2-6c55-7000-8000-000000000001';
+  const B = '0199a3d2-6c55-7000-8000-000000000002';
+
+  it('keeps each cleaner department once and allows none', () => {
+    expect(assignCleanerSchema.parse({ departmentIds: [A, B, A] }).departmentIds).toEqual([A, B]);
+    expect(assignCleanerSchema.parse({ departmentIds: [] }).departmentIds).toEqual([]);
+    expect(assignCleanerSchema.safeParse({ departmentIds: ['x'] }).success).toBe(false);
+  });
+
+  it('needs a department for a nurse', () => {
+    expect(messages(assignNurseSchema.safeParse({}))).not.toHaveLength(0);
+    expect(assignNurseSchema.parse({ departmentId: A })).toEqual({ departmentId: A });
+  });
+
+  it('does not store a single department for a cleaner', () => {
+    const cleaner = createStaffSchema.parse({
+      fullName: 'أبو أحمد',
+      phone: null,
+      role: 'CLEANER',
+      departmentId: A,
+      specialty: null,
+      radiologyModality: null,
+      salary: 400000,
+      email: 'abu@amal.org',
+      password: 'Strong1234',
+    });
+    expect(cleaner.departmentId).toBeNull();
   });
 });
