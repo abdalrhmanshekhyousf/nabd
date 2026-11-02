@@ -8,6 +8,7 @@ import { AppShell } from '@/layouts/AppShell';
 import { RootLayout } from '@/layouts/RootLayout';
 import { DepartmentsPage } from '@/pages/admin/DepartmentsPage';
 import { HospitalSettingsPage } from '@/pages/admin/HospitalSettingsPage';
+import { OperatingRoomsPage } from '@/pages/admin/OperatingRoomsPage';
 import { RoomsPage } from '@/pages/admin/RoomsPage';
 import { ComingSoonPage } from '@/pages/ComingSoonPage';
 import { DashboardPage } from '@/pages/DashboardPage';
@@ -32,6 +33,7 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
 export const BUILT_PAGES: Partial<Record<`${Role}:${string}`, ReactElement>> = {
   'ADMIN:departments': <DepartmentsPage />,
   'ADMIN:rooms': <RoomsPage />,
+  'ADMIN:operating-rooms': <OperatingRoomsPage />,
   'ADMIN:settings': <HospitalSettingsPage />,
 };
 

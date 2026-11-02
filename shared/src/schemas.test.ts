@@ -7,6 +7,8 @@ import {
   updateRoomSchema,
   hospitalInfoSchema,
   loginSchema,
+  operatingRoomSchema,
+  operatingRoomServiceSchema,
   preferencesSchema,
   registerHospitalFormSchema,
   registerHospitalSchema,
@@ -143,6 +145,8 @@ describe('client output is valid server input', () => {
     [updateRoomSchema, { number: 'A-2', floor: 3 }],
     [createBedSchema, {}],
     [bedServiceSchema, { outOfService: true }],
+    [operatingRoomSchema, { name: ' غرفة العمليات 1 ' }],
+    [operatingRoomServiceSchema, { outOfService: false }],
     [hospitalInfoSchema, { name: 'x', address: 'y', phone: '0991234567', email: 'I@X.co' }],
   ] as const;
 

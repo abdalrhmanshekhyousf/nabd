@@ -52,6 +52,14 @@ const MESSAGES: Record<ErrorCode, Record<Language, string>> = {
     ar: 'هالسرير عليه مريض أو محجوز هلق',
     en: 'This bed is occupied or reserved right now',
   },
+  OPERATING_ROOM_EXISTS: {
+    ar: 'في غرفة عمليات بنفس الاسم',
+    en: 'An operating room with this name already exists',
+  },
+  OPERATING_ROOM_IN_USE: {
+    ar: 'غرفة العمليات مشغولة هلق (حجز أو تحضير أو عملية أو تعقيم)',
+    en: 'The operating room is in use right now (booked, preparing, surgery or sterilization)',
+  },
   FILE_REQUIRED: { ar: 'اختار ملف لترفعه', en: 'Choose a file to upload' },
   FILE_TOO_LARGE: {
     ar: 'الملف أكبر من المسموح (2 ميغا كحد أقصى)',
