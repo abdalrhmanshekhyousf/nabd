@@ -16,6 +16,8 @@ import { ComingSoonPage } from '@/pages/ComingSoonPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
+import { DoctorPatientsPage } from '@/pages/doctor/DoctorPatientsPage';
+import { PatientFilePage } from '@/pages/doctor/PatientFilePage';
 import { PatientRegisterPage } from '@/pages/PatientRegisterPage';
 import { RegisterPage } from '@/pages/RegisterPage';
 
@@ -40,6 +42,18 @@ export const BUILT_PAGES: Partial<Record<`${Role}:${string}`, ReactElement>> = {
   'ADMIN:staff': <StaffPage />,
   'ADMIN:assignments': <AssignmentsPage />,
   'ADMIN:settings': <HospitalSettingsPage />,
+  'DOCTOR:patients': <DoctorPatientsPage />,
+};
+
+// Pages opened from inside a section (not sidebar links), by role.
+const DETAIL_ROUTES: Partial<Record<Role, RouteObject[]>> = {
+  DOCTOR: [
+    {
+      path: 'patients/:patientId',
+      element: <PatientFilePage />,
+      handle: { titleKey: 'nav.patientFile', phase: 2 } satisfies RouteHandle,
+    },
+  ],
 };
 
 // One protected area per role (/admin, /doctor, ...): its dashboard plus a page
@@ -65,6 +79,7 @@ const roleAreas: RouteObject[] = ROLES.map((role) => ({
         element: BUILT_PAGES[`${role}:${item.path}`] ?? <ComingSoonPage />,
         handle: { titleKey: item.labelKey, phase: item.phase } satisfies RouteHandle,
       })),
+    ...(DETAIL_ROUTES[role] ?? []),
   ],
 }));
 

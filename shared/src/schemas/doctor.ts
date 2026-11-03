@@ -10,3 +10,8 @@ export const doctorStatusSchema = z.object({
 });
 
 export type DoctorStatusInput = z.infer<typeof doctorStatusSchema>;
+
+/** GET /doctors/me/patients: optional search by name. */
+export const patientSearchSchema = z.object({
+  search: z.string().trim().max(100).optional(),
+});

@@ -28,6 +28,70 @@ const DEMO_USERS: { role: Role; email: string; fullName: string }[] = [
   { role: 'PATIENT', email: 'patient@nabd.demo', fullName: 'أحمد يوسف' },
 ];
 
+/**
+ * The demo patient is the demo doctor's patient, with a short history (task
+ * 2.7). Only once: a file that already has a doctor is left alone.
+ */
+async function seedMedicalFile(hospitalId: string) {
+  const doctor = await prisma.user.findUnique({
+    where: { hospitalId_email: { hospitalId, email: 'doctor@nabd.demo' } },
+  });
+  const record = await prisma.medicalRecord.findFirst({
+    where: { hospitalId, patient: { user: { email: 'patient@nabd.demo' } } },
+  });
+  if (!doctor || !record || record.doctorId) return;
+
+  await prisma.medicalRecord.update({
+    where: { id: record.id },
+    data: { doctorId: doctor.id, allergies: 'البنسلين', chronicConditions: 'ارتفاع ضغط الدم' },
+  });
+  await prisma.patient.update({
+    where: { id: record.patientId },
+    data: { gender: 'MALE', dateOfBirth: new Date('1968-03-12'), bloodType: 'A+' },
+  });
+  const signed = {
+    hospitalId,
+    recordId: record.id,
+    doctorId: doctor.id,
+    doctorName: doctor.fullName,
+  };
+  await prisma.doctorReport.create({
+    data: {
+      ...signed,
+      title: 'زيارة أولى',
+      diagnosis: 'ارتفاع ضغط الدم',
+      content: 'الضغط 150/95. بلشنا بدواء خافض للضغط، والمراجعة بعد أسبوعين.',
+      createdAt: new Date(Date.now() - 14 * 86_400_000),
+    },
+  });
+  await prisma.doctorReport.create({
+    data: {
+      ...signed,
+      title: 'مراجعة',
+      diagnosis: 'ارتفاع ضغط الدم، تحت السيطرة',
+      content: 'الضغط صار 130/85 مع الدواء. منكمّل على نفس الجرعة.',
+    },
+  });
+  await prisma.prescription.create({
+    data: {
+      ...signed,
+      notes: 'بعد الأكل',
+      items: {
+        create: [
+          {
+            hospitalId,
+            drugName: 'أملوديبين',
+            dose: '5 ملغ',
+            frequency: 'مرة باليوم',
+            durationDays: 30,
+          },
+          { hospitalId, drugName: 'أسبرين', dose: '81 ملغ', frequency: 'مرة باليوم' },
+        ],
+      },
+    },
+  });
+}
+
 async function main() {
   const hospital =
     (await prisma.hospital.findFirst({ where: { name: DEMO_HOSPITAL.name } })) ??
@@ -68,6 +132,8 @@ async function main() {
       },
     });
   }
+
+  await seedMedicalFile(hospitalId);
 
   console.info(`Hospital: ${hospital.name} (${hospital.id})`);
   console.info(`Demo accounts (password ${PASSWORD}):`);

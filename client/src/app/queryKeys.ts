@@ -8,5 +8,7 @@ export const queryKeys = {
   assignments: ['assignments'] as const,
   notifications: ['notifications'] as const,
   doctorStatus: ['doctor-status'] as const,
+  myPatients: (search = '') => ['my-patients', search] as const,
+  patientFile: (patientId: string) => ['patient-file', patientId] as const,
   publicHospitals: (search: string) => ['public-hospitals', search] as const,
 };
