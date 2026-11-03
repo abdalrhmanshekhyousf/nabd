@@ -10,6 +10,7 @@ export * from './schemas/department.js';
 export * from './schemas/doctor.js';
 export * from './schemas/hospital.js';
 export * from './schemas/me.js';
+export * from './schemas/medicalRecord.js';
 export * from './schemas/operatingRoom.js';
 export * from './schemas/room.js';
 export * from './schemas/staff.js';

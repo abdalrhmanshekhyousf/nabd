@@ -388,7 +388,7 @@ function StaffForm({
       </Section>
 
       {/* Actions stay visible at the bottom while the form scrolls. */}
-      <div className="sticky bottom-0 -mx-4 -mb-4 flex flex-col-reverse gap-2 border-t border-border bg-surface p-4 sm:-mx-5 sm:-mb-5 sm:flex-row sm:justify-end sm:px-5">
+      <div className="sticky -bottom-4 -mx-4 -mb-4 flex flex-col-reverse gap-2 border-t border-border bg-surface p-4 sm:-bottom-5 sm:-mx-5 sm:-mb-5 sm:flex-row sm:justify-end sm:px-5">
         <Button variant="ghost" onClick={onCancel}>
           {t('common.cancel')}
         </Button>

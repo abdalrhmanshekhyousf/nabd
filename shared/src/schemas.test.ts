@@ -9,6 +9,8 @@ import {
   registerPatientFormSchema,
   hospitalSearchSchema,
   doctorStatusSchema,
+  createReportSchema,
+  createPrescriptionSchema,
   updateStaffSchema,
   createBedSchema,
   createRoomSchema,
@@ -199,6 +201,22 @@ describe('client output is valid server input', () => {
     ],
     [hospitalSearchSchema, { search: ' دار ' }],
     [doctorStatusSchema, { status: 'BUSY' }],
+    [createReportSchema, { title: ' مراجعة ', diagnosis: '', content: 'مستقر' }],
+    [
+      createPrescriptionSchema,
+      {
+        items: [
+          {
+            drugName: 'أملوديبين',
+            dose: '5 ملغ',
+            frequency: 'مرة باليوم',
+            durationDays: 30,
+            instructions: '',
+          },
+        ],
+        notes: null,
+      },
+    ],
     [assignNurseSchema, { departmentId: '0199a3d2-6c55-7000-8000-000000000001' }],
     [
       assignCleanerSchema,
@@ -397,5 +415,33 @@ describe('doctorStatusSchema', () => {
     expect(messages(doctorStatusSchema.safeParse({ status: 'SLEEPING' }))).toEqual([
       'validation.required',
     ]);
+  });
+});
+
+describe('report and prescription schemas', () => {
+  it('needs a title and text for a report; the diagnosis is optional', () => {
+    expect(
+      createReportSchema.parse({ title: 'x', diagnosis: '  ', content: 'y' }).diagnosis,
+    ).toBeNull();
+    expect(
+      messages(createReportSchema.safeParse({ title: '', diagnosis: null, content: '' })),
+    ).toEqual(['validation.required', 'validation.required']);
+  });
+
+  it('needs at least one complete medicine', () => {
+    expect(messages(createPrescriptionSchema.safeParse({ items: [], notes: null }))).toEqual([
+      'validation.required',
+    ]);
+    const missingDose = createPrescriptionSchema.safeParse({
+      items: [{ drugName: 'x', dose: '', frequency: 'y', durationDays: null, instructions: null }],
+      notes: null,
+    });
+    expect(missingDose.error?.issues[0].path).toEqual(['items', 0, 'dose']);
+    expect(
+      createPrescriptionSchema.safeParse({
+        items: [{ drugName: 'x', dose: 'y', frequency: 'z', durationDays: 0, instructions: null }],
+        notes: null,
+      }).success,
+    ).toBe(false);
   });
 });

@@ -110,6 +110,8 @@ const FILE: PatientFile = {
   ],
 };
 
+let file: PatientFile;
+
 beforeAll(() => {
   MotionGlobalConfig.skipAnimations = true;
 });
@@ -121,7 +123,33 @@ beforeEach(() => {
   queryClient.clear();
   fake.calls.length = 0;
   useSessionStore.setState({ status: 'authenticated', user: DOCTOR });
+  file = structuredClone(FILE);
   fake.respond((config) => {
+    if (config.method === 'post' && config.url === `/doctors/me/patients/${SARA}/reports`) {
+      const body = JSON.parse(config.data as string);
+      const report = {
+        id: `rep${file.reports.length + 1}`,
+        doctorName: 'د. ريم العلي',
+        createdAt: new Date().toISOString(),
+        ...body,
+      };
+      file.reports.unshift(report);
+      return { status: 201, data: { report } };
+    }
+    if (config.method === 'post' && config.url === `/doctors/me/patients/${SARA}/prescriptions`) {
+      const body = JSON.parse(config.data as string);
+      const prescription = {
+        id: 'p2',
+        doctorName: 'د. ريم العلي',
+        status: 'PENDING' as const,
+        createdAt: new Date().toISOString(),
+        dispensedAt: null,
+        notes: body.notes || null,
+        items: body.items.map((item: object, i: number) => ({ id: `n${i}`, ...item })),
+      };
+      file.prescriptions.unshift(prescription);
+      return { status: 201, data: { prescription } };
+    }
     if (config.url === '/doctors/me/patients') {
       const search = (config.params?.search as string | undefined) ?? '';
       return {
@@ -129,7 +157,7 @@ beforeEach(() => {
         data: { patients: PATIENTS.filter((p) => (p.fullName ?? '').includes(search)) },
       };
     }
-    if (config.url === `/doctors/me/patients/${SARA}`) return { status: 200, data: FILE };
+    if (config.url === `/doctors/me/patients/${SARA}`) return { status: 200, data: file };
     if (config.url?.startsWith('/doctors/me/patients/')) {
       return apiError(404, 'NOT_FOUND', 'المطلوب غير موجود');
     }
@@ -195,5 +223,90 @@ describe('DoctorPatientsPage', () => {
     expect(await screen.findByText('ما لقينا هالمريض بين مرضاك')).toBeInTheDocument();
     await user.click(screen.getByRole('link', { name: 'رجوع لمرضاي' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/doctor/patients'));
+  });
+});
+
+describe('writing in the file', () => {
+  const posted = (kind: string) =>
+    JSON.parse(
+      fake.calls.find((c) => c.method === 'post' && c.url?.endsWith(kind))!.data as string,
+    );
+
+  async function openFile() {
+    const user = userEvent.setup();
+    renderApp(`/doctor/patients/${SARA}`);
+    await screen.findByRole('heading', { name: 'سارة الأحمد' });
+    return user;
+  }
+
+  it('writes a report that shows at the top of the file', async () => {
+    const user = await openFile();
+    await user.click(screen.getByRole('button', { name: 'كتابة تقرير' }));
+    const dialog = await screen.findByRole('dialog', { name: 'تقرير جديد لـسارة الأحمد' });
+
+    await user.click(within(dialog).getByRole('button', { name: 'حفظ التقرير' }));
+    expect(await within(dialog).findAllByText('هالحقل مطلوب')).toHaveLength(2);
+
+    await user.type(within(dialog).getByLabelText(/عنوان التقرير/), 'مراجعة طارئة');
+    await user.type(within(dialog).getByLabelText(/نص التقرير/), 'ألم بالصدر، تخطيط طبيعي.');
+    await user.click(within(dialog).getByRole('button', { name: 'حفظ التقرير' }));
+
+    expect(await screen.findByText('انحفظ التقرير بملف سارة الأحمد')).toBeInTheDocument();
+    expect(posted('/reports')).toEqual({
+      title: 'مراجعة طارئة',
+      diagnosis: null,
+      content: 'ألم بالصدر، تخطيط طبيعي.',
+    });
+    const reports = screen.getByRole('region', { name: 'التقارير الطبية' });
+    await waitFor(() =>
+      expect(within(reports).getAllByRole('listitem')[0]).toHaveTextContent('مراجعة طارئة'),
+    );
+  });
+
+  it('writes a prescription of several medicines, reminding of allergies', async () => {
+    const user = await openFile();
+    await user.click(screen.getByRole('button', { name: 'وصفة جديدة' }));
+    const dialog = await screen.findByRole('dialog', { name: 'وصفة جديدة لـسارة الأحمد' });
+    expect(within(dialog).getByRole('note')).toHaveTextContent('حساسية من البنسلين');
+
+    await user.click(within(dialog).getByRole('button', { name: 'إضافة دواء' }));
+    await user.click(within(dialog).getByRole('button', { name: 'إضافة دواء' }));
+    await user.click(within(dialog).getByRole('button', { name: 'إزالة الدواء 3' }));
+    await waitFor(() => expect(within(dialog).getAllByLabelText(/اسم الدواء/)).toHaveLength(2));
+
+    const [firstName, secondName] = within(dialog).getAllByLabelText(/اسم الدواء/);
+    const [firstDose, secondDose] = within(dialog).getAllByLabelText(/^الجرعة/);
+    const [firstFrequency, secondFrequency] = within(dialog).getAllByLabelText(/كم مرة/);
+    await user.type(firstName, 'أموكسيسيلين');
+    await user.type(firstDose, '500 ملغ');
+    await user.type(firstFrequency, 'كل 8 ساعات');
+    await user.type(within(dialog).getAllByLabelText(/المدة بالأيام/)[0], '7');
+    await user.type(secondName, 'باراسيتامول');
+    await user.type(secondDose, '500 ملغ');
+    await user.type(secondFrequency, 'عند الحاجة');
+    await user.click(within(dialog).getByRole('button', { name: 'حفظ الوصفة' }));
+
+    expect(await screen.findByText('انحفظت الوصفة وراحت للصيدلية')).toBeInTheDocument();
+    expect(posted('/prescriptions')).toEqual({
+      items: [
+        {
+          drugName: 'أموكسيسيلين',
+          dose: '500 ملغ',
+          frequency: 'كل 8 ساعات',
+          durationDays: 7,
+          instructions: null,
+        },
+        {
+          drugName: 'باراسيتامول',
+          dose: '500 ملغ',
+          frequency: 'عند الحاجة',
+          durationDays: null,
+          instructions: null,
+        },
+      ],
+      notes: null,
+    });
+    const prescriptions = screen.getByRole('region', { name: 'الوصفات' });
+    expect(await within(prescriptions).findByText(/أموكسيسيلين/)).toBeInTheDocument();
   });
 });

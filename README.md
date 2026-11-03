@@ -139,6 +139,7 @@ psql -U postgres -c "CREATE DATABASE nabd_test;"
 | `PATCH /api/notifications/:id/read` و `POST /api/notifications/read-all`   | تعليم إشعار، أو كل إشعاراتي، كمقروء. بيتحدّث الجرس بكل تبويباتي وأجهزتي المفتوحة                                                   |
 | `GET` و `PATCH /api/doctors/me/status`                                     | حالة الطبيب: متفرّغ، مشغول، أو عطلة (الطبيب بس، لحالته). التغيير بيوصل لحظياً لأجهزته ولكل شاشات المستشفى اللي بتعرض الأطباء       |
 | `GET /api/doctors/me/patients` و `GET /api/doctors/me/patients/:patientId` | مرضاي (الطبيب المعالج، مع بحث بالاسم)، وملف مريض كامل للعرض: معلوماته، والحساسيات، والتقارير، والوصفات. مريض غيري بيطلع "مو موجود" |
+| `POST /api/doctors/me/patients/:patientId/reports` و `/prescriptions`      | الطبيب المعالج بيكتب تقرير (عنوان، تشخيص، نص) أو وصفة (دواء أو أكتر بجرعته ومدته). الوصفة بتروح للصيدلية بانتظار الصرف             |
 
 - توكن الدخول (JWT) عمره 15 دقيقة وبينبعت بـ `Authorization: Bearer`. توكن التجديد عمره 30 يوم، بكوكي `httpOnly` ما بتقدر تقراه الصفحة، وبينحفظ منه بس الـ hash.
 - كل خطأ بيرجع بالشكل `{ "error": { "code": "...", "message": "..." } }`. الرسالة بلغة المستخدم حسب `Accept-Language`، والـ `code` ثابت للبرمجة.

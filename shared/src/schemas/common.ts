@@ -23,6 +23,15 @@ export const requiredText = (max = 200) =>
 
 export const id = () => z.uuid('validation.invalid');
 
+/** Optional text that becomes null when empty. */
+export const optionalText = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max, 'validation.tooLong')
+    .nullable()
+    .transform((value) => value || null);
+
 /**
  * An optional email: an empty field becomes null. Null is accepted as input too,
  * because the client sends this schema's own output to the server.

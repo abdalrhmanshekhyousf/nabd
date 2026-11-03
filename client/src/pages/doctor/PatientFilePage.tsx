@@ -5,21 +5,23 @@ import {
   ArrowRight,
   FileText,
   HeartPulse,
-  Info,
+  FilePlus2,
   Pill,
   ShieldAlert,
   Stethoscope,
 } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 import { queryKeys } from '@/app/queryKeys';
 import { PatientAvatar } from '@/components/patients/PatientAvatar';
 import { patientFacts, patientName } from '@/components/patients/patientDisplay';
-import { Card, Spinner, StatusBadge, type StatusTone } from '@/components/ui';
+import { PrescriptionDialog } from '@/components/patients/PrescriptionDialog';
+import { ReportDialog } from '@/components/patients/ReportDialog';
+import { Button, Card, Spinner, StatusBadge, type StatusTone } from '@/components/ui';
 import { api, describeApiError } from '@/lib/api';
 import { cn } from '@/lib/cn';
-import { enter } from '@/lib/motion';
+import { calm, enter } from '@/lib/motion';
 
 const PRESCRIPTION_TONE: Record<PrescriptionStatus, StatusTone> = {
   PENDING: 'warning',
@@ -127,6 +129,7 @@ function PrescriptionCard({ prescription }: { prescription: PrescriptionView }) 
 export function PatientFilePage() {
   const { t, i18n } = useTranslation();
   const { patientId = '' } = useParams();
+  const [dialog, setDialog] = useState<'report' | 'prescription' | null>(null);
   const { data, isPending, error } = useQuery({
     queryKey: queryKeys.patientFile(patientId),
     queryFn: async () =>
@@ -239,18 +242,47 @@ export function PatientFilePage() {
         )}
       </motion.div>
 
-      <p className="flex items-center gap-2 text-xs text-muted">
-        <Info className="size-3.5 shrink-0" aria-hidden="true" />
-        {t('patients.readOnly')}
-      </p>
+      <motion.div {...enter(2)} className="flex flex-col gap-2 sm:flex-row">
+        <Button icon={<FilePlus2 className="size-4" />} onClick={() => setDialog('report')}>
+          {t('patients.writeReport')}
+        </Button>
+        <Button
+          variant="outline"
+          icon={<Pill className="size-4" />}
+          onClick={() => setDialog('prescription')}
+        >
+          {t('patients.newPrescription')}
+        </Button>
+      </motion.div>
 
-      <Section icon={<FileText />} title={t('patients.reportsTitle')} index={2}>
+      <ReportDialog
+        open={dialog === 'report'}
+        onClose={() => setDialog(null)}
+        patientId={patientId}
+        patientName={patientName(patient, t)}
+      />
+      <PrescriptionDialog
+        open={dialog === 'prescription'}
+        onClose={() => setDialog(null)}
+        patientId={patientId}
+        patientName={patientName(patient, t)}
+        allergies={record.allergies}
+      />
+
+      <Section icon={<FileText />} title={t('patients.reportsTitle')} index={3}>
         {reports.length === 0 ? (
           <Empty text={t('patients.noReports')} />
         ) : (
           <ol className="relative space-y-3 border-s-2 border-border ps-5">
             {reports.map((report) => (
-              <li key={report.id} className="relative">
+              <motion.li
+                key={report.id}
+                layout
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={calm}
+                className="relative"
+              >
                 <span
                   aria-hidden="true"
                   className="absolute -start-[1.6rem] top-4 size-3 rounded-full border-2 border-surface bg-accent"
@@ -271,19 +303,27 @@ export function PatientFilePage() {
                   )}
                   <p className="text-sm whitespace-pre-line text-foreground">{report.content}</p>
                 </Card>
-              </li>
+              </motion.li>
             ))}
           </ol>
         )}
       </Section>
 
-      <Section icon={<Pill />} title={t('patients.prescriptionsTitle')} index={3}>
+      <Section icon={<Pill />} title={t('patients.prescriptionsTitle')} index={4}>
         {prescriptions.length === 0 ? (
           <Empty text={t('patients.noPrescriptions')} />
         ) : (
           <div className="grid gap-3 lg:grid-cols-2">
             {prescriptions.map((prescription) => (
-              <PrescriptionCard key={prescription.id} prescription={prescription} />
+              <motion.div
+                key={prescription.id}
+                layout
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={calm}
+              >
+                <PrescriptionCard prescription={prescription} />
+              </motion.div>
             ))}
           </div>
         )}

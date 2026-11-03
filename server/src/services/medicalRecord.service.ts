@@ -1,4 +1,11 @@
-import type { PatientFile, PatientSummary, PrescriptionView, DoctorReportView } from '@nabd/shared';
+import type {
+  CreatePrescriptionData,
+  CreateReportData,
+  DoctorReportView,
+  PatientFile,
+  PatientSummary,
+  PrescriptionView,
+} from '@nabd/shared';
 import type { ScopedPrisma } from '../lib/scopedPrisma.js';
 import { HttpError } from '../middleware/errorHandler.js';
 
@@ -113,5 +120,84 @@ export async function getPatientFile(
         }),
       ),
     })),
+  };
+}
+
+/** The file of one of my patients, or "not found" (same rule as reading it). */
+async function requireMyRecord(db: ScopedPrisma, doctorId: string, patientId: string) {
+  const [record, doctor] = await Promise.all([
+    db.medicalRecord.findFirst({ where: { patientId, doctorId }, select: { id: true } }),
+    db.user.findUnique({ where: { id: doctorId }, select: { fullName: true } }),
+  ]);
+  if (!record || !doctor) throw new HttpError(404, 'NOT_FOUND', 'Patient not found');
+  return { recordId: record.id, doctorName: doctor.fullName };
+}
+
+/** Moves the patient to the top of "my patients". */
+const touch = (db: ScopedPrisma, recordId: string) =>
+  db.medicalRecord.update({ where: { id: recordId }, data: { updatedAt: new Date() } });
+
+/** Writes a medical report in my patient's file (task 2.8), signed with my name. */
+export async function addReport(
+  db: ScopedPrisma,
+  hospitalId: string,
+  doctorId: string,
+  patientId: string,
+  input: CreateReportData,
+): Promise<DoctorReportView> {
+  const { recordId, doctorName } = await requireMyRecord(db, doctorId, patientId);
+  const report = await db.doctorReport.create({
+    data: { hospitalId, recordId, doctorId, doctorName, ...input },
+  });
+  await touch(db, recordId);
+  return {
+    id: report.id,
+    doctorName: report.doctorName,
+    title: report.title,
+    diagnosis: report.diagnosis,
+    content: report.content,
+    createdAt: report.createdAt.toISOString(),
+  };
+}
+
+/** Writes a prescription for my patient; it waits for the pharmacist (3.10). */
+export async function addPrescription(
+  db: ScopedPrisma,
+  hospitalId: string,
+  doctorId: string,
+  patientId: string,
+  { items, notes }: CreatePrescriptionData,
+): Promise<PrescriptionView> {
+  const { recordId, doctorName } = await requireMyRecord(db, doctorId, patientId);
+  const prescription = await db.prescription.create({
+    data: {
+      hospitalId,
+      recordId,
+      doctorId,
+      doctorName,
+      notes,
+      // Nested rows are not stamped by the scoped client: hospitalId explicitly.
+      items: { create: items.map((item) => ({ hospitalId, ...item })) },
+    },
+    include: { items: true },
+  });
+  await touch(db, recordId);
+  return {
+    id: prescription.id,
+    doctorName: prescription.doctorName,
+    status: prescription.status,
+    notes: prescription.notes,
+    createdAt: prescription.createdAt.toISOString(),
+    dispensedAt: null,
+    items: prescription.items.map(
+      ({ id, drugName, dose, frequency, durationDays, instructions }) => ({
+        id,
+        drugName,
+        dose,
+        frequency,
+        durationDays,
+        instructions,
+      }),
+    ),
   };
 }

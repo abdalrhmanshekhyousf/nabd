@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { email, id, requiredText } from './common.js';
+import { email, id, optionalText, requiredText } from './common.js';
 import { newPassword } from './hospital.js';
 
 /** Roles the admin can give an employee (patients sign up or are registered by reception). */
@@ -41,15 +41,6 @@ const optionalPhone = () =>
     .trim()
     .nullable()
     .refine((value) => !value || /^\+?[\d\s\-()]{6,20}$/.test(value), 'validation.phoneInvalid')
-    .transform((value) => value || null);
-
-/** Optional text that becomes null when empty. */
-const optionalText = (max: number) =>
-  z
-    .string()
-    .trim()
-    .max(max, 'validation.tooLong')
-    .nullable()
     .transform((value) => value || null);
 
 /** What every employee record has, whether being added or edited. */
