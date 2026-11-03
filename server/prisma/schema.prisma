@@ -94,6 +94,30 @@ enum Gender {
   FEMALE
 }
 
+// AVPU scale, matches CONSCIOUSNESS_LEVELS in @nabd/shared (task 2.10).
+enum Consciousness {
+  ALERT
+  VERBAL
+  PAIN
+  UNRESPONSIVE
+}
+
+// Matches TRIAGE_STATUSES in @nabd/shared.
+enum TriageStatus {
+  WAITING
+  IN_TREATMENT
+  TRANSFERRED
+  DISCHARGED
+}
+
+// Matches DOCTOR_CALL_STATUSES in @nabd/shared.
+enum DoctorCallStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELLED
+}
+
 // Matches PRESCRIPTION_STATUSES in @nabd/shared (tasks 2.6, 3.10).
 enum PrescriptionStatus {
   PENDING
@@ -150,6 +174,8 @@ model Hospital {
   doctorReports      DoctorReport[]
   prescriptions      Prescription[]
   prescriptionItems  PrescriptionItem[]
+  triageAssessments  TriageAssessment[]
+  doctorCalls        DoctorCall[]
 }
 
 model Department {
@@ -160,10 +186,11 @@ model Department {
   createdAt  DateTime        @default(now())
   updatedAt  DateTime        @updatedAt
 
-  hospital Hospital            @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  rooms    Room[]
-  staff    StaffProfile[]
-  cleaners CleanerAssignment[]
+  hospital    Hospital            @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  rooms       Room[]
+  staff       StaffProfile[]
+  cleaners    CleanerAssignment[]
+  erTransfers TriageAssessment[]
 
   @@unique([hospitalId, name])
   @@unique([hospitalId, code])
@@ -249,6 +276,9 @@ model User {
   treatedRecords       MedicalRecord[]     @relation("TreatingDoctor")
   writtenReports       DoctorReport[]      @relation("ReportAuthor")
   writtenPrescriptions Prescription[]      @relation("PrescriptionAuthor")
+  triagedVisits        TriageAssessment[]  @relation("TriageNurse")
+  receivedCalls        DoctorCall[]        @relation("CalledDoctor")
+  placedCalls          DoctorCall[]        @relation("CallingNurse")
 
   @@unique([hospitalId, email])
   @@index([hospitalId, role])
@@ -325,9 +355,10 @@ model Patient {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  hospital      Hospital       @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  user          User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  hospital      Hospital           @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  user          User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
   medicalRecord MedicalRecord?
+  erVisits      TriageAssessment[]
 
   @@unique([hospitalId, nationalId])
   @@index([hospitalId])
@@ -417,6 +448,73 @@ model PrescriptionItem {
   prescription Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
 
   @@index([prescriptionId])
+}
+
+// ─── Emergency room (task 2.10) ───────────────────────────────────────────────
+
+// One emergency visit: created at the quick registration (2.11), filled by the
+// triage form (2.12). The suggested ESI level comes from the rules (2.13); the
+// nurse may set another with a reason (2.14). Ranges are also checked by the
+// database (see the migration).
+model TriageAssessment {
+  id               String         @id @default(uuid(7)) @db.Uuid
+  hospitalId       String         @db.Uuid
+  patientId        String         @db.Uuid
+  nurseId          String?        @db.Uuid
+  status           TriageStatus   @default(WAITING)
+  arrivedAt        DateTime       @default(now())
+  chiefComplaint   String?
+  pulse            Int?
+  systolic         Int?
+  diastolic        Int?
+  respiratoryRate  Int?
+  oxygenSaturation Int?
+  temperature      Decimal?       @db.Decimal(4, 1)
+  consciousness    Consciousness?
+  breathing        Boolean?
+  painScore        Int?
+  expectedExams    Int?
+  suggestedLevel   Int?
+  level            Int?
+  overrideReason   String?
+  assessedAt       DateTime?
+  // Where the patient went after the ER (2.17).
+  departmentId     String?        @db.Uuid
+  closedAt         DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  hospital   Hospital     @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  patient    Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  nurse      User?        @relation("TriageNurse", fields: [nurseId], references: [id], onDelete: SetNull)
+  department Department?  @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  calls      DoctorCall[]
+
+  // The waiting list: by status, then level, then arrival (2.15).
+  @@index([hospitalId, status, level, arrivedAt])
+  @@index([patientId])
+}
+
+// A nurse calls a specific doctor to an ER patient (2.16); the doctor accepts
+// or declines (2.9).
+model DoctorCall {
+  id            String           @id @default(uuid(7)) @db.Uuid
+  hospitalId    String           @db.Uuid
+  triageId      String           @db.Uuid
+  doctorId      String?          @db.Uuid
+  calledById    String?          @db.Uuid
+  status        DoctorCallStatus @default(PENDING)
+  declineReason String?
+  respondedAt   DateTime?
+  createdAt     DateTime         @default(now())
+
+  hospital Hospital         @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  triage   TriageAssessment @relation(fields: [triageId], references: [id], onDelete: Cascade)
+  doctor   User?            @relation("CalledDoctor", fields: [doctorId], references: [id], onDelete: SetNull)
+  calledBy User?            @relation("CallingNurse", fields: [calledById], references: [id], onDelete: SetNull)
+
+  @@index([doctorId, status])
+  @@index([triageId])
 }
 
 // ─── System ───────────────────────────────────────────────────────────────────
