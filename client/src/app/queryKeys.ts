@@ -7,5 +7,6 @@ export const queryKeys = {
   staff: (filter: object = {}) => ['staff', filter] as const,
   assignments: ['assignments'] as const,
   notifications: ['notifications'] as const,
+  doctorStatus: ['doctor-status'] as const,
   publicHospitals: (search: string) => ['public-hospitals', search] as const,
 };

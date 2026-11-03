@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MotionGlobalConfig } from 'framer-motion';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -9,6 +9,7 @@ import { INTRO_SEEN_KEY } from '@/hooks/useIntroSplash';
 import { api } from '@/lib/api';
 import { useSessionStore } from '@/stores/sessionStore';
 import { apiError, fakeApi } from '@/test/fakeApi';
+import { fakeSockets, lastSocket } from '@/test/fakeSocket';
 import { renderApp } from '@/test/renderApp';
 import type { StaffMember } from './StaffPage';
 
@@ -58,6 +59,7 @@ beforeEach(() => {
         isActive: true,
         department: body.departmentId ? CARDIOLOGY : null,
         cleanerDepartments: [],
+        doctorStatus: null,
         ...body,
       });
       return { status: 201, data: { member: staff[0] } };
@@ -101,6 +103,7 @@ function member(overrides: Partial<StaffMember>): StaffMember {
     radiologyModality: null,
     specialty: null,
     cleanerDepartments: [],
+    doctorStatus: null,
     ...overrides,
   };
 }
@@ -194,6 +197,7 @@ describe('StaffPage', () => {
         radiologyModality: null,
         specialty: null,
         cleanerDepartments: [],
+        doctorStatus: null,
       },
     ];
     renderApp('/admin/staff');
@@ -326,5 +330,26 @@ describe('StaffPage', () => {
     expect(
       within(dialog).getByRole('link', { name: 'أقسام عامل النظافة بتتحدد من صفحة توزيع الفرق' }),
     ).toHaveAttribute('href', '/admin/assignments');
+  });
+
+  it('shows each doctor’s status and follows it live', async () => {
+    staff = [
+      member({
+        id: 'd1',
+        fullName: 'د. ريم',
+        role: 'DOCTOR',
+        specialty: 'قلبية',
+        doctorStatus: 'AVAILABLE',
+      }),
+    ];
+    renderApp('/admin/staff');
+    const table = await screen.findByRole('table', { name: 'قائمة الموظفين' });
+    expect(within(table).getByText('متفرّغ')).toBeInTheDocument();
+    await waitFor(() => expect(fakeSockets).toHaveLength(1));
+
+    staff[0] = { ...staff[0], doctorStatus: 'BUSY' };
+    act(() => lastSocket().fromServer('refresh', { queryKeys: [['staff']] }));
+
+    expect(await within(table).findByText('مشغول')).toBeInTheDocument();
   });
 });

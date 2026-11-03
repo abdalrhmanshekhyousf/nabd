@@ -6,6 +6,7 @@ import type { SessionHospital, SessionUser } from '@/app/session';
 import type { RouteHandle } from '@/app/navigation';
 import { LanguageToggle } from '@/components/language/LanguageToggle';
 import { ThemeToggle } from '@/components/theme/ThemeToggle';
+import { DoctorStatusMenu } from '@/components/doctor/DoctorStatusMenu';
 import { AccountMenu } from './AccountMenu';
 import { NotificationsMenu } from './NotificationsMenu';
 
@@ -58,6 +59,8 @@ export function TopBar({ user, hospital, menuOpen, onOpenMenu }: TopBarProps) {
           <LanguageToggle />
           <ThemeToggle />
         </div>
+        {/* Doctors set their availability from anywhere (task 2.5). */}
+        {user.role === 'DOCTOR' && <DoctorStatusMenu />}
         <NotificationsMenu />
         <AccountMenu user={user} hospital={hospital} />
       </div>

@@ -269,6 +269,20 @@ export const en: Translation = {
     STERILIZING: 'Sterilizing',
     OUT_OF_SERVICE: 'Out of service',
   },
+  doctorStatus: {
+    label: 'My status',
+    current: 'Your status: {{status}}',
+    choose: 'Change your status',
+    changed: 'Your status is now: {{status}}',
+    AVAILABLE: 'Available',
+    BUSY: 'Busy',
+    ON_LEAVE: 'On leave',
+    hint: {
+      AVAILABLE: 'Ready for patients and emergency calls',
+      BUSY: 'Treating a patient right now',
+      ON_LEAVE: 'Away from work for now',
+    },
+  },
   staff: {
     cleanerHint: "A cleaner's departments are set on the Team assignments page",
     title: 'Staff',

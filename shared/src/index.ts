@@ -6,6 +6,7 @@ export * from './roles.js';
 export * from './schemas/auth.js';
 export * from './schemas/common.js';
 export * from './schemas/department.js';
+export * from './schemas/doctor.js';
 export * from './schemas/hospital.js';
 export * from './schemas/me.js';
 export * from './schemas/operatingRoom.js';

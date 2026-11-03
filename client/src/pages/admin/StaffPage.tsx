@@ -6,6 +6,7 @@ import {
   ROLES_WITH_MANY_DEPARTMENTS,
   STAFF_ROLES,
   updateStaffSchema,
+  type DoctorStatus,
   type RadiologyModality,
   type Role,
   type StaffRole,
@@ -41,6 +42,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router';
 import { queryKeys } from '@/app/queryKeys';
 import { departmentLabel, type Department } from '@/components/departments/departmentDisplay';
+import { DOCTOR_STATUS_TONE } from '@/components/doctor/doctorStatusStyles';
 import {
   Button,
   Card,
@@ -72,6 +74,8 @@ export type StaffMember = {
   specialty: string | null;
   /** Only cleaners: every department they cover (task 1.29). */
   cleanerDepartments: Pick<Department, 'id' | 'name' | 'code'>[];
+  /** Only doctors: available, busy or on leave, live (task 2.5). */
+  doctorStatus: DoctorStatus | null;
 };
 
 type Credentials = { name: string; email: string; password: string };
@@ -639,11 +643,18 @@ export function StaffPage() {
       key: 'role',
       header: t('staff.colRole'),
       cell: (member) => (
-        <StatusBadge tone={ROLE_TONE[member.role] ?? 'neutral'} dot={false}>
-          {t(`roles.${member.role}`)}
-          {member.radiologyModality ? ` · ${t(`modalities.${member.radiologyModality}`)}` : ''}
-          {member.specialty ? ` · ${member.specialty}` : ''}
-        </StatusBadge>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <StatusBadge tone={ROLE_TONE[member.role] ?? 'neutral'} dot={false}>
+            {t(`roles.${member.role}`)}
+            {member.radiologyModality ? ` · ${t(`modalities.${member.radiologyModality}`)}` : ''}
+            {member.specialty ? ` · ${member.specialty}` : ''}
+          </StatusBadge>
+          {member.doctorStatus && (
+            <StatusBadge tone={DOCTOR_STATUS_TONE[member.doctorStatus]}>
+              {t(`doctorStatus.${member.doctorStatus}`)}
+            </StatusBadge>
+          )}
+        </div>
       ),
     },
     {

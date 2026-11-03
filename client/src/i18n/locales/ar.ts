@@ -267,6 +267,20 @@ export const ar = {
     STERILIZING: 'قيد التعقيم',
     OUT_OF_SERVICE: 'خارج الخدمة',
   },
+  doctorStatus: {
+    label: 'حالتي',
+    current: 'حالتك: {{status}}',
+    choose: 'غيّر حالتك',
+    changed: 'صارت حالتك: {{status}}',
+    AVAILABLE: 'متفرّغ',
+    BUSY: 'مشغول',
+    ON_LEAVE: 'عطلة',
+    hint: {
+      AVAILABLE: 'جاهز تستلم المرضى واستدعاءات الإسعاف',
+      BUSY: 'عم تعالج مريض هلق',
+      ON_LEAVE: 'مو بالدوام هالفترة',
+    },
+  },
   staff: {
     cleanerHint: 'أقسام عامل النظافة بتتحدد من صفحة توزيع الفرق',
     title: 'الموظفين',

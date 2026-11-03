@@ -8,6 +8,7 @@ import {
   registerPatientSchema,
   registerPatientFormSchema,
   hospitalSearchSchema,
+  doctorStatusSchema,
   updateStaffSchema,
   createBedSchema,
   createRoomSchema,
@@ -197,6 +198,7 @@ describe('client output is valid server input', () => {
       },
     ],
     [hospitalSearchSchema, { search: ' دار ' }],
+    [doctorStatusSchema, { status: 'BUSY' }],
     [assignNurseSchema, { departmentId: '0199a3d2-6c55-7000-8000-000000000001' }],
     [
       assignCleanerSchema,
@@ -384,5 +386,16 @@ describe('registerPatientSchema', () => {
       confirmPassword: 'Other1234',
     });
     expect(messages(result)).toEqual(['validation.passwordMismatch']);
+  });
+});
+
+describe('doctorStatusSchema', () => {
+  it('accepts the three statuses only', () => {
+    for (const status of ['AVAILABLE', 'BUSY', 'ON_LEAVE']) {
+      expect(doctorStatusSchema.parse({ status })).toEqual({ status });
+    }
+    expect(messages(doctorStatusSchema.safeParse({ status: 'SLEEPING' }))).toEqual([
+      'validation.required',
+    ]);
   });
 });

@@ -14,6 +14,7 @@ import { operatingRoomRouter } from './routes/operatingRoom.routes.js';
 import { bedRouter, roomRouter } from './routes/room.routes.js';
 import { assignmentRouter } from './routes/assignment.routes.js';
 import { devRouter } from './routes/dev.routes.js';
+import { doctorRouter } from './routes/doctor.routes.js';
 import { notificationRouter } from './routes/notification.routes.js';
 import { publicRouter } from './routes/public.routes.js';
 import { staffRouter } from './routes/staff.routes.js';
@@ -44,6 +45,7 @@ export function createApp() {
   app.use('/api/staff', staffRouter);
   app.use('/api/assignments', assignmentRouter);
   app.use('/api/notifications', notificationRouter);
+  app.use('/api/doctors', doctorRouter);
   if (!env.isProduction) app.use('/api/dev', devRouter);
 
   app.use(notFound);
