@@ -94,6 +94,13 @@ enum Gender {
   FEMALE
 }
 
+// Matches PRESCRIPTION_STATUSES in @nabd/shared (tasks 2.6, 3.10).
+enum PrescriptionStatus {
+  PENDING
+  DISPENSED
+  CANCELLED
+}
+
 // Matches NOTIFICATION_TYPES in @nabd/shared (task 2.2).
 enum NotificationType {
   DOCTOR_CALL
@@ -139,6 +146,10 @@ model Hospital {
   refreshTokens      RefreshToken[]
   cleanerAssignments CleanerAssignment[]
   notifications      Notification[]
+  medicalRecords     MedicalRecord[]
+  doctorReports      DoctorReport[]
+  prescriptions      Prescription[]
+  prescriptionItems  PrescriptionItem[]
 }
 
 model Department {
@@ -228,13 +239,16 @@ model User {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  hospital           Hospital            @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  staffProfile       StaffProfile?
-  doctorProfile      DoctorProfile?
-  patient            Patient?
-  refreshTokens      RefreshToken[]
-  cleanerAssignments CleanerAssignment[]
-  notifications      Notification[]
+  hospital             Hospital            @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  staffProfile         StaffProfile?
+  doctorProfile        DoctorProfile?
+  patient              Patient?
+  refreshTokens        RefreshToken[]
+  cleanerAssignments   CleanerAssignment[]
+  notifications        Notification[]
+  treatedRecords       MedicalRecord[]     @relation("TreatingDoctor")
+  writtenReports       DoctorReport[]      @relation("ReportAuthor")
+  writtenPrescriptions Prescription[]      @relation("PrescriptionAuthor")
 
   @@unique([hospitalId, email])
   @@index([hospitalId, role])
@@ -311,11 +325,98 @@ model Patient {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  user     User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  hospital      Hospital       @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  user          User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  medicalRecord MedicalRecord?
 
   @@unique([hospitalId, nationalId])
   @@index([hospitalId])
+}
+
+// ─── Medical file (task 2.6) ──────────────────────────────────────────────────
+
+// The patient's file at this hospital: one per patient, created with them.
+// The treating doctor is the one whose patient this is (consultants only get
+// temporary read access, task 3.13).
+model MedicalRecord {
+  id                String   @id @default(uuid(7)) @db.Uuid
+  hospitalId        String   @db.Uuid
+  patientId         String   @unique @db.Uuid
+  doctorId          String?  @db.Uuid
+  allergies         String?
+  chronicConditions String?
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  hospital      Hospital       @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  patient       Patient        @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor        User?          @relation("TreatingDoctor", fields: [doctorId], references: [id], onDelete: SetNull)
+  reports       DoctorReport[]
+  prescriptions Prescription[]
+
+  @@index([hospitalId, doctorId])
+}
+
+// Reports and prescriptions are medical history: removing a doctor's account
+// keeps them, with the author's name saved alongside.
+model DoctorReport {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  hospitalId String   @db.Uuid
+  recordId   String   @db.Uuid
+  doctorId   String?  @db.Uuid
+  doctorName String
+  title      String
+  diagnosis  String?
+  content    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  hospital Hospital      @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  record   MedicalRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  doctor   User?         @relation("ReportAuthor", fields: [doctorId], references: [id], onDelete: SetNull)
+
+  @@index([recordId, createdAt])
+  @@index([hospitalId])
+}
+
+model Prescription {
+  id          String             @id @default(uuid(7)) @db.Uuid
+  hospitalId  String             @db.Uuid
+  recordId    String             @db.Uuid
+  doctorId    String?            @db.Uuid
+  doctorName  String
+  status      PrescriptionStatus @default(PENDING)
+  notes       String?
+  dispensedAt DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  hospital Hospital           @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  record   MedicalRecord      @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  doctor   User?              @relation("PrescriptionAuthor", fields: [doctorId], references: [id], onDelete: SetNull)
+  items    PrescriptionItem[]
+
+  @@index([recordId, createdAt])
+  // The pharmacy's queue (task 3.10).
+  @@index([hospitalId, status])
+}
+
+// One medicine of a prescription; dispensing and reminders (3.10, 3.26) work per item.
+model PrescriptionItem {
+  id             String  @id @default(uuid(7)) @db.Uuid
+  hospitalId     String  @db.Uuid
+  prescriptionId String  @db.Uuid
+  drugName       String
+  dose           String
+  frequency      String
+  durationDays   Int?
+  instructions   String?
+
+  hospital     Hospital     @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  prescription Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+
+  @@index([prescriptionId])
 }
 
 // ─── System ───────────────────────────────────────────────────────────────────

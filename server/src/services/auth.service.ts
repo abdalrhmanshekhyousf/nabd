@@ -245,6 +245,8 @@ export async function registerPatient(
             phone: patient.phone,
             gender: patient.gender,
             dateOfBirth: patient.dateOfBirth ? new Date(patient.dateOfBirth) : null,
+            // Their file at this hospital starts empty (task 2.6).
+            medicalRecord: { create: { hospitalId } },
           },
         },
       },

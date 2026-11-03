@@ -60,7 +60,11 @@ async function main() {
         ...(role === 'DOCTOR' && {
           doctorProfile: { create: { hospitalId, specialty: 'Cardiology' } },
         }),
-        ...(role === 'PATIENT' && { patient: { create: { hospitalId, fullName } } }),
+        ...(role === 'PATIENT' && {
+          patient: {
+            create: { hospitalId, fullName, medicalRecord: { create: { hospitalId } } },
+          },
+        }),
       },
     });
   }

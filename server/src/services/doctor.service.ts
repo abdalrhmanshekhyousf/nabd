@@ -15,5 +15,9 @@ export async function getMyStatus(db: ScopedPrisma, userId: string) {
 /** Sets the signed-in doctor's status: available, busy or on leave. */
 export async function setMyStatus(db: ScopedPrisma, userId: string, { status }: DoctorStatusInput) {
   await getMyStatus(db, userId);
-  return db.doctorProfile.update({ where: { userId }, data: { status }, select: { status: true } });
+  return db.doctorProfile.update({
+    where: { userId },
+    data: { status, statusChangedAt: new Date() },
+    select: { status: true },
+  });
 }
