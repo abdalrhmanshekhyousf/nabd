@@ -79,6 +79,10 @@ describe('NewCasePage', () => {
 
     const status = await screen.findByRole('status');
     expect(status).toHaveTextContent('مريض مجهول الهوية صار بقائمة الانتظار');
+    expect(within(status).getByRole('link', { name: 'تقييم الخطورة الآن' })).toHaveAttribute(
+      'href',
+      '/nurse/triage/v1',
+    );
     expect(posted()).toEqual({
       anonymous: true,
       gender: 'MALE',

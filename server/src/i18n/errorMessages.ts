@@ -60,6 +60,10 @@ const MESSAGES: Record<ErrorCode, Record<Language, string>> = {
     ar: 'غرفة العمليات مشغولة هلق (حجز أو تحضير أو عملية أو تعقيم)',
     en: 'The operating room is in use right now (booked, preparing, surgery or sterilization)',
   },
+  VISIT_CLOSED: {
+    ar: 'هالزيارة انسكّرت (تحوّل المريض أو تخرّج)',
+    en: 'This visit is closed (the patient was transferred or discharged)',
+  },
   EMAIL_TAKEN: {
     ar: 'في حساب بهالإيميل بالمستشفى',
     en: 'An account with this email already exists in this hospital',

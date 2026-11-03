@@ -19,6 +19,7 @@ import { NotFoundPage } from '@/pages/NotFoundPage';
 import { DoctorPatientsPage } from '@/pages/doctor/DoctorPatientsPage';
 import { PatientFilePage } from '@/pages/doctor/PatientFilePage';
 import { NewCasePage } from '@/pages/nurse/NewCasePage';
+import { TriagePage } from '@/pages/nurse/TriagePage';
 import { PatientRegisterPage } from '@/pages/PatientRegisterPage';
 import { RegisterPage } from '@/pages/RegisterPage';
 
@@ -49,6 +50,13 @@ export const BUILT_PAGES: Partial<Record<`${Role}:${string}`, ReactElement>> = {
 
 // Pages opened from inside a section (not sidebar links), by role.
 const DETAIL_ROUTES: Partial<Record<Role, RouteObject[]>> = {
+  NURSE: [
+    {
+      path: 'triage/:visitId',
+      element: <TriagePage />,
+      handle: { titleKey: 'nav.triage', phase: 2 } satisfies RouteHandle,
+    },
+  ],
   DOCTOR: [
     {
       path: 'patients/:patientId',

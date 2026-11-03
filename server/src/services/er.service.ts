@@ -1,4 +1,5 @@
-import type { QuickRegistrationData } from '@nabd/shared';
+import type { ErVisit, QuickRegistrationData, TriageData } from '@nabd/shared';
+import type { Prisma } from '../generated/prisma/client.js';
 import type { ScopedPrisma } from '../lib/scopedPrisma.js';
 import { HttpError } from '../middleware/errorHandler.js';
 
@@ -71,4 +72,65 @@ export async function registerArrival(
       arrivedAt: visit.arrivedAt.toISOString(),
     };
   });
+}
+
+const visitInclude = {
+  patient: {
+    select: { id: true, fullName: true, isAnonymous: true, gender: true, dateOfBirth: true },
+  },
+} as const satisfies Prisma.TriageAssessmentInclude;
+
+type VisitRow = Prisma.TriageAssessmentGetPayload<{ include: typeof visitInclude }>;
+
+/** The shape the ER screens use; the temperature leaves the database as a Decimal. */
+export function toErVisit(visit: VisitRow): ErVisit {
+  return {
+    id: visit.id,
+    status: visit.status,
+    arrivedAt: visit.arrivedAt.toISOString(),
+    assessedAt: visit.assessedAt?.toISOString() ?? null,
+    chiefComplaint: visit.chiefComplaint,
+    arrivalNote: visit.arrivalNote,
+    patient: {
+      ...visit.patient,
+      dateOfBirth: visit.patient.dateOfBirth?.toISOString().slice(0, 10) ?? null,
+    },
+    breathing: visit.breathing,
+    consciousness: visit.consciousness,
+    pulse: visit.pulse,
+    systolic: visit.systolic,
+    diastolic: visit.diastolic,
+    respiratoryRate: visit.respiratoryRate,
+    oxygenSaturation: visit.oxygenSaturation,
+    temperature: visit.temperature === null ? null : Number(visit.temperature),
+    painScore: visit.painScore,
+    expectedExams: visit.expectedExams,
+    suggestedLevel: visit.suggestedLevel,
+    level: visit.level,
+    overrideReason: visit.overrideReason,
+  };
+}
+
+export async function getVisit(db: ScopedPrisma, id: string) {
+  const visit = await db.triageAssessment.findUnique({ where: { id }, include: visitInclude });
+  if (!visit) throw new HttpError(404, 'NOT_FOUND', 'Visit not found');
+  return toErVisit(visit);
+}
+
+/**
+ * Saves the triage form (task 2.12) for a visit that is still open; the nurse
+ * who assessed it is recorded. The ESI level is suggested from it in 2.13.
+ */
+export async function saveTriage(db: ScopedPrisma, nurseId: string, id: string, input: TriageData) {
+  const visit = await db.triageAssessment.findUnique({ where: { id }, select: { status: true } });
+  if (!visit) throw new HttpError(404, 'NOT_FOUND', 'Visit not found');
+  if (visit.status === 'TRANSFERRED' || visit.status === 'DISCHARGED') {
+    throw new HttpError(409, 'VISIT_CLOSED', 'This visit is closed');
+  }
+  const saved = await db.triageAssessment.update({
+    where: { id },
+    data: { ...input, nurseId, assessedAt: new Date() },
+    include: visitInclude,
+  });
+  return toErVisit(saved);
 }

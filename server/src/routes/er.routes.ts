@@ -1,8 +1,15 @@
-import { quickRegistrationSchema } from '@nabd/shared';
+import { quickRegistrationSchema, triageSchema } from '@nabd/shared';
 import { Router } from 'express';
+import { z } from 'zod';
 import { authenticate, requireRole, session } from '../middleware/auth.js';
 import { emitRefresh, rooms } from '../realtime/realtime.js';
-import { erDepartmentOf, registerArrival, requireErNurse } from '../services/er.service.js';
+import {
+  erDepartmentOf,
+  getVisit,
+  registerArrival,
+  requireErNurse,
+  saveTriage,
+} from '../services/er.service.js';
 
 // The emergency room (phase 2): emergency nurses only.
 export const erRouter = Router();
@@ -24,4 +31,24 @@ erRouter.post('/visits', async (req, res) => {
   // The waiting list (2.15) of the emergency department updates live.
   emitRefresh(rooms.department(departmentId), [['er-queue']]);
   res.status(201).json({ visit });
+});
+
+const visitParam = z.object({ id: z.uuid() });
+
+erRouter.get('/visits/:id', async (req, res) => {
+  const { auth, db } = session(req);
+  await requireErNurse(db, auth.userId);
+  const { id } = visitParam.parse(req.params);
+  res.json({ visit: await getVisit(db, id) });
+});
+
+/** The triage form: complaint, vital signs, consciousness, pain (task 2.12). */
+erRouter.put('/visits/:id/triage', async (req, res) => {
+  const { auth, db } = session(req);
+  const departmentId = await requireErNurse(db, auth.userId);
+  const { id } = visitParam.parse(req.params);
+  const input = triageSchema.parse(req.body);
+  const visit = await saveTriage(db, auth.userId, id, input);
+  emitRefresh(rooms.department(departmentId), [['er-queue'], ['er-visit', id]]);
+  res.json({ visit });
 });

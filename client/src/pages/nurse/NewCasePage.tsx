@@ -9,6 +9,7 @@ import {
   ListOrdered,
   Phone,
   ShieldAlert,
+  Stethoscope,
   UserPlus,
   UserRound,
   UserRoundSearch,
@@ -285,7 +286,16 @@ function Success({ visit, onAnother }: { visit: Registered; onAnother: () => voi
         {t('er.arrivedAt', { time: time.format(new Date(visit.arrivedAt)) })}
       </p>
       <div className="mt-2 flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-        <Button icon={<UserPlus className="size-4" />} onClick={onAnother} autoFocus>
+        <Link
+          to={`../triage/${visit.id}`}
+          relative="path"
+          autoFocus
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground shadow-soft transition-colors hover:bg-primary/88 focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:outline-none"
+        >
+          <Stethoscope className="size-4" aria-hidden="true" />
+          {t('er.assessNow')}
+        </Link>
+        <Button variant="outline" icon={<UserPlus className="size-4" />} onClick={onAnother}>
           {t('er.another')}
         </Button>
         <Link

@@ -12,6 +12,8 @@ import {
   createReportSchema,
   createPrescriptionSchema,
   quickRegistrationSchema,
+  triageSchema,
+  isAbnormal,
   updateStaffSchema,
   createBedSchema,
   createRoomSchema,
@@ -202,6 +204,22 @@ describe('client output is valid server input', () => {
     ],
     [hospitalSearchSchema, { search: ' دار ' }],
     [doctorStatusSchema, { status: 'BUSY' }],
+    [
+      triageSchema,
+      {
+        chiefComplaint: 'ألم بالصدر',
+        breathing: true,
+        consciousness: 'ALERT',
+        pulse: 118,
+        systolic: 90,
+        diastolic: 60,
+        respiratoryRate: 24,
+        oxygenSaturation: 91,
+        temperature: 37.8,
+        painScore: 8,
+        expectedExams: 2,
+      },
+    ],
     [
       quickRegistrationSchema,
       { anonymous: true, gender: null, chiefComplaint: ' نزيف ', arrivalNote: '' },
@@ -498,5 +516,46 @@ describe('quickRegistrationSchema', () => {
       arrivalNote: null,
     });
     expect(result.error?.issues.map((issue) => issue.path[0])).toEqual(['fullName']);
+  });
+});
+
+describe('triageSchema', () => {
+  const triage = {
+    chiefComplaint: 'ألم بالصدر',
+    breathing: true,
+    consciousness: 'ALERT',
+    pulse: 118,
+    systolic: 90,
+    diastolic: 60,
+    respiratoryRate: 24,
+    oxygenSaturation: 91,
+    temperature: 37.8,
+    painScore: 8,
+    expectedExams: 2,
+  };
+
+  it('accepts a full assessment, and vitals that could not be measured', () => {
+    expect(triageSchema.parse(triage)).toEqual(triage);
+    expect(triageSchema.parse({ ...triage, pulse: null, temperature: null }).pulse).toBeNull();
+  });
+
+  it('refuses impossible or badly shaped values', () => {
+    for (const change of [
+      { pulse: 400 },
+      { oxygenSaturation: 101 },
+      { temperature: 37.85 },
+      { painScore: 11 },
+      { expectedExams: 3 },
+      { consciousness: 'ASLEEP' },
+    ]) {
+      expect(triageSchema.safeParse({ ...triage, ...change }).success).toBe(false);
+    }
+  });
+
+  it('knows which vital signs are outside the normal range', () => {
+    expect(isAbnormal('pulse', 118)).toBe(true);
+    expect(isAbnormal('pulse', 72)).toBe(false);
+    expect(isAbnormal('oxygenSaturation', 91)).toBe(true);
+    expect(isAbnormal('temperature', null)).toBe(false);
   });
 });
