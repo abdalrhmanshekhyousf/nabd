@@ -11,6 +11,7 @@ import {
   doctorStatusSchema,
   createReportSchema,
   createPrescriptionSchema,
+  quickRegistrationSchema,
   updateStaffSchema,
   createBedSchema,
   createRoomSchema,
@@ -201,6 +202,23 @@ describe('client output is valid server input', () => {
     ],
     [hospitalSearchSchema, { search: ' دار ' }],
     [doctorStatusSchema, { status: 'BUSY' }],
+    [
+      quickRegistrationSchema,
+      { anonymous: true, gender: null, chiefComplaint: ' نزيف ', arrivalNote: '' },
+    ],
+    [
+      quickRegistrationSchema,
+      {
+        anonymous: false,
+        fullName: 'سارة',
+        phone: '',
+        dateOfBirth: '',
+        nationalId: ' 0101 ',
+        gender: 'FEMALE',
+        chiefComplaint: 'ألم بطن',
+        arrivalNote: null,
+      },
+    ],
     [createReportSchema, { title: ' مراجعة ', diagnosis: '', content: 'مستقر' }],
     [
       createPrescriptionSchema,
@@ -443,5 +461,42 @@ describe('report and prescription schemas', () => {
         notes: null,
       }).success,
     ).toBe(false);
+  });
+});
+
+describe('quickRegistrationSchema', () => {
+  it('an unidentified arrival needs only the complaint', () => {
+    expect(
+      quickRegistrationSchema.parse({
+        anonymous: true,
+        gender: null,
+        chiefComplaint: 'غياب وعي',
+        arrivalNote: null,
+      }),
+    ).toEqual({ anonymous: true, gender: null, chiefComplaint: 'غياب وعي', arrivalNote: null });
+    expect(
+      messages(
+        quickRegistrationSchema.safeParse({
+          anonymous: true,
+          gender: null,
+          chiefComplaint: '',
+          arrivalNote: null,
+        }),
+      ),
+    ).toEqual(['validation.required']);
+  });
+
+  it('a known patient needs a name too', () => {
+    const result = quickRegistrationSchema.safeParse({
+      anonymous: false,
+      fullName: ' ',
+      phone: null,
+      dateOfBirth: null,
+      nationalId: null,
+      gender: null,
+      chiefComplaint: 'كسر',
+      arrivalNote: null,
+    });
+    expect(result.error?.issues.map((issue) => issue.path[0])).toEqual(['fullName']);
   });
 });

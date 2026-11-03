@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { email, id, optionalText, requiredText } from './common.js';
+import { email, id, optionalPhone, optionalText, requiredText } from './common.js';
 import { newPassword } from './hospital.js';
 
 /** Roles the admin can give an employee (patients sign up or are registered by reception). */
@@ -33,15 +33,6 @@ export const ROLES_NEEDING_DEPARTMENT: readonly StaffRole[] = ['DOCTOR', 'NURSE'
 export const ROLES_WITH_MANY_DEPARTMENTS: readonly StaffRole[] = ['CLEANER'];
 
 export const MAX_SALARY = 1_000_000_000;
-
-/** An optional phone number: an empty field becomes null. */
-const optionalPhone = () =>
-  z
-    .string()
-    .trim()
-    .nullable()
-    .refine((value) => !value || /^\+?[\d\s\-()]{6,20}$/.test(value), 'validation.phoneInvalid')
-    .transform((value) => value || null);
 
 /** What every employee record has, whether being added or edited. */
 const staffFields = {

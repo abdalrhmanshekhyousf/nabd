@@ -1,32 +1,9 @@
 import { z } from 'zod';
-import { email, id, phone, requiredText } from './common.js';
+import { email, id, optionalBirthDate, phone, requiredText } from './common.js';
 import { newPassword } from './hospital.js';
 
 export const GENDERS = ['MALE', 'FEMALE'] as const;
 export type Gender = (typeof GENDERS)[number];
-
-/** Today as YYYY-MM-DD in the device's own time zone. */
-const today = () => {
-  const now = new Date();
-  return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
-};
-
-/** An optional date of birth (YYYY-MM-DD, as a date input gives it); empty becomes null. */
-const dateOfBirth = () =>
-  z
-    .string()
-    .trim()
-    .nullable()
-    .refine(
-      (value) =>
-        !value ||
-        (/^\d{4}-\d{2}-\d{2}$/.test(value) &&
-          !Number.isNaN(Date.parse(value)) &&
-          value >= '1900-01-01' &&
-          value <= today()),
-      'validation.dateInvalid',
-    )
-    .transform((value) => value || null);
 
 /**
  * POST /auth/register/patient (task 1.30): a patient opens their own account at
@@ -37,7 +14,7 @@ export const registerPatientSchema = z.object({
   fullName: requiredText(120),
   phone: phone(),
   gender: z.enum(GENDERS, 'validation.required'),
-  dateOfBirth: dateOfBirth(),
+  dateOfBirth: optionalBirthDate(),
   email: email(),
   password: newPassword(),
 });

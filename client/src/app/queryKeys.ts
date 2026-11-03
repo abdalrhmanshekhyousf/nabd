@@ -10,5 +10,7 @@ export const queryKeys = {
   doctorStatus: ['doctor-status'] as const,
   myPatients: (search = '') => ['my-patients', search] as const,
   patientFile: (patientId: string) => ['patient-file', patientId] as const,
+  erAccess: ['er-access'] as const,
+  erQueue: ['er-queue'] as const,
   publicHospitals: (search: string) => ['public-hospitals', search] as const,
 };

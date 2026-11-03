@@ -18,6 +18,7 @@ import { LoginPage } from '@/pages/LoginPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { DoctorPatientsPage } from '@/pages/doctor/DoctorPatientsPage';
 import { PatientFilePage } from '@/pages/doctor/PatientFilePage';
+import { NewCasePage } from '@/pages/nurse/NewCasePage';
 import { PatientRegisterPage } from '@/pages/PatientRegisterPage';
 import { RegisterPage } from '@/pages/RegisterPage';
 
@@ -43,6 +44,7 @@ export const BUILT_PAGES: Partial<Record<`${Role}:${string}`, ReactElement>> = {
   'ADMIN:assignments': <AssignmentsPage />,
   'ADMIN:settings': <HospitalSettingsPage />,
   'DOCTOR:patients': <DoctorPatientsPage />,
+  'NURSE:new-case': <NewCasePage />,
 };
 
 // Pages opened from inside a section (not sidebar links), by role.

@@ -92,6 +92,17 @@ async function seedMedicalFile(hospitalId: string) {
   });
 }
 
+/** The demo nurse works in the emergency room, so ER pages can be tried (task 2.11). */
+async function seedEmergencyNurse(hospitalId: string) {
+  const er =
+    (await prisma.department.findFirst({ where: { hospitalId, code: 'EMERGENCY' } })) ??
+    (await prisma.department.create({ data: { hospitalId, name: 'الإسعاف', code: 'EMERGENCY' } }));
+  await prisma.staffProfile.updateMany({
+    where: { hospitalId, departmentId: null, user: { email: 'nurse@nabd.demo' } },
+    data: { departmentId: er.id },
+  });
+}
+
 async function main() {
   const hospital =
     (await prisma.hospital.findFirst({ where: { name: DEMO_HOSPITAL.name } })) ??
@@ -133,6 +144,7 @@ async function main() {
     });
   }
 
+  await seedEmergencyNurse(hospitalId);
   await seedMedicalFile(hospitalId);
 
   console.info(`Hospital: ${hospital.name} (${hospital.id})`);

@@ -464,6 +464,8 @@ model TriageAssessment {
   status           TriageStatus   @default(WAITING)
   arrivedAt        DateTime       @default(now())
   chiefComplaint   String?
+  // How they arrived and, for unidentified patients, what they look like (2.11).
+  arrivalNote      String?
   pulse            Int?
   systolic         Int?
   diastolic        Int?

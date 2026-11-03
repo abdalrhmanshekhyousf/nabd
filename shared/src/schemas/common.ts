@@ -53,3 +53,35 @@ export const phone = () =>
     .trim()
     .min(1, 'validation.required')
     .regex(/^\+?[\d\s\-()]{6,20}$/, 'validation.phoneInvalid');
+
+/** An optional phone number: an empty field becomes null. */
+export const optionalPhone = () =>
+  z
+    .string()
+    .trim()
+    .nullable()
+    .refine((value) => !value || /^\+?[\d\s\-()]{6,20}$/.test(value), 'validation.phoneInvalid')
+    .transform((value) => value || null);
+
+/** Today as YYYY-MM-DD in the device's own time zone. */
+const today = () => {
+  const now = new Date();
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+};
+
+/** An optional date of birth (YYYY-MM-DD, as a date input gives it); empty becomes null. */
+export const optionalBirthDate = () =>
+  z
+    .string()
+    .trim()
+    .nullable()
+    .refine(
+      (value) =>
+        !value ||
+        (/^\d{4}-\d{2}-\d{2}$/.test(value) &&
+          !Number.isNaN(Date.parse(value)) &&
+          value >= '1900-01-01' &&
+          value <= today()),
+      'validation.dateInvalid',
+    )
+    .transform((value) => value || null);
