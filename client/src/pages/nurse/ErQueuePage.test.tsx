@@ -56,6 +56,9 @@ function visit(id: string, fullName: string | null, overrides: Partial<ErVisit>)
     overrideReason: null,
     reasons: [],
     call: null,
+    closedAt: null,
+    closingNote: null,
+    department: null,
     ...overrides,
   };
 }

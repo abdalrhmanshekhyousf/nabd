@@ -321,3 +321,106 @@ describe('the doctor answers a call (task 2.9)', () => {
     expect(heard).toEqual(['er-queue', 'er-visit']);
   });
 });
+
+describe('the patient leaves the ER (task 2.17)', () => {
+  const act = (
+    h: Awaited<ReturnType<typeof er>>,
+    path: string,
+    body: object,
+    method: 'put' | 'post' = 'post',
+  ) =>
+    request(app)
+      [method](`/api/er/visits/${h.visit.id}/${path}`)
+      .set('Authorization', `Bearer ${h.nurse.token}`)
+      .send(body);
+
+  it('moves between waiting and in treatment while in the ER', async () => {
+    const h = await er();
+    expect((await act(h, 'status', { status: 'IN_TREATMENT' }, 'put')).body.visit.status).toBe(
+      'IN_TREATMENT',
+    );
+    expect((await act(h, 'status', { status: 'WAITING' }, 'put')).body.visit.status).toBe(
+      'WAITING',
+    );
+    expect((await act(h, 'status', { status: 'DISCHARGED' }, 'put')).status).toBe(400);
+  });
+
+  it('transfers to a ward with a note, leaves the list, and withdraws a pending call', async () => {
+    const h = await er();
+    const sami = await h.doctor('د. سامي', 'قلبية', 'AVAILABLE');
+    const { call } = (await h.call(sami.id)).body;
+    const wardNurse = await h.user('NURSE', 'ممرض القلبية', h.ward.id);
+    const socket = connectClient(url, {
+      auth: { token: wardNurse.token },
+      transports: ['websocket'],
+      reconnection: false,
+      forceNew: true,
+    });
+    sockets.push(socket);
+    const heard: string[] = [];
+    socket.on('refresh', ({ queryKeys }: { queryKeys: string[][] }) =>
+      heard.push(...queryKeys.map((k) => k[0])),
+    );
+    await new Promise((resolve) => socket.once('ready', resolve));
+
+    const res = await act(h, 'transfer', { departmentId: h.ward.id, note: 'مراقبة قلبية 24 ساعة' });
+    await new Promise((resolve) => setTimeout(resolve, 250));
+
+    expect(res.status).toBe(200);
+    expect(res.body.visit).toMatchObject({
+      status: 'TRANSFERRED',
+      closingNote: 'مراقبة قلبية 24 ساعة',
+      closedAt: expect.any(String),
+      department: expect.objectContaining({ id: h.ward.id, code: 'CARDIOLOGY' }),
+    });
+    expect((await h.queue()).body.visits).toEqual([]);
+    expect((await prisma.doctorCall.findUnique({ where: { id: call.id } }))?.status).toBe(
+      'CANCELLED',
+    );
+    expect(heard).toContain('ward-incoming');
+  });
+
+  it('refuses a transfer to the ER itself or to another hospital', async () => {
+    const h = await er();
+    const other = await er();
+    const erDept = await prisma.department.findFirst({
+      where: { hospitalId: h.id, code: 'EMERGENCY' },
+    });
+
+    expect((await act(h, 'transfer', { departmentId: erDept!.id, note: null })).status).toBe(400);
+    expect((await act(h, 'transfer', { departmentId: other.ward.id, note: null })).status).toBe(
+      404,
+    );
+  });
+
+  it('discharges with instructions; a closed visit cannot change again', async () => {
+    const h = await er();
+
+    const res = await act(h, 'discharge', { note: 'راحة 3 أيام ومراجعة بعد أسبوع' });
+    expect(res.body.visit).toMatchObject({
+      status: 'DISCHARGED',
+      closingNote: 'راحة 3 أيام ومراجعة بعد أسبوع',
+      department: null,
+    });
+
+    for (const [path, body, method] of [
+      ['discharge', { note: null }, 'post'],
+      ['transfer', { departmentId: h.ward.id, note: null }, 'post'],
+      ['status', { status: 'IN_TREATMENT' }, 'put'],
+    ] as const) {
+      const again = await act(h, path, body, method);
+      expect(again.status).toBe(409);
+      expect(again.body.error.code).toBe('VISIT_CLOSED');
+    }
+  });
+
+  it('is for emergency nurses only', async () => {
+    const h = await er();
+    const wardNurse = await h.user('NURSE', 'ممرض القلبية', h.ward.id);
+    const res = await request(app)
+      .post(`/api/er/visits/${h.visit.id}/discharge`)
+      .set('Authorization', `Bearer ${wardNurse.token}`)
+      .send({ note: null });
+    expect(res.status).toBe(403);
+  });
+});

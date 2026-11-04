@@ -1,5 +1,8 @@
 import {
   callDoctorSchema,
+  dischargeSchema,
+  erStatusSchema,
+  transferSchema,
   overrideLevelSchema,
   quickRegistrationSchema,
   triageSchema,
@@ -11,6 +14,7 @@ import { emitRefresh, rooms } from '../realtime/realtime.js';
 import {
   callDoctor,
   cancelCall,
+  dischargeVisit,
   erDepartmentOf,
   getQueue,
   getVisit,
@@ -19,6 +23,8 @@ import {
   registerArrival,
   requireErNurse,
   saveTriage,
+  setErStatus,
+  transferVisit,
 } from '../services/er.service.js';
 
 // The emergency room (phase 2): emergency nurses only.
@@ -108,4 +114,47 @@ erRouter.delete('/visits/:id/calls/:callId', async (req, res) => {
   emitRefresh(rooms.department(departmentId), [['er-queue'], ['er-visit', id]]);
   if (call.doctorId) emitRefresh(rooms.user(call.doctorId), [['doctor-calls']]);
   res.json({ call });
+});
+
+// The patient's course in the ER: treated, then transferred or discharged (task 2.17).
+erRouter.put('/visits/:id/status', async (req, res) => {
+  const { auth, db } = session(req);
+  const departmentId = await requireErNurse(db, auth.userId);
+  const { id } = visitParam.parse(req.params);
+  const { status } = erStatusSchema.parse(req.body);
+  const visit = await setErStatus(db, id, status);
+  emitRefresh(rooms.department(departmentId), [['er-queue'], ['er-visit', id]]);
+  res.json({ visit });
+});
+
+/** Tells everyone concerned that the visit left the ER. */
+function announceClosed(
+  erDepartmentId: string,
+  { visit, withdrawnDoctorIds }: { visit: { id: string }; withdrawnDoctorIds: string[] },
+  wardId?: string,
+) {
+  emitRefresh(rooms.department(erDepartmentId), [['er-queue'], ['er-visit', visit.id]]);
+  for (const doctorId of withdrawnDoctorIds) emitRefresh(rooms.user(doctorId), [['doctor-calls']]);
+  // The ward's screens (bed admission, 3.16) pick up the new arrival.
+  if (wardId) emitRefresh(rooms.department(wardId), [['ward-incoming']]);
+}
+
+erRouter.post('/visits/:id/transfer', async (req, res) => {
+  const { auth, db } = session(req);
+  const departmentId = await requireErNurse(db, auth.userId);
+  const { id } = visitParam.parse(req.params);
+  const input = transferSchema.parse(req.body);
+  const result = await transferVisit(db, id, input);
+  announceClosed(departmentId, result, input.departmentId);
+  res.json({ visit: result.visit });
+});
+
+erRouter.post('/visits/:id/discharge', async (req, res) => {
+  const { auth, db } = session(req);
+  const departmentId = await requireErNurse(db, auth.userId);
+  const { id } = visitParam.parse(req.params);
+  const input = dischargeSchema.parse(req.body ?? {});
+  const result = await dischargeVisit(db, id, input);
+  announceClosed(departmentId, result);
+  res.json({ visit: result.visit });
 });

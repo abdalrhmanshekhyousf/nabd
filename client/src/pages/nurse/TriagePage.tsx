@@ -3,6 +3,7 @@ import {
   CONSCIOUSNESS_LEVELS,
   EXPECTED_EXAMS,
   isAbnormal,
+  isClosed,
   suggestEsiLevel,
   triageSchema,
   VITAL_RANGES,
@@ -20,6 +21,7 @@ import { Link, useParams } from 'react-router';
 import { queryKeys } from '@/app/queryKeys';
 import { EsiSuggestion } from '@/components/er/EsiSuggestion';
 import { DoctorCallPanel } from '@/components/er/DoctorCallPanel';
+import { ErCoursePanel } from '@/components/er/ErCoursePanel';
 import { LevelOverride } from '@/components/er/LevelOverride';
 import { patientFacts, patientName } from '@/components/patients/patientDisplay';
 import { Button, Card, Input, Spinner } from '@/components/ui';
@@ -435,6 +437,8 @@ export function TriagePage() {
     );
   }
 
+  const closed = isClosed(visit.status);
+
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       {back}
@@ -453,17 +457,27 @@ export function TriagePage() {
         </Card>
       </motion.div>
       <motion.div {...enter(1)}>
-        <Card className="p-4 sm:p-6">
-          {/* A new key when the visit is saved keeps the form's values in step. */}
-          <TriageForm key={visit.assessedAt ?? 'new'} visit={visit} />
-        </Card>
+        <ErCoursePanel visit={visit} />
       </motion.div>
       <motion.div {...enter(2)}>
-        <LevelOverride visit={visit} />
+        <Card className="p-4 sm:p-6">
+          {/* Read-only once the patient has left the ER. */}
+          <fieldset disabled={closed} className="min-w-0 disabled:opacity-80">
+            {/* A new key when the visit is saved keeps the form's values in step. */}
+            <TriageForm key={visit.assessedAt ?? 'new'} visit={visit} />
+          </fieldset>
+        </Card>
       </motion.div>
-      <motion.div {...enter(3)}>
-        <DoctorCallPanel visit={visit} />
-      </motion.div>
+      {!closed && (
+        <>
+          <motion.div {...enter(3)}>
+            <LevelOverride visit={visit} />
+          </motion.div>
+          <motion.div {...enter(4)}>
+            <DoctorCallPanel visit={visit} />
+          </motion.div>
+        </>
+      )}
     </div>
   );
 }

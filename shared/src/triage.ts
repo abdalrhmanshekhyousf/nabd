@@ -72,7 +72,16 @@ export type ErVisit = {
   reasons: EsiReason[];
   /** The latest call to a doctor for this visit (task 2.16), if any. */
   call: DoctorCallView | null;
+  /** Where the patient went and when, once transferred or discharged (2.17). */
+  closedAt: string | null;
+  closingNote: string | null;
+  department: { id: string; name: string; code: DepartmentCode | null } | null;
 };
+
+/** A visit is closed once the patient is transferred or discharged. */
+export function isClosed(status: TriageStatus) {
+  return status === 'TRANSFERRED' || status === 'DISCHARGED';
+}
 
 export type DoctorCallView = {
   id: string;

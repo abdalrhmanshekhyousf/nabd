@@ -108,3 +108,22 @@ export type CallDoctorInput = z.infer<typeof callDoctorSchema>;
 /** POST /doctors/me/calls/:id/decline: a doctor says why they cannot come (task 2.9). */
 export const declineCallSchema = z.object({ reason: requiredText(200) });
 export type DeclineCallInput = z.infer<typeof declineCallSchema>;
+
+/** PUT /er/visits/:id/status: waiting or being treated, while in the ER (task 2.17). */
+export const erStatusSchema = z.object({
+  status: z.enum(['WAITING', 'IN_TREATMENT'], 'validation.required'),
+});
+
+/** POST /er/visits/:id/transfer: to a ward, which admits the patient (3.16). */
+export const transferSchema = z.object({
+  departmentId: id(),
+  note: optionalText(300),
+});
+
+/** POST /er/visits/:id/discharge: home, with instructions. */
+export const dischargeSchema = z.object({ note: optionalText(500) });
+
+export type ErStatusInput = z.infer<typeof erStatusSchema>;
+export type TransferInput = z.input<typeof transferSchema>;
+export type TransferData = z.output<typeof transferSchema>;
+export type DischargeData = z.output<typeof dischargeSchema>;

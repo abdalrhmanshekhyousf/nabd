@@ -483,6 +483,8 @@ model TriageAssessment {
   // Where the patient went after the ER (2.17).
   departmentId     String?        @db.Uuid
   closedAt         DateTime?
+  // The transfer or discharge note (2.17).
+  closingNote      String?
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 

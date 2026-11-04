@@ -14,6 +14,9 @@ import {
   quickRegistrationSchema,
   triageSchema,
   overrideLevelSchema,
+  transferSchema,
+  dischargeSchema,
+  erStatusSchema,
   overrideReasonMissing,
   isAbnormal,
   updateStaffSchema,
@@ -207,6 +210,9 @@ describe('client output is valid server input', () => {
     [hospitalSearchSchema, { search: ' دار ' }],
     [doctorStatusSchema, { status: 'BUSY' }],
     [overrideLevelSchema, { level: 2, reason: ' شكله تعبان ' }],
+    [transferSchema, { departmentId: '0199a3d2-6c55-7000-8000-000000000001', note: '' }],
+    [dischargeSchema, { note: ' راحة 3 أيام ' }],
+    [erStatusSchema, { status: 'IN_TREATMENT' }],
     [
       triageSchema,
       {
@@ -574,5 +580,17 @@ describe('overrideLevelSchema', () => {
     expect(overrideReasonMissing(2, 4, '  ')).toBe(true);
     expect(overrideReasonMissing(2, 4, 'شكله تعبان')).toBe(false);
     expect(overrideReasonMissing(4, 4, null)).toBe(false);
+  });
+});
+
+describe('ER status, transfer and discharge', () => {
+  it('only waiting or in treatment can be set directly', () => {
+    expect(erStatusSchema.safeParse({ status: 'IN_TREATMENT' }).success).toBe(true);
+    expect(erStatusSchema.safeParse({ status: 'DISCHARGED' }).success).toBe(false);
+  });
+
+  it('a transfer needs a department; notes are optional', () => {
+    expect(transferSchema.safeParse({ departmentId: '', note: null }).success).toBe(false);
+    expect(dischargeSchema.parse({ note: '' })).toEqual({ note: null });
   });
 });

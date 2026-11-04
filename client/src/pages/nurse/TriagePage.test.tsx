@@ -1,5 +1,5 @@
 import type { ErVisit } from '@nabd/shared';
-import { fireEvent, screen, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MotionGlobalConfig } from 'framer-motion';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -47,6 +47,9 @@ const VISIT: ErVisit = {
   overrideReason: null,
   reasons: [],
   call: null,
+  closedAt: null,
+  closingNote: null,
+  department: null,
 };
 
 beforeAll(() => {
@@ -325,5 +328,133 @@ describe('calling a doctor (task 2.16)', () => {
     expect(warning).toHaveTextContent('ما في طبيب متفرّغ من نفس الاختصاص');
     expect(within(warning).getByRole('button', { name: 'استدعاء د. سامي' })).toBeInTheDocument();
     expect(within(warning).getByRole('button', { name: 'استدعاء د. عمر' })).toBeInTheDocument();
+  });
+});
+
+describe('the patient leaves the ER (task 2.17)', () => {
+  let current: ErVisit;
+
+  beforeEach(() => {
+    current = { ...VISIT, level: 3, suggestedLevel: 3, assessedAt: new Date().toISOString() };
+    fake.respond((config) => {
+      if (config.url === `/er/visits/${VISIT_ID}`) return { status: 200, data: { visit: current } };
+      if (config.url === `/er/visits/${VISIT_ID}/status`) {
+        current = { ...current, status: JSON.parse(config.data as string).status };
+        return { status: 200, data: { visit: current } };
+      }
+      if (config.url === `/er/visits/${VISIT_ID}/transfer`) {
+        const { note } = JSON.parse(config.data as string);
+        current = {
+          ...current,
+          status: 'TRANSFERRED',
+          closedAt: new Date().toISOString(),
+          closingNote: note,
+          department: { id: 'ward', name: 'القلبية', code: 'CARDIOLOGY' },
+        };
+        return { status: 200, data: { visit: current } };
+      }
+      if (config.url === `/er/visits/${VISIT_ID}/discharge`) {
+        const { note } = JSON.parse(config.data as string);
+        current = {
+          ...current,
+          status: 'DISCHARGED',
+          closedAt: new Date().toISOString(),
+          closingNote: note,
+        };
+        return { status: 200, data: { visit: current } };
+      }
+      if (config.url === '/departments') {
+        return {
+          status: 200,
+          data: {
+            departments: [
+              { id: 'er', name: 'الإسعاف', code: 'EMERGENCY', roomCount: 0, staffCount: 0 },
+              { id: 'ward', name: 'القلبية', code: 'CARDIOLOGY', roomCount: 0, staffCount: 0 },
+            ],
+          },
+        };
+      }
+      if (config.url === '/er/queue') return { status: 200, data: { visits: [] } };
+      if (config.url === '/notifications')
+        return { status: 200, data: { notifications: [], unread: 0 } };
+      return { status: 200, data: {} };
+    });
+  });
+
+  it('switches between waiting and in treatment', async () => {
+    renderApp(`/nurse/triage/${VISIT_ID}`);
+    const user = userEvent.setup();
+    const course = await screen.findByRole('radiogroup', { name: 'حالة المريض' });
+
+    await user.click(within(course).getByRole('radio', { name: 'قيد العلاج' }));
+
+    await waitFor(() =>
+      expect(within(course).getByRole('radio', { name: 'قيد العلاج' })).toHaveAttribute(
+        'aria-checked',
+        'true',
+      ),
+    );
+    expect(JSON.parse(fake.calls.find((c) => c.url?.endsWith('/status'))!.data as string)).toEqual({
+      status: 'IN_TREATMENT',
+    });
+  });
+
+  it('transfers to a ward (never back to the ER) and returns to the list', async () => {
+    const router = renderApp(`/nurse/triage/${VISIT_ID}`);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'تحويل لقسم' }));
+    const dialog = await screen.findByRole('dialog', { name: 'تحويل لقسم' });
+
+    await user.click(within(dialog).getByRole('button', { name: 'تحويل المريض' }));
+    expect(await within(dialog).findByText('هالحقل مطلوب')).toBeInTheDocument();
+    const select = within(dialog).getByLabelText(/^القسم/);
+    expect(within(select).queryByRole('option', { name: 'الإسعاف' })).toBeNull();
+    await user.selectOptions(select, 'ward');
+    await user.type(within(dialog).getByLabelText(/ملاحظة للقسم/), 'مراقبة قلبية');
+    await user.click(within(dialog).getByRole('button', { name: 'تحويل المريض' }));
+
+    expect(await screen.findByText('تحوّل مريض مجهول الهوية لقسم القلبية')).toBeInTheDocument();
+    expect(
+      JSON.parse(fake.calls.find((c) => c.url?.endsWith('/transfer'))!.data as string),
+    ).toEqual({
+      departmentId: 'ward',
+      note: 'مراقبة قلبية',
+    });
+    await waitFor(() => expect(router.state.location.pathname).toBe('/nurse/emergency'));
+  });
+
+  it('a closed visit says where the patient went and is read-only', async () => {
+    current = {
+      ...current,
+      status: 'DISCHARGED',
+      closedAt: new Date().toISOString(),
+      closingNote: 'راحة 3 أيام',
+    };
+    renderApp(`/nurse/triage/${VISIT_ID}`);
+
+    const banner = await screen.findByRole('status');
+    expect(banner).toHaveTextContent('تخرّج من الإسعاف');
+    expect(banner).toHaveTextContent('راحة 3 أيام');
+    expect(screen.getByRole('button', { name: 'حفظ التقييم' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'تعديل المستوى' })).toBeNull();
+    expect(screen.queryByRole('radiogroup', { name: 'استدعاء طبيب' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'تخريج' })).toBeNull();
+  });
+
+  it('discharges with instructions', async () => {
+    renderApp(`/nurse/triage/${VISIT_ID}`);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'تخريج' }));
+    const dialog = await screen.findByRole('dialog', { name: 'تخريج المريض' });
+
+    await user.type(within(dialog).getByLabelText(/تعليمات التخريج/), 'راحة 3 أيام');
+    await user.click(within(dialog).getByRole('button', { name: 'تخريج المريض' }));
+
+    expect(await screen.findByText('تخرّج مريض مجهول الهوية')).toBeInTheDocument();
+    expect(
+      JSON.parse(fake.calls.find((c) => c.url?.endsWith('/discharge'))!.data as string),
+    ).toMatchObject({
+      note: 'راحة 3 أيام',
+    });
   });
 });

@@ -2,10 +2,12 @@ import {
   availableAlternatives,
   overrideReasonMissing,
   suggestEsiLevel,
+  type DischargeData,
   type DoctorOption,
   type ErVisit,
   type OverrideLevelData,
   type QuickRegistrationData,
+  type TransferData,
   type TriageData,
 } from '@nabd/shared';
 import type { Prisma } from '../generated/prisma/client.js';
@@ -88,6 +90,7 @@ const visitInclude = {
   patient: {
     select: { id: true, fullName: true, isAnonymous: true, gender: true, dateOfBirth: true },
   },
+  department: { select: { id: true, name: true, code: true } },
   // The latest call to a doctor (task 2.16).
   calls: {
     orderBy: { createdAt: 'desc' },
@@ -127,6 +130,9 @@ export function toErVisit(visit: VisitRow): ErVisit {
     overrideReason: visit.overrideReason,
     reasons: visit.assessedAt ? suggestEsiLevel({ ...visit, temperature }).reasons : [],
     call: visit.calls[0] ? toCallView(visit.calls[0]) : null,
+    closedAt: visit.closedAt?.toISOString() ?? null,
+    closingNote: visit.closingNote,
+    department: visit.department,
   };
 }
 
@@ -315,4 +321,75 @@ export async function cancelCall(db: ScopedPrisma, visitId: string, callId: stri
     include: { doctor: { select: { fullName: true } } },
   });
   return toCallView(cancelled);
+}
+
+/** Waiting or being treated, while the patient is in the ER (task 2.17). */
+export async function setErStatus(
+  db: ScopedPrisma,
+  id: string,
+  status: 'WAITING' | 'IN_TREATMENT',
+) {
+  await requireOpenVisit(db, id);
+  const saved = await db.triageAssessment.update({
+    where: { id },
+    data: { status },
+    include: visitInclude,
+  });
+  return toErVisit(saved);
+}
+
+/**
+ * Closes the visit: the patient leaves the ER, transferred to a ward or
+ * discharged home. A call still waiting for an answer is withdrawn. Returns
+ * the visit and the doctors whose calls were withdrawn (to refresh them).
+ */
+async function closeVisit(
+  db: ScopedPrisma,
+  id: string,
+  data: { status: 'TRANSFERRED' | 'DISCHARGED'; closingNote: string | null; departmentId?: string },
+) {
+  await requireOpenVisit(db, id);
+  return db.$transaction(async (tx) => {
+    const withdrawn = await tx.doctorCall.findMany({
+      where: { triageId: id, status: 'PENDING' },
+      select: { doctorId: true },
+    });
+    await tx.doctorCall.updateMany({
+      where: { triageId: id, status: 'PENDING' },
+      data: { status: 'CANCELLED', respondedAt: new Date() },
+    });
+    const saved = await tx.triageAssessment.update({
+      where: { id },
+      data: { ...data, closedAt: new Date() },
+      include: visitInclude,
+    });
+    return {
+      visit: toErVisit(saved),
+      withdrawnDoctorIds: withdrawn.flatMap((call) => (call.doctorId ? [call.doctorId] : [])),
+    };
+  });
+}
+
+/** Transfers the patient to a ward of this hospital (not back to the ER). */
+export async function transferVisit(
+  db: ScopedPrisma,
+  id: string,
+  { departmentId, note }: TransferData,
+) {
+  const department = await db.department.findUnique({
+    where: { id: departmentId },
+    select: { code: true },
+  });
+  if (!department) throw new HttpError(404, 'NOT_FOUND', 'Department not found');
+  if (department.code === 'EMERGENCY') {
+    throw new HttpError(400, 'VALIDATION_ERROR', 'Choose a department other than the ER', {
+      issues: [{ path: ['departmentId'], message: 'validation.invalid' }],
+    });
+  }
+  return closeVisit(db, id, { status: 'TRANSFERRED', closingNote: note, departmentId });
+}
+
+/** Sends the patient home, with their instructions. */
+export async function dischargeVisit(db: ScopedPrisma, id: string, { note }: DischargeData) {
+  return closeVisit(db, id, { status: 'DISCHARGED', closingNote: note });
 }
