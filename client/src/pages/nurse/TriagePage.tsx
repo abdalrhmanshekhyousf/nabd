@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 import { queryKeys } from '@/app/queryKeys';
 import { EsiSuggestion } from '@/components/er/EsiSuggestion';
+import { DoctorCallPanel } from '@/components/er/DoctorCallPanel';
 import { LevelOverride } from '@/components/er/LevelOverride';
 import { patientFacts, patientName } from '@/components/patients/patientDisplay';
 import { Button, Card, Input, Spinner } from '@/components/ui';
@@ -459,6 +460,9 @@ export function TriagePage() {
       </motion.div>
       <motion.div {...enter(2)}>
         <LevelOverride visit={visit} />
+      </motion.div>
+      <motion.div {...enter(3)}>
+        <DoctorCallPanel visit={visit} />
       </motion.div>
     </div>
   );

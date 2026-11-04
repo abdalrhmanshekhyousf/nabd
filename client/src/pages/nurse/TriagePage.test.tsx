@@ -46,6 +46,7 @@ const VISIT: ErVisit = {
   level: null,
   overrideReason: null,
   reasons: [],
+  call: null,
 };
 
 beforeAll(() => {
@@ -231,5 +232,98 @@ describe('setting another level (task 2.14)', () => {
 
     await screen.findByRole('heading', { name: 'مريض مجهول الهوية' });
     expect(screen.queryByRole('button', { name: 'تعديل المستوى' })).toBeNull();
+  });
+});
+
+describe('calling a doctor (task 2.16)', () => {
+  const doctor = (
+    id: string,
+    fullName: string,
+    specialty: string,
+    status: 'AVAILABLE' | 'BUSY' | 'ON_LEAVE',
+  ) => ({
+    id,
+    fullName,
+    specialty,
+    status,
+    department: null,
+  });
+  let current: ErVisit;
+  let doctors: ReturnType<typeof doctor>[];
+
+  beforeEach(() => {
+    current = { ...VISIT, level: 2, suggestedLevel: 2, assessedAt: new Date().toISOString() };
+    doctors = [
+      doctor('reem', 'د. ريم', 'قلبية', 'BUSY'),
+      doctor('sami', 'د. سامي', 'قلبية', 'AVAILABLE'),
+      doctor('omar', 'د. عمر', 'عظمية', 'AVAILABLE'),
+      doctor('lina', 'د. لينا', 'عصبية', 'ON_LEAVE'),
+    ];
+    fake.respond((config) => {
+      if (config.url === `/er/visits/${VISIT_ID}`) return { status: 200, data: { visit: current } };
+      if (config.url === '/er/doctors') return { status: 200, data: { doctors } };
+      if (config.url === `/er/visits/${VISIT_ID}/calls` && config.method === 'post') {
+        const { doctorId } = JSON.parse(config.data as string);
+        const called = doctors.find((d) => d.id === doctorId)!;
+        const call = {
+          id: 'call1',
+          status: 'PENDING' as const,
+          doctorId,
+          doctorName: called.fullName,
+          declineReason: null,
+          createdAt: new Date().toISOString(),
+          respondedAt: null,
+        };
+        current = { ...current, call };
+        return { status: 201, data: { call } };
+      }
+      if (config.url === `/er/visits/${VISIT_ID}/calls/call1` && config.method === 'delete') {
+        current = { ...current, call: { ...current.call!, status: 'CANCELLED' } };
+        return { status: 200, data: { call: current.call } };
+      }
+      if (config.url === '/notifications') {
+        return { status: 200, data: { notifications: [], unread: 0 } };
+      }
+      return { status: 200, data: {} };
+    });
+  });
+
+  it('suggests an available doctor of the same specialty when the chosen one is busy', async () => {
+    renderApp(`/nurse/triage/${VISIT_ID}`);
+    const user = userEvent.setup();
+    const picker = await screen.findByRole('radiogroup', { name: 'استدعاء طبيب' });
+    expect(within(picker).getByRole('radio', { name: /د. ريم/ })).toHaveTextContent('مشغول');
+
+    await user.click(within(picker).getByRole('radio', { name: /د. ريم/ }));
+    const warning = await screen.findByRole('alert');
+    expect(warning).toHaveTextContent('د. ريم مشغول هلق.');
+    expect(warning).toHaveTextContent('متفرّغين من نفس الاختصاص:');
+    expect(within(warning).queryByRole('button', { name: 'استدعاء د. عمر' })).toBeNull();
+
+    await user.click(within(warning).getByRole('button', { name: 'استدعاء د. سامي' }));
+
+    expect(await screen.findByText('تم استدعاء د. سامي، وصله تنبيه عاجل')).toBeInTheDocument();
+    const post = fake.calls.find((c) => c.method === 'post' && c.url?.endsWith('/calls'))!;
+    expect(JSON.parse(post.data as string)).toEqual({ doctorId: 'sami' });
+    expect(await screen.findByText('تم استدعاء د. سامي · بانتظار الرد')).toBeInTheDocument();
+    expect(screen.queryByRole('radiogroup', { name: 'استدعاء طبيب' })).toBeNull();
+
+    await user.click(screen.getByRole('button', { name: 'إلغاء الاستدعاء' }));
+    expect(await screen.findByRole('radiogroup', { name: 'استدعاء طبيب' })).toBeInTheDocument();
+    expect(fake.calls.some((c) => c.method === 'delete')).toBe(true);
+  });
+
+  it('offers available doctors of other specialties when nobody of the same one is free', async () => {
+    renderApp(`/nurse/triage/${VISIT_ID}`);
+    const user = userEvent.setup();
+    const picker = await screen.findByRole('radiogroup', { name: 'استدعاء طبيب' });
+
+    await user.click(within(picker).getByRole('radio', { name: /د. لينا/ }));
+
+    const warning = await screen.findByRole('alert');
+    expect(warning).toHaveTextContent('د. لينا بعطلة هلق.');
+    expect(warning).toHaveTextContent('ما في طبيب متفرّغ من نفس الاختصاص');
+    expect(within(warning).getByRole('button', { name: 'استدعاء د. سامي' })).toBeInTheDocument();
+    expect(within(warning).getByRole('button', { name: 'استدعاء د. عمر' })).toBeInTheDocument();
   });
 });

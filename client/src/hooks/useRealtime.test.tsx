@@ -111,14 +111,14 @@ describe('useRealtime', () => {
         item({
           type: 'DOCTOR_CALL',
           urgent: true,
-          data: { patient: 'مريض مجهول', level: 2 },
+          data: { patient: 'مريض مجهول', complaint: 'ألم بالصدر', level: 2 },
           link: '/admin/staff',
         }),
       ),
     );
 
     expect(await screen.findByText('استدعاء عاجل للإسعاف')).toBeInTheDocument();
-    expect(screen.getByText('مريض مجهول · مستوى الخطورة 2')).toBeInTheDocument();
+    expect(screen.getByText('مريض مجهول · ألم بالصدر · مستوى الخطورة 2')).toBeInTheDocument();
     expect(playSound).toHaveBeenCalledWith('urgent');
     await user.click(screen.getByRole('button', { name: 'فتح' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/admin/staff'));

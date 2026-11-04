@@ -1,3 +1,5 @@
+import type { DepartmentCode } from './schemas/department.js';
+
 /** ESI triage levels: 1 is the most urgent (task 2.10). */
 export const ESI_LEVELS = [1, 2, 3, 4, 5] as const;
 export type EsiLevel = (typeof ESI_LEVELS)[number];
@@ -68,7 +70,43 @@ export type ErVisit = {
   overrideReason: string | null;
   /** Why the suggested level, once assessed (task 2.13). */
   reasons: EsiReason[];
+  /** The latest call to a doctor for this visit (task 2.16), if any. */
+  call: DoctorCallView | null;
 };
+
+export type DoctorCallView = {
+  id: string;
+  status: DoctorCallStatus;
+  doctorId: string | null;
+  doctorName: string | null;
+  declineReason: string | null;
+  createdAt: string;
+  respondedAt: string | null;
+};
+
+/** A doctor the ER can call (task 2.16). */
+export type DoctorOption = {
+  id: string;
+  fullName: string;
+  specialty: string;
+  status: 'AVAILABLE' | 'BUSY' | 'ON_LEAVE';
+  department: { id: string; name: string; code: DepartmentCode | null } | null;
+};
+
+/**
+ * When the chosen doctor is busy or on leave: available doctors of the same
+ * specialty (case and spaces ignored). The server and the picker use the same
+ * rule, so the picker offers exactly what the server will accept.
+ */
+export function availableAlternatives(doctors: DoctorOption[], chosen: DoctorOption) {
+  const specialty = chosen.specialty.trim().toLowerCase();
+  return doctors.filter(
+    (doctor) =>
+      doctor.id !== chosen.id &&
+      doctor.status === 'AVAILABLE' &&
+      doctor.specialty.trim().toLowerCase() === specialty,
+  );
+}
 
 /** Why a level was suggested, so the nurse sees the reasoning (task 2.13). */
 export type EsiReason =

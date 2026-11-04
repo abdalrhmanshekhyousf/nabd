@@ -9,6 +9,16 @@ export function describeNotification({ type, data }: Pick<NotificationItem, 'typ
   const bodyKey = `notifications.body.${type}` as const;
   return {
     title: i18n.t(`notifications.types.${type}`),
-    body: i18n.exists(bodyKey) ? i18n.t(bodyKey as never, data) : undefined,
+    body: i18n.exists(bodyKey) ? i18n.t(bodyKey as never, readable(data)) : undefined,
+  };
+}
+
+/** Details as the reader should see them: an unnamed patient, an unknown level. */
+function readable(data: NotificationItem['data']) {
+  return {
+    ...data,
+    patient: data.patient ?? i18n.t('patients.anonymous'),
+    level: data.level ?? '—',
+    complaint: data.complaint ?? '—',
   };
 }

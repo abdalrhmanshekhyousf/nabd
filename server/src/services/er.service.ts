@@ -1,6 +1,8 @@
 import {
+  availableAlternatives,
   overrideReasonMissing,
   suggestEsiLevel,
+  type DoctorOption,
   type ErVisit,
   type OverrideLevelData,
   type QuickRegistrationData,
@@ -9,6 +11,7 @@ import {
 import type { Prisma } from '../generated/prisma/client.js';
 import type { ScopedPrisma } from '../lib/scopedPrisma.js';
 import { HttpError } from '../middleware/errorHandler.js';
+import { sendNotification } from './notification.service.js';
 
 /** The emergency department this person works in, or null (a nurse's type follows it). */
 export async function erDepartmentOf(db: ScopedPrisma, userId: string) {
@@ -85,6 +88,12 @@ const visitInclude = {
   patient: {
     select: { id: true, fullName: true, isAnonymous: true, gender: true, dateOfBirth: true },
   },
+  // The latest call to a doctor (task 2.16).
+  calls: {
+    orderBy: { createdAt: 'desc' },
+    take: 1,
+    include: { doctor: { select: { fullName: true } } },
+  },
 } as const satisfies Prisma.TriageAssessmentInclude;
 
 type VisitRow = Prisma.TriageAssessmentGetPayload<{ include: typeof visitInclude }>;
@@ -117,6 +126,21 @@ export function toErVisit(visit: VisitRow): ErVisit {
     level: visit.level,
     overrideReason: visit.overrideReason,
     reasons: visit.assessedAt ? suggestEsiLevel({ ...visit, temperature }).reasons : [],
+    call: visit.calls[0] ? toCallView(visit.calls[0]) : null,
+  };
+}
+
+type CallRow = VisitRow['calls'][number];
+
+function toCallView(call: CallRow) {
+  return {
+    id: call.id,
+    status: call.status,
+    doctorId: call.doctorId,
+    doctorName: call.doctor?.fullName ?? null,
+    declineReason: call.declineReason,
+    createdAt: call.createdAt.toISOString(),
+    respondedAt: call.respondedAt?.toISOString() ?? null,
   };
 }
 
@@ -202,4 +226,93 @@ export async function getQueue(db: ScopedPrisma) {
     orderBy: [{ level: { sort: 'asc', nulls: 'first' } }, { arrivedAt: 'asc' }],
   });
   return visits.map(toErVisit);
+}
+
+/** Every active doctor with their status and department, for the ER picker (task 2.16). */
+export async function listDoctors(db: ScopedPrisma): Promise<DoctorOption[]> {
+  const doctors = await db.user.findMany({
+    where: { role: 'DOCTOR', isActive: true, doctorProfile: { isNot: null } },
+    select: {
+      id: true,
+      fullName: true,
+      doctorProfile: { select: { specialty: true, status: true } },
+      staffProfile: { select: { department: { select: { id: true, name: true, code: true } } } },
+    },
+    orderBy: { fullName: 'asc' },
+  });
+  return doctors.map((doctor) => ({
+    id: doctor.id,
+    fullName: doctor.fullName,
+    specialty: doctor.doctorProfile!.specialty,
+    status: doctor.doctorProfile!.status,
+    department: doctor.staffProfile?.department ?? null,
+  }));
+}
+
+async function requireOpenVisit(db: ScopedPrisma, id: string) {
+  const visit = await db.triageAssessment.findUnique({ where: { id }, include: visitInclude });
+  if (!visit) throw new HttpError(404, 'NOT_FOUND', 'Visit not found');
+  if (visit.status === 'TRANSFERRED' || visit.status === 'DISCHARGED') {
+    throw new HttpError(409, 'VISIT_CLOSED', 'This visit is closed');
+  }
+  return visit;
+}
+
+/**
+ * Calls a specific doctor to an ER patient (task 2.16). Only an available
+ * doctor is called; a busy one or one on leave is refused with the available
+ * doctors of the same specialty to choose from. The doctor is alerted with an
+ * urgent notification and answers in 2.9.
+ */
+export async function callDoctor(
+  db: ScopedPrisma,
+  hospitalId: string,
+  nurseId: string,
+  visitId: string,
+  doctorId: string,
+) {
+  const visit = await requireOpenVisit(db, visitId);
+  if (visit.calls[0]?.status === 'PENDING') {
+    throw new HttpError(409, 'CALL_PENDING', 'A call is waiting for an answer');
+  }
+  const doctors = await listDoctors(db);
+  const doctor = doctors.find((candidate) => candidate.id === doctorId);
+  if (!doctor) throw new HttpError(404, 'NOT_FOUND', 'Doctor not found');
+  if (doctor.status !== 'AVAILABLE') {
+    throw new HttpError(409, 'DOCTOR_UNAVAILABLE', 'This doctor is not available', {
+      status: doctor.status,
+      alternatives: availableAlternatives(doctors, doctor),
+    });
+  }
+
+  const call = await db.doctorCall.create({
+    data: { hospitalId, triageId: visitId, doctorId, calledById: nurseId },
+    include: { doctor: { select: { fullName: true } } },
+  });
+  await sendNotification(db, hospitalId, {
+    to: { userIds: [doctorId] },
+    type: 'DOCTOR_CALL',
+    data: {
+      patient: visit.patient.isAnonymous ? null : visit.patient.fullName,
+      level: visit.level,
+      complaint: visit.chiefComplaint,
+    },
+    link: '/doctor/calls',
+  });
+  return toCallView(call);
+}
+
+/** The nurse withdraws a call nobody has answered yet. */
+export async function cancelCall(db: ScopedPrisma, visitId: string, callId: string) {
+  const call = await db.doctorCall.findFirst({ where: { id: callId, triageId: visitId } });
+  if (!call) throw new HttpError(404, 'NOT_FOUND', 'Call not found');
+  if (call.status !== 'PENDING') {
+    throw new HttpError(409, 'VISIT_CLOSED', 'This call was already answered');
+  }
+  const cancelled = await db.doctorCall.update({
+    where: { id: callId },
+    data: { status: 'CANCELLED', respondedAt: new Date() },
+    include: { doctor: { select: { fullName: true } } },
+  });
+  return toCallView(cancelled);
 }

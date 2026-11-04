@@ -16,7 +16,14 @@ devRouter.post('/notify', async (req, res) => {
   const [notification] = await sendNotification(db, auth.hospitalId, {
     to: { userIds: [auth.userId] },
     ...(urgent
-      ? { type: 'DOCTOR_CALL', data: { patient: 'مريض مجهول · Unknown patient', level: 2 } }
+      ? {
+          type: 'DOCTOR_CALL',
+          data: {
+            patient: 'مريض مجهول · Unknown patient',
+            complaint: 'ألم بالصدر · Chest pain',
+            level: 2,
+          },
+        }
       : { type: 'CLEANING_REQUEST', data: { place: 'غرفة 101 · Room 101' } }),
     link: '/dev/ui',
   });

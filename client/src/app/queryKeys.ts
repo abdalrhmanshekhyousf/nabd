@@ -13,5 +13,6 @@ export const queryKeys = {
   erAccess: ['er-access'] as const,
   erQueue: ['er-queue'] as const,
   erVisit: (id: string) => ['er-visit', id] as const,
+  doctors: ['doctors'] as const,
   publicHospitals: (search: string) => ['public-hospitals', search] as const,
 };

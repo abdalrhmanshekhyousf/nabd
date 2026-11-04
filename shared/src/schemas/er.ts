@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { CONSCIOUSNESS_LEVELS, ESI_LEVELS, EXPECTED_EXAMS } from '../triage.js';
 import { GENDERS } from './patient.js';
-import { optionalBirthDate, optionalPhone, optionalText, requiredText } from './common.js';
+import { id, optionalBirthDate, optionalPhone, optionalText, requiredText } from './common.js';
 
 /** What every arrival needs: why they came, and how (task 2.11). */
 const arrival = {
@@ -100,3 +100,7 @@ export function overrideReasonMissing(
 
 export type OverrideLevelInput = z.input<typeof overrideLevelSchema>;
 export type OverrideLevelData = z.output<typeof overrideLevelSchema>;
+
+/** POST /er/visits/:id/calls: call this doctor to the patient (task 2.16). */
+export const callDoctorSchema = z.object({ doctorId: id() });
+export type CallDoctorInput = z.infer<typeof callDoctorSchema>;

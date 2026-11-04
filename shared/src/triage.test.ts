@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { isOverdue, minutesWaiting, suggestEsiLevel, type EsiInput } from './triage.js';
+import {
+  availableAlternatives,
+  isOverdue,
+  minutesWaiting,
+  suggestEsiLevel,
+  type DoctorOption,
+  type EsiInput,
+} from './triage.js';
 
 /** A calm adult with normal signs and no tests expected: level 5. */
 const calm: EsiInput = {
@@ -102,5 +109,29 @@ describe('waiting times', () => {
     expect(isOverdue(1, ago(0.5), now)).toBe(false);
     expect(isOverdue(1, ago(2), now)).toBe(true);
     expect(isOverdue(null, ago(500), now)).toBe(false);
+  });
+});
+
+describe('availableAlternatives', () => {
+  const doctor = (id: string, specialty: string, status: DoctorOption['status']): DoctorOption => ({
+    id,
+    fullName: id,
+    specialty,
+    status,
+    department: null,
+  });
+  const doctors = [
+    doctor('reem', 'قلبية', 'BUSY'),
+    doctor('sami', ' قلبية ', 'AVAILABLE'),
+    doctor('lina', 'قلبية', 'ON_LEAVE'),
+    doctor('omar', 'عظمية', 'AVAILABLE'),
+    doctor('nour', 'Cardiology', 'AVAILABLE'),
+    doctor('zaid', 'cardiology', 'AVAILABLE'),
+  ];
+
+  it('offers available doctors of the same specialty only', () => {
+    expect(availableAlternatives(doctors, doctors[0]).map((d) => d.id)).toEqual(['sami']);
+    expect(availableAlternatives(doctors, doctors[4]).map((d) => d.id)).toEqual(['zaid']);
+    expect(availableAlternatives(doctors, doctors[3])).toEqual([]);
   });
 });

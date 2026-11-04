@@ -12,6 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   AlarmClock,
+  PhoneCall,
   ChevronLeft,
   ClipboardPlus,
   HeartPulse,
@@ -106,6 +107,23 @@ function VisitCard({ visit, now }: { visit: ErVisit; now: number }) {
                 <span className="inline-flex items-center gap-1 rounded-md bg-info/12 px-1.5 py-0.5 font-medium text-info">
                   <Stethoscope className="size-3.5" aria-hidden="true" />
                   {t('queue.inTreatment')}
+                </span>
+              )}
+              {visit.call && visit.call.status !== 'CANCELLED' && (
+                <span
+                  className={cn(
+                    'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-medium',
+                    visit.call.status === 'PENDING' && 'bg-info/12 text-info',
+                    visit.call.status === 'ACCEPTED' && 'bg-success/12 text-success',
+                    visit.call.status === 'DECLINED' && 'bg-danger/12 text-danger',
+                  )}
+                >
+                  <PhoneCall className="size-3.5" aria-hidden="true" />
+                  {visit.call.status === 'PENDING'
+                    ? t('queue.calledPending', { name: visit.call.doctorName })
+                    : visit.call.status === 'ACCEPTED'
+                      ? t('queue.calledAccepted', { name: visit.call.doctorName })
+                      : t('queue.calledDeclined', { name: visit.call.doctorName })}
                 </span>
               )}
               {visit.overrideReason && (

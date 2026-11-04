@@ -1,12 +1,20 @@
-import { overrideLevelSchema, quickRegistrationSchema, triageSchema } from '@nabd/shared';
+import {
+  callDoctorSchema,
+  overrideLevelSchema,
+  quickRegistrationSchema,
+  triageSchema,
+} from '@nabd/shared';
 import { Router } from 'express';
 import { z } from 'zod';
 import { authenticate, requireRole, session } from '../middleware/auth.js';
 import { emitRefresh, rooms } from '../realtime/realtime.js';
 import {
+  callDoctor,
+  cancelCall,
   erDepartmentOf,
   getQueue,
   getVisit,
+  listDoctors,
   overrideLevel,
   registerArrival,
   requireErNurse,
@@ -71,4 +79,33 @@ erRouter.put('/visits/:id/level', async (req, res) => {
   const visit = await overrideLevel(db, auth.userId, id, input);
   emitRefresh(rooms.department(departmentId), [['er-queue'], ['er-visit', id]]);
   res.json({ visit });
+});
+
+/** Doctors with their live status, for calling one (task 2.16; refreshed on [['doctors']]). */
+erRouter.get('/doctors', async (req, res) => {
+  const { auth, db } = session(req);
+  await requireErNurse(db, auth.userId);
+  res.json({ doctors: await listDoctors(db) });
+});
+
+/** Calls a specific, available doctor to the patient (task 2.16). */
+erRouter.post('/visits/:id/calls', async (req, res) => {
+  const { auth, db } = session(req);
+  const departmentId = await requireErNurse(db, auth.userId);
+  const { id } = visitParam.parse(req.params);
+  const { doctorId } = callDoctorSchema.parse(req.body);
+  const call = await callDoctor(db, auth.hospitalId, auth.userId, id, doctorId);
+  emitRefresh(rooms.department(departmentId), [['er-queue'], ['er-visit', id]]);
+  emitRefresh(rooms.user(doctorId), [['doctor-calls']]);
+  res.status(201).json({ call });
+});
+
+erRouter.delete('/visits/:id/calls/:callId', async (req, res) => {
+  const { auth, db } = session(req);
+  const departmentId = await requireErNurse(db, auth.userId);
+  const { id, callId } = z.object({ id: z.uuid(), callId: z.uuid() }).parse(req.params);
+  const call = await cancelCall(db, id, callId);
+  emitRefresh(rooms.department(departmentId), [['er-queue'], ['er-visit', id]]);
+  if (call.doctorId) emitRefresh(rooms.user(call.doctorId), [['doctor-calls']]);
+  res.json({ call });
 });

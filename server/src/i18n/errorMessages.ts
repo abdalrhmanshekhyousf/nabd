@@ -60,6 +60,14 @@ const MESSAGES: Record<ErrorCode, Record<Language, string>> = {
     ar: 'غرفة العمليات مشغولة هلق (حجز أو تحضير أو عملية أو تعقيم)',
     en: 'The operating room is in use right now (booked, preparing, surgery or sterilization)',
   },
+  DOCTOR_UNAVAILABLE: {
+    ar: 'الطبيب مو متفرّغ هلق، اختار طبيب متفرّغ',
+    en: 'This doctor is not available now; choose an available one',
+  },
+  CALL_PENDING: {
+    ar: 'في استدعاء لهالمريض لسا بانتظار الرد',
+    en: 'A call for this patient is still waiting for an answer',
+  },
   NOT_ASSESSED: {
     ar: 'لازم ينعمل تقييم الخطورة أول',
     en: 'The triage has to be done first',
