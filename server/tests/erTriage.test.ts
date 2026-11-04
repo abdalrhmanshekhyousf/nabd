@@ -48,6 +48,11 @@ async function withVisit() {
       ...user,
       read: (visitId: string) =>
         request(app).get(`/api/er/visits/${visitId}`).set('Authorization', `Bearer ${token}`),
+      level: (visitId: string, body: object) =>
+        request(app)
+          .put(`/api/er/visits/${visitId}/level`)
+          .set('Authorization', `Bearer ${token}`)
+          .send(body),
       triage: (visitId: string, body: object) =>
         request(app)
           .put(`/api/er/visits/${visitId}/triage`)
@@ -183,5 +188,52 @@ describe('the suggested ESI level (task 2.13)', () => {
       level: 2,
       overrideReason: 'شكله تعبان أكتر من أرقامه',
     });
+  });
+});
+
+describe('setting another level (task 2.14)', () => {
+  it('needs a reason for another level, and the suggestion clears it', async () => {
+    const h = await withVisit();
+    const me = await h.nurse(h.er.id);
+    await me.triage(h.visit.id, TRIAGE); // suggested 2
+
+    const missing = await me.level(h.visit.id, { level: 1, reason: '' });
+    expect(missing.status).toBe(400);
+    expect(missing.body.error.code).toBe('VALIDATION_ERROR');
+
+    const raised = await me.level(h.visit.id, {
+      level: 1,
+      reason: 'ألم صدر مع تعرّق، اشتباه جلطة',
+    });
+    expect(raised.status).toBe(200);
+    expect(raised.body.visit).toMatchObject({
+      suggestedLevel: 2,
+      level: 1,
+      overrideReason: 'ألم صدر مع تعرّق، اشتباه جلطة',
+    });
+
+    const back = await me.level(h.visit.id, { level: 2, reason: 'أي شي' });
+    expect(back.body.visit).toMatchObject({ level: 2, overrideReason: null });
+  });
+
+  it('refuses visits not assessed yet or closed, and nurses outside the ER', async () => {
+    const h = await withVisit();
+    const me = await h.nurse(h.er.id);
+    const wardNurse = await h.nurse(h.ward.id);
+    const body = { level: 1, reason: 'سبب' };
+
+    const notAssessed = await me.level(h.visit.id, body);
+    expect(notAssessed.status).toBe(409);
+    expect(notAssessed.body.error.code).toBe('NOT_ASSESSED');
+
+    await me.triage(h.visit.id, TRIAGE);
+    expect((await wardNurse.level(h.visit.id, body)).status).toBe(403);
+    expect((await me.level(h.visit.id, { level: 7, reason: 'x' })).status).toBe(400);
+
+    await prisma.triageAssessment.update({
+      where: { id: h.visit.id },
+      data: { status: 'TRANSFERRED' },
+    });
+    expect((await me.level(h.visit.id, body)).body.error.code).toBe('VISIT_CLOSED');
   });
 });

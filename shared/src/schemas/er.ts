@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { CONSCIOUSNESS_LEVELS, EXPECTED_EXAMS } from '../triage.js';
+import { CONSCIOUSNESS_LEVELS, ESI_LEVELS, EXPECTED_EXAMS } from '../triage.js';
 import { GENDERS } from './patient.js';
 import { optionalBirthDate, optionalPhone, optionalText, requiredText } from './common.js';
 
@@ -69,3 +69,34 @@ export const triageSchema = z.object({
 
 export type TriageInput = z.input<typeof triageSchema>;
 export type TriageData = z.output<typeof triageSchema>;
+
+/**
+ * PUT /er/visits/:id/level: the nurse sets the level (task 2.14). A level other
+ * than the suggested one needs a reason (checked against the suggestion on
+ * the server); choosing the suggestion again clears the override.
+ */
+export const overrideLevelSchema = z.object({
+  level: z.union(
+    ESI_LEVELS.map((level) => z.literal(level)) as [
+      z.ZodLiteral<1>,
+      z.ZodLiteral<2>,
+      z.ZodLiteral<3>,
+      z.ZodLiteral<4>,
+      z.ZodLiteral<5>,
+    ],
+    'validation.required',
+  ),
+  reason: optionalText(300),
+});
+
+/** The same rule in the form, which knows the suggestion. */
+export function overrideReasonMissing(
+  level: number,
+  suggestedLevel: number,
+  reason: string | null,
+) {
+  return level !== suggestedLevel && !reason?.trim();
+}
+
+export type OverrideLevelInput = z.input<typeof overrideLevelSchema>;
+export type OverrideLevelData = z.output<typeof overrideLevelSchema>;

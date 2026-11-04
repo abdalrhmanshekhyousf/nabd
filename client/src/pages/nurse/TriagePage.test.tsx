@@ -161,3 +161,75 @@ describe('TriagePage', () => {
     expect(suggestion).toHaveTextContent('بيحتاج فحص واحد');
   });
 });
+
+describe('setting another level (task 2.14)', () => {
+  let current: ErVisit;
+
+  beforeEach(() => {
+    current = {
+      ...VISIT,
+      assessedAt: new Date().toISOString(),
+      breathing: true,
+      consciousness: 'ALERT',
+      painScore: 2,
+      expectedExams: 1,
+      suggestedLevel: 4,
+      level: 4,
+      reasons: [{ code: 'EXAMS', count: 1 }],
+    };
+    fake.respond((config) => {
+      if (config.url === `/er/visits/${VISIT_ID}`) return { status: 200, data: { visit: current } };
+      if (config.url === `/er/visits/${VISIT_ID}/level`) {
+        const { level, reason } = JSON.parse(config.data as string);
+        current = {
+          ...current,
+          level,
+          overrideReason: level === current.suggestedLevel ? null : reason,
+        };
+        return { status: 200, data: { visit: current } };
+      }
+      if (config.url === '/notifications') {
+        return { status: 200, data: { notifications: [], unread: 0 } };
+      }
+      return { status: 200, data: {} };
+    });
+  });
+
+  it('needs a reason for another level, shows the change, and goes back to the suggestion', async () => {
+    renderApp(`/nurse/triage/${VISIT_ID}`);
+    const user = userEvent.setup();
+    expect(await screen.findByText('معتمد نفس المستوى المقترح (4)')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'تعديل المستوى' }));
+    const dialog = await screen.findByRole('dialog', { name: 'تعديل مستوى الخطورة' });
+    await user.click(within(dialog).getByRole('radio', { name: /المستوى 2/ }));
+    await user.click(within(dialog).getByRole('button', { name: 'اعتماد المستوى' }));
+    expect(await within(dialog).findByText('اكتب ليش غيّرت المستوى')).toBeInTheDocument();
+    expect(fake.calls.some((c) => c.url?.endsWith('/level'))).toBe(false);
+
+    await user.type(within(dialog).getByLabelText(/سبب التعديل/), 'ألم صدر مع تعرّق');
+    await user.click(within(dialog).getByRole('button', { name: 'اعتماد المستوى' }));
+
+    expect(await screen.findByText('المستوى 2 بدل المقترح 4')).toBeInTheDocument();
+    expect(screen.getByText('السبب: ألم صدر مع تعرّق')).toBeInTheDocument();
+    const put = fake.calls.find((c) => c.url?.endsWith('/level'))!;
+    expect(JSON.parse(put.data as string)).toEqual({ level: 2, reason: 'ألم صدر مع تعرّق' });
+
+    await user.click(screen.getByRole('button', { name: 'رجوع للمقترح' }));
+    expect(await screen.findByText('معتمد نفس المستوى المقترح (4)')).toBeInTheDocument();
+    expect(
+      JSON.parse(fake.calls.filter((c) => c.url?.endsWith('/level')).at(-1)!.data as string),
+    ).toEqual({
+      level: 4,
+      reason: null,
+    });
+  });
+
+  it('is not offered before the triage is saved', async () => {
+    current = VISIT;
+    renderApp(`/nurse/triage/${VISIT_ID}`);
+
+    await screen.findByRole('heading', { name: 'مريض مجهول الهوية' });
+    expect(screen.queryByRole('button', { name: 'تعديل المستوى' })).toBeNull();
+  });
+});

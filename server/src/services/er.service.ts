@@ -1,6 +1,8 @@
 import {
+  overrideReasonMissing,
   suggestEsiLevel,
   type ErVisit,
+  type OverrideLevelData,
   type QuickRegistrationData,
   type TriageData,
 } from '@nabd/shared';
@@ -148,6 +150,41 @@ export async function saveTriage(db: ScopedPrisma, nurseId: string, id: string, 
       // The suggestion becomes the level, unless the nurse set another with a reason (2.14).
       level: visit.overrideReason ? visit.level : suggestedLevel,
     },
+    include: visitInclude,
+  });
+  return toErVisit(saved);
+}
+
+/**
+ * The nurse sets the level (task 2.14): another level than the suggested one
+ * needs a reason; the suggested one clears the override.
+ */
+export async function overrideLevel(
+  db: ScopedPrisma,
+  nurseId: string,
+  id: string,
+  { level, reason }: OverrideLevelData,
+) {
+  const visit = await db.triageAssessment.findUnique({
+    where: { id },
+    select: { status: true, suggestedLevel: true },
+  });
+  if (!visit) throw new HttpError(404, 'NOT_FOUND', 'Visit not found');
+  if (visit.status === 'TRANSFERRED' || visit.status === 'DISCHARGED') {
+    throw new HttpError(409, 'VISIT_CLOSED', 'This visit is closed');
+  }
+  if (visit.suggestedLevel === null) {
+    throw new HttpError(409, 'NOT_ASSESSED', 'Triage the patient first');
+  }
+  if (overrideReasonMissing(level, visit.suggestedLevel, reason)) {
+    throw new HttpError(400, 'VALIDATION_ERROR', 'A reason is required', {
+      issues: [{ path: ['reason'], message: 'validation.required' }],
+    });
+  }
+  const overridden = level !== visit.suggestedLevel;
+  const saved = await db.triageAssessment.update({
+    where: { id },
+    data: { level, overrideReason: overridden ? reason : null, nurseId },
     include: visitInclude,
   });
   return toErVisit(saved);

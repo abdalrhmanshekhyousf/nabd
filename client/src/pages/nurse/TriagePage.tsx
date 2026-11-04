@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 import { queryKeys } from '@/app/queryKeys';
 import { EsiSuggestion } from '@/components/er/EsiSuggestion';
+import { LevelOverride } from '@/components/er/LevelOverride';
 import { patientFacts, patientName } from '@/components/patients/patientDisplay';
 import { Button, Card, Input, Spinner } from '@/components/ui';
 import { api, describeApiError } from '@/lib/api';
@@ -455,6 +456,9 @@ export function TriagePage() {
           {/* A new key when the visit is saved keeps the form's values in step. */}
           <TriageForm key={visit.assessedAt ?? 'new'} visit={visit} />
         </Card>
+      </motion.div>
+      <motion.div {...enter(2)}>
+        <LevelOverride visit={visit} />
       </motion.div>
     </div>
   );

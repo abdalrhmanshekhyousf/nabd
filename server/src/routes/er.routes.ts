@@ -1,4 +1,4 @@
-import { quickRegistrationSchema, triageSchema } from '@nabd/shared';
+import { overrideLevelSchema, quickRegistrationSchema, triageSchema } from '@nabd/shared';
 import { Router } from 'express';
 import { z } from 'zod';
 import { authenticate, requireRole, session } from '../middleware/auth.js';
@@ -6,6 +6,7 @@ import { emitRefresh, rooms } from '../realtime/realtime.js';
 import {
   erDepartmentOf,
   getVisit,
+  overrideLevel,
   registerArrival,
   requireErNurse,
   saveTriage,
@@ -49,6 +50,17 @@ erRouter.put('/visits/:id/triage', async (req, res) => {
   const { id } = visitParam.parse(req.params);
   const input = triageSchema.parse(req.body);
   const visit = await saveTriage(db, auth.userId, id, input);
+  emitRefresh(rooms.department(departmentId), [['er-queue'], ['er-visit', id]]);
+  res.json({ visit });
+});
+
+/** The nurse sets another level than suggested, with a reason (task 2.14). */
+erRouter.put('/visits/:id/level', async (req, res) => {
+  const { auth, db } = session(req);
+  const departmentId = await requireErNurse(db, auth.userId);
+  const { id } = visitParam.parse(req.params);
+  const input = overrideLevelSchema.parse(req.body);
+  const visit = await overrideLevel(db, auth.userId, id, input);
   emitRefresh(rooms.department(departmentId), [['er-queue'], ['er-visit', id]]);
   res.json({ visit });
 });

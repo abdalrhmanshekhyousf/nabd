@@ -13,6 +13,8 @@ import {
   createPrescriptionSchema,
   quickRegistrationSchema,
   triageSchema,
+  overrideLevelSchema,
+  overrideReasonMissing,
   isAbnormal,
   updateStaffSchema,
   createBedSchema,
@@ -204,6 +206,7 @@ describe('client output is valid server input', () => {
     ],
     [hospitalSearchSchema, { search: ' دار ' }],
     [doctorStatusSchema, { status: 'BUSY' }],
+    [overrideLevelSchema, { level: 2, reason: ' شكله تعبان ' }],
     [
       triageSchema,
       {
@@ -557,5 +560,19 @@ describe('triageSchema', () => {
     expect(isAbnormal('pulse', 72)).toBe(false);
     expect(isAbnormal('oxygenSaturation', 91)).toBe(true);
     expect(isAbnormal('temperature', null)).toBe(false);
+  });
+});
+
+describe('overrideLevelSchema', () => {
+  it('takes a level 1 to 5 and an optional reason', () => {
+    expect(overrideLevelSchema.parse({ level: 1, reason: '' })).toEqual({ level: 1, reason: null });
+    expect(overrideLevelSchema.safeParse({ level: 6, reason: null }).success).toBe(false);
+  });
+
+  it('a reason is needed only when the level differs from the suggestion', () => {
+    expect(overrideReasonMissing(2, 4, null)).toBe(true);
+    expect(overrideReasonMissing(2, 4, '  ')).toBe(true);
+    expect(overrideReasonMissing(2, 4, 'شكله تعبان')).toBe(false);
+    expect(overrideReasonMissing(4, 4, null)).toBe(false);
   });
 });
