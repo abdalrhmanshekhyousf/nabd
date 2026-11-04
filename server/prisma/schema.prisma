@@ -73,6 +73,33 @@ enum OperatingRoomStatus {
   OUT_OF_SERVICE
 }
 
+// Matches BOOKING_KINDS / BOOKING_STATUSES in @nabd/shared (task 2.18).
+enum BookingKind {
+  SCHEDULED
+  EMERGENCY
+}
+
+enum BookingStatus {
+  SCHEDULED
+  POSTPONED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+// Matches CLEANING_KINDS / CLEANING_STATUSES in @nabd/shared (task 2.18).
+enum CleaningKind {
+  CLEANING
+  STERILIZATION
+}
+
+enum CleaningStatus {
+  PENDING
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
 enum DoctorStatus {
   AVAILABLE
   BUSY
@@ -176,6 +203,9 @@ model Hospital {
   prescriptionItems  PrescriptionItem[]
   triageAssessments  TriageAssessment[]
   doctorCalls        DoctorCall[]
+  operationBookings  OperationBooking[]
+  roomStatusChanges  OperatingRoomStatusChange[]
+  cleaningRequests   CleaningRequest[]
 }
 
 model Department {
@@ -186,11 +216,12 @@ model Department {
   createdAt  DateTime        @default(now())
   updatedAt  DateTime        @updatedAt
 
-  hospital    Hospital            @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  rooms       Room[]
-  staff       StaffProfile[]
-  cleaners    CleanerAssignment[]
-  erTransfers TriageAssessment[]
+  hospital         Hospital            @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  rooms            Room[]
+  staff            StaffProfile[]
+  cleaners         CleanerAssignment[]
+  erTransfers      TriageAssessment[]
+  cleaningRequests CleaningRequest[]
 
   @@unique([hospitalId, name])
   @@unique([hospitalId, code])
@@ -224,8 +255,9 @@ model Bed {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  room     Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  hospital         Hospital          @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  room             Room              @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  cleaningRequests CleaningRequest[]
 
   @@unique([roomId, label])
   @@index([hospitalId, status])
@@ -240,7 +272,10 @@ model OperatingRoom {
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
 
-  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  hospital         Hospital                    @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  bookings         OperationBooking[]
+  statusChanges    OperatingRoomStatusChange[]
+  cleaningRequests CleaningRequest[]
 
   @@unique([hospitalId, name])
   @@index([hospitalId, status])
@@ -266,19 +301,24 @@ model User {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  hospital             Hospital            @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  hospital             Hospital                    @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
   staffProfile         StaffProfile?
   doctorProfile        DoctorProfile?
   patient              Patient?
   refreshTokens        RefreshToken[]
   cleanerAssignments   CleanerAssignment[]
   notifications        Notification[]
-  treatedRecords       MedicalRecord[]     @relation("TreatingDoctor")
-  writtenReports       DoctorReport[]      @relation("ReportAuthor")
-  writtenPrescriptions Prescription[]      @relation("PrescriptionAuthor")
-  triagedVisits        TriageAssessment[]  @relation("TriageNurse")
-  receivedCalls        DoctorCall[]        @relation("CalledDoctor")
-  placedCalls          DoctorCall[]        @relation("CallingNurse")
+  treatedRecords       MedicalRecord[]             @relation("TreatingDoctor")
+  writtenReports       DoctorReport[]              @relation("ReportAuthor")
+  writtenPrescriptions Prescription[]              @relation("PrescriptionAuthor")
+  triagedVisits        TriageAssessment[]          @relation("TriageNurse")
+  receivedCalls        DoctorCall[]                @relation("CalledDoctor")
+  placedCalls          DoctorCall[]                @relation("CallingNurse")
+  surgeries            OperationBooking[]          @relation("Surgeon")
+  bookingsMade         OperationBooking[]          @relation("BookedBy")
+  roomStatusChanges    OperatingRoomStatusChange[] @relation("RoomStatusChanger")
+  cleaningRequested    CleaningRequest[]           @relation("CleaningRequester")
+  cleaningJobs         CleaningRequest[]           @relation("CleaningWorker")
 
   @@unique([hospitalId, email])
   @@index([hospitalId, role])
@@ -355,10 +395,11 @@ model Patient {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  hospital      Hospital           @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  user          User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
-  medicalRecord MedicalRecord?
-  erVisits      TriageAssessment[]
+  hospital          Hospital           @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  user              User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  medicalRecord     MedicalRecord?
+  erVisits          TriageAssessment[]
+  operationBookings OperationBooking[]
 
   @@unique([hospitalId, nationalId])
   @@index([hospitalId])
@@ -488,11 +529,12 @@ model TriageAssessment {
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
-  hospital   Hospital     @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  patient    Patient      @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  nurse      User?        @relation("TriageNurse", fields: [nurseId], references: [id], onDelete: SetNull)
-  department Department?  @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  hospital   Hospital           @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  patient    Patient            @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  nurse      User?              @relation("TriageNurse", fields: [nurseId], references: [id], onDelete: SetNull)
+  department Department?        @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   calls      DoctorCall[]
+  bookings   OperationBooking[]
 
   // The waiting list: by status, then level, then arrival (2.15).
   @@index([hospitalId, status, level, arrivedAt])
@@ -519,6 +561,93 @@ model DoctorCall {
 
   @@index([doctorId, status])
   @@index([triageId])
+}
+
+// ─── Operating rooms and cleaning (task 2.18) ─────────────────────────────────
+
+// A booking of an operating room. Scheduled bookings have a room and a time
+// (no overlaps, 2.20); an emergency one may wait for the first room that frees
+// up and pushes scheduled ones back (2.21).
+model OperationBooking {
+  id              String        @id @default(uuid(7)) @db.Uuid
+  hospitalId      String        @db.Uuid
+  operatingRoomId String?       @db.Uuid
+  patientId       String        @db.Uuid
+  triageId        String?       @db.Uuid
+  surgeonId       String?       @db.Uuid
+  surgeonName     String
+  bookedById      String?       @db.Uuid
+  kind            BookingKind   @default(SCHEDULED)
+  status          BookingStatus @default(SCHEDULED)
+  procedure       String
+  notes           String?
+  startsAt        DateTime
+  endsAt          DateTime
+  startedAt       DateTime?
+  endedAt         DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  hospital      Hospital                    @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  operatingRoom OperatingRoom?              @relation(fields: [operatingRoomId], references: [id], onDelete: SetNull)
+  patient       Patient                     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  triage        TriageAssessment?           @relation(fields: [triageId], references: [id], onDelete: SetNull)
+  surgeon       User?                       @relation("Surgeon", fields: [surgeonId], references: [id], onDelete: SetNull)
+  bookedBy      User?                       @relation("BookedBy", fields: [bookedById], references: [id], onDelete: SetNull)
+  statusChanges OperatingRoomStatusChange[]
+
+  // Overlap checks per room, and the day's list.
+  @@index([operatingRoomId, startsAt])
+  @@index([hospitalId, status, startsAt])
+}
+
+// Every change of an operating room's status: from, to, who and when.
+model OperatingRoomStatusChange {
+  id              String              @id @default(uuid(7)) @db.Uuid
+  hospitalId      String              @db.Uuid
+  operatingRoomId String              @db.Uuid
+  bookingId       String?             @db.Uuid
+  fromStatus      OperatingRoomStatus
+  toStatus        OperatingRoomStatus
+  changedById     String?             @db.Uuid
+  changedByName   String
+  createdAt       DateTime            @default(now())
+
+  hospital      Hospital          @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  operatingRoom OperatingRoom     @relation(fields: [operatingRoomId], references: [id], onDelete: Cascade)
+  booking       OperationBooking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  changedBy     User?             @relation("RoomStatusChanger", fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@index([operatingRoomId, createdAt])
+}
+
+// A cleaning or sterilization job for the cleaners of a department (2.23–2.25,
+// 3.17): an operating room after surgery, a bed after discharge, or a place.
+model CleaningRequest {
+  id              String         @id @default(uuid(7)) @db.Uuid
+  hospitalId      String         @db.Uuid
+  departmentId    String         @db.Uuid
+  kind            CleaningKind   @default(CLEANING)
+  status          CleaningStatus @default(PENDING)
+  operatingRoomId String?        @db.Uuid
+  bedId           String?        @db.Uuid
+  place           String?
+  note            String?
+  requestedById   String?        @db.Uuid
+  assignedToId    String?        @db.Uuid
+  createdAt       DateTime       @default(now())
+  startedAt       DateTime?
+  finishedAt      DateTime?
+
+  hospital      Hospital       @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  department    Department     @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  operatingRoom OperatingRoom? @relation(fields: [operatingRoomId], references: [id], onDelete: SetNull)
+  bed           Bed?           @relation(fields: [bedId], references: [id], onDelete: SetNull)
+  requestedBy   User?          @relation("CleaningRequester", fields: [requestedById], references: [id], onDelete: SetNull)
+  assignedTo    User?          @relation("CleaningWorker", fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  // A cleaner's board: their departments' open jobs (2.24).
+  @@index([hospitalId, departmentId, status])
 }
 
 // ─── System ───────────────────────────────────────────────────────────────────

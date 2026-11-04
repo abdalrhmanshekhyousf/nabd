@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   create,
+  history,
   list,
   remove,
   rename,
@@ -17,4 +18,5 @@ operatingRoomRouter.get('/', list);
 operatingRoomRouter.post('/', requireRole('ADMIN'), create);
 operatingRoomRouter.patch('/:id', requireRole('ADMIN'), rename);
 operatingRoomRouter.patch('/:id/service', requireRole('ADMIN'), setService);
+operatingRoomRouter.get('/:id/history', requireRole('ADMIN', 'DOCTOR', 'NURSE'), history);
 operatingRoomRouter.delete('/:id', requireRole('ADMIN'), remove);

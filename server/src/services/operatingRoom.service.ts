@@ -2,6 +2,7 @@ import { OPERATING_ROOM_IDLE, type OperatingRoomStatus } from '@nabd/shared';
 import { Prisma } from '../generated/prisma/client.js';
 import type { ScopedPrisma } from '../lib/scopedPrisma.js';
 import { HttpError } from '../middleware/errorHandler.js';
+import { changeRoomStatus } from './roomStatus.service.js';
 
 const operatingRoomSelect = {
   id: true,
@@ -65,15 +66,21 @@ export async function renameOperatingRoom(db: ScopedPrisma, id: string, name: st
  * as available (task 1.26). Every other transition belongs to the state machine
  * of task 2.19.
  */
-export async function setOperatingRoomService(db: ScopedPrisma, id: string, outOfService: boolean) {
+/** The admin takes a room out of service for maintenance, or back; logged (task 2.18). */
+export async function setOperatingRoomService(
+  db: ScopedPrisma,
+  hospitalId: string,
+  actorId: string,
+  id: string,
+  outOfService: boolean,
+) {
   const room = await requireIdle(db, id);
   const status: OperatingRoomStatus = outOfService ? 'OUT_OF_SERVICE' : 'AVAILABLE';
   if (room.status === status) return room;
-  return db.operatingRoom.update({
-    where: { id },
-    data: { status, statusChangedAt: new Date() },
-    select: operatingRoomSelect,
-  });
+  await db.$transaction((tx) =>
+    changeRoomStatus(tx, { hospitalId, roomId: id, to: status, actorId }),
+  );
+  return db.operatingRoom.findUniqueOrThrow({ where: { id }, select: operatingRoomSelect });
 }
 
 export async function deleteOperatingRoom(db: ScopedPrisma, id: string) {
