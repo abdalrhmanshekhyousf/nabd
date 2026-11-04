@@ -5,6 +5,7 @@ import { authenticate, requireRole, session } from '../middleware/auth.js';
 import { emitRefresh, rooms } from '../realtime/realtime.js';
 import {
   erDepartmentOf,
+  getQueue,
   getVisit,
   overrideLevel,
   registerArrival,
@@ -35,6 +36,13 @@ erRouter.post('/visits', async (req, res) => {
 });
 
 const visitParam = z.object({ id: z.uuid() });
+
+/** The waiting list, live through refresh events on [['er-queue']] (task 2.15). */
+erRouter.get('/queue', async (req, res) => {
+  const { auth, db } = session(req);
+  await requireErNurse(db, auth.userId);
+  res.json({ visits: await getQueue(db) });
+});
 
 erRouter.get('/visits/:id', async (req, res) => {
   const { auth, db } = session(req);

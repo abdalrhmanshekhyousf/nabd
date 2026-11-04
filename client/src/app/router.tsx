@@ -18,6 +18,7 @@ import { LoginPage } from '@/pages/LoginPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { DoctorPatientsPage } from '@/pages/doctor/DoctorPatientsPage';
 import { PatientFilePage } from '@/pages/doctor/PatientFilePage';
+import { ErQueuePage } from '@/pages/nurse/ErQueuePage';
 import { NewCasePage } from '@/pages/nurse/NewCasePage';
 import { TriagePage } from '@/pages/nurse/TriagePage';
 import { PatientRegisterPage } from '@/pages/PatientRegisterPage';
@@ -45,6 +46,7 @@ export const BUILT_PAGES: Partial<Record<`${Role}:${string}`, ReactElement>> = {
   'ADMIN:assignments': <AssignmentsPage />,
   'ADMIN:settings': <HospitalSettingsPage />,
   'DOCTOR:patients': <DoctorPatientsPage />,
+  'NURSE:emergency': <ErQueuePage />,
   'NURSE:new-case': <NewCasePage />,
 };
 

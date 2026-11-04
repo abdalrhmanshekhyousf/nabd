@@ -237,3 +237,55 @@ describe('setting another level (task 2.14)', () => {
     expect((await me.level(h.visit.id, body)).body.error.code).toBe('VISIT_CLOSED');
   });
 });
+
+describe('GET /api/er/queue (task 2.15)', () => {
+  it('lists open visits: untriaged first, then by level, then by arrival', async () => {
+    const h = await withVisit(); // an untriaged arrival, now
+    const me = await h.nurse(h.er.id);
+    const ago = (minutes: number) => new Date(Date.now() - minutes * 60_000);
+    const add = (chiefComplaint: string, data: object) =>
+      prisma.triageAssessment.create({
+        data: { hospitalId: h.id, patientId: h.visit.patientId, chiefComplaint, ...data },
+      });
+    await add('level 3 early', { level: 3, arrivedAt: ago(40) });
+    await add('level 1', { level: 1, arrivedAt: ago(2) });
+    await add('level 3 late', { level: 3, arrivedAt: ago(10) });
+    await add('treated, level 2', { level: 2, arrivedAt: ago(5), status: 'IN_TREATMENT' });
+    await add('discharged', { level: 1, arrivedAt: ago(60), status: 'DISCHARGED' });
+    await add('transferred', { level: 1, arrivedAt: ago(60), status: 'TRANSFERRED' });
+
+    const res = await request(app)
+      .get('/api/er/queue')
+      .set(
+        'Authorization',
+        `Bearer ${signAccessToken({ sub: me.id, hospitalId: h.id, role: 'NURSE' })}`,
+      );
+
+    expect(res.status).toBe(200);
+    expect(res.body.visits.map((v: { chiefComplaint: string }) => v.chiefComplaint)).toEqual([
+      'غياب وعي',
+      'level 1',
+      'treated, level 2',
+      'level 3 early',
+      'level 3 late',
+    ]);
+  });
+
+  it('is for emergency nurses of this hospital only', async () => {
+    const h = await withVisit();
+    const other = await withVisit();
+    const wardNurse = await h.nurse(h.ward.id);
+    const otherNurse = await other.nurse(other.er.id);
+    const get = (user: { id: string }, hospitalId: string) =>
+      request(app)
+        .get('/api/er/queue')
+        .set(
+          'Authorization',
+          `Bearer ${signAccessToken({ sub: user.id, hospitalId, role: 'NURSE' })}`,
+        );
+
+    expect((await get(wardNurse, h.id)).status).toBe(403);
+    const theirs = (await get(otherNurse, other.id)).body.visits;
+    expect(theirs.map((v: { id: string }) => v.id)).toEqual([other.visit.id]);
+  });
+});

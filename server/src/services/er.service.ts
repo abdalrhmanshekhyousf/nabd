@@ -189,3 +189,17 @@ export async function overrideLevel(
   });
   return toErVisit(saved);
 }
+
+/**
+ * The emergency waiting list (task 2.15): open visits only. New arrivals not
+ * triaged yet come first (they must be seen), then by level, then by who came
+ * first.
+ */
+export async function getQueue(db: ScopedPrisma) {
+  const visits = await db.triageAssessment.findMany({
+    where: { status: { in: ['WAITING', 'IN_TREATMENT'] } },
+    include: visitInclude,
+    orderBy: [{ level: { sort: 'asc', nulls: 'first' } }, { arrivedAt: 'asc' }],
+  });
+  return visits.map(toErVisit);
+}

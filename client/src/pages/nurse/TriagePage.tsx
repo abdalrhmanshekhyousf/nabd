@@ -406,7 +406,7 @@ export function TriagePage() {
 
   const back = (
     <Link
-      to="../new-case"
+      to="../../emergency"
       relative="path"
       className="inline-flex items-center gap-1.5 text-sm font-medium text-muted transition-colors hover:text-accent"
     >

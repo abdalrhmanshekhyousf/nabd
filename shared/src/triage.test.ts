@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { suggestEsiLevel, type EsiInput } from './triage.js';
+import { isOverdue, minutesWaiting, suggestEsiLevel, type EsiInput } from './triage.js';
 
 /** A calm adult with normal signs and no tests expected: level 5. */
 const calm: EsiInput = {
@@ -82,5 +82,25 @@ describe('suggestEsiLevel: edges', () => {
       level: 3,
       reasons: [],
     });
+  });
+});
+
+describe('waiting times', () => {
+  const now = Date.parse('2026-11-04T12:00:00Z');
+  const ago = (minutes: number) => new Date(now - minutes * 60_000).toISOString();
+
+  it('counts whole minutes since arrival', () => {
+    expect(minutesWaiting(ago(12.7), now)).toBe(12);
+    expect(minutesWaiting(ago(-1), now)).toBe(0);
+  });
+
+  it('is late past the level’s target', () => {
+    expect(isOverdue(2, ago(10), now)).toBe(false);
+    expect(isOverdue(2, ago(11), now)).toBe(true);
+    expect(isOverdue(3, ago(31), now)).toBe(true);
+    expect(isOverdue(5, ago(119), now)).toBe(false);
+    expect(isOverdue(1, ago(0.5), now)).toBe(false);
+    expect(isOverdue(1, ago(2), now)).toBe(true);
+    expect(isOverdue(null, ago(500), now)).toBe(false);
   });
 });

@@ -124,3 +124,23 @@ export function suggestEsiLevel(input: EsiInput): { level: EsiLevel; reasons: Es
   const level = exams >= 2 ? 3 : exams === 1 ? 4 : 5;
   return { level, reasons: [{ code: 'EXAMS', count: Math.min(exams, 2) }] };
 }
+
+/**
+ * How long each level may wait before a doctor sees them, in minutes (the
+ * usual ESI targets; the report: 1 immediately, 2 within minutes). Waiting
+ * longer marks the card late on the waiting list (task 2.15).
+ */
+export const ESI_TARGET_MINUTES: Record<EsiLevel, number> = { 1: 0, 2: 10, 3: 30, 4: 60, 5: 120 };
+
+/** Minutes since arrival, whole. */
+export function minutesWaiting(arrivedAt: string, now = Date.now()) {
+  return Math.max(0, Math.floor((now - new Date(arrivedAt).getTime()) / 60_000));
+}
+
+/** Waiting longer than the level allows (level 1 is never "on time" while waiting). */
+export function isOverdue(level: number | null, arrivedAt: string, now = Date.now()) {
+  if (level === null || !(level in ESI_TARGET_MINUTES)) return false;
+  const target = ESI_TARGET_MINUTES[level as EsiLevel];
+  const waited = (now - new Date(arrivedAt).getTime()) / 60_000;
+  return level === 1 ? waited >= 1 : waited > target;
+}
