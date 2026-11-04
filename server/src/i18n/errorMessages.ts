@@ -64,6 +64,10 @@ const MESSAGES: Record<ErrorCode, Record<Language, string>> = {
     ar: 'الطبيب مو متفرّغ هلق، اختار طبيب متفرّغ',
     en: 'This doctor is not available now; choose an available one',
   },
+  CALL_ANSWERED: {
+    ar: 'هالاستدعاء انرد عليه أو انلغى',
+    en: 'This call was already answered or cancelled',
+  },
   CALL_PENDING: {
     ar: 'في استدعاء لهالمريض لسا بانتظار الرد',
     en: 'A call for this patient is still waiting for an answer',

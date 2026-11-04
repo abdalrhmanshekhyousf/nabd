@@ -199,3 +199,125 @@ describe('calling a doctor (task 2.16)', () => {
     expect((await h.call(sami.id, sami.token)).status).toBe(403);
   });
 });
+
+describe('the doctor answers a call (task 2.9)', () => {
+  const as = (token: string) => ({
+    calls: () => request(app).get('/api/doctors/me/calls').set('Authorization', `Bearer ${token}`),
+    accept: (id: string) =>
+      request(app)
+        .post(`/api/doctors/me/calls/${id}/accept`)
+        .set('Authorization', `Bearer ${token}`),
+    decline: (id: string, reason: string) =>
+      request(app)
+        .post(`/api/doctors/me/calls/${id}/decline`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ reason }),
+  });
+
+  it('lists my calls; accepting starts the treatment and makes the patient mine', async () => {
+    const h = await er();
+    const sami = await h.doctor('د. سامي', 'قلبية', 'AVAILABLE');
+    const { call } = (await h.call(sami.id)).body;
+    const me = as(sami.token);
+
+    const listed = (await me.calls()).body;
+    expect(listed.pending).toEqual([
+      expect.objectContaining({
+        id: call.id,
+        calledBy: 'لينا',
+        visit: expect.objectContaining({
+          level: 2,
+          chiefComplaint: 'ألم بالصدر',
+          patient: expect.objectContaining({ fullName: 'سارة الأحمد' }),
+        }),
+      }),
+    ]);
+
+    const accepted = await me.accept(call.id);
+    expect(accepted.status).toBe(200);
+    expect(accepted.body.call).toMatchObject({
+      status: 'ACCEPTED',
+      respondedAt: expect.any(String),
+    });
+    expect((await prisma.triageAssessment.findUnique({ where: { id: h.visit.id } }))?.status).toBe(
+      'IN_TREATMENT',
+    );
+    const record = await prisma.medicalRecord.findFirst({
+      where: { patientId: h.visit.patientId },
+    });
+    expect(record?.doctorId).toBe(sami.id);
+    expect((await me.calls()).body).toMatchObject({
+      pending: [],
+      answered: [expect.objectContaining({ status: 'ACCEPTED' })],
+    });
+    expect((await h.queue()).body.visits[0].call).toMatchObject({
+      status: 'ACCEPTED',
+      doctorName: 'د. سامي',
+    });
+  });
+
+  it('declining needs a reason, and leaves the patient waiting', async () => {
+    const h = await er();
+    const sami = await h.doctor('د. سامي', 'قلبية', 'AVAILABLE');
+    const { call } = (await h.call(sami.id)).body;
+    const me = as(sami.token);
+
+    expect((await me.decline(call.id, '  ')).status).toBe(400);
+    const declined = await me.decline(call.id, 'عم عالج حالة تانية');
+
+    expect(declined.body.call).toMatchObject({
+      status: 'DECLINED',
+      declineReason: 'عم عالج حالة تانية',
+    });
+    expect((await prisma.triageAssessment.findUnique({ where: { id: h.visit.id } }))?.status).toBe(
+      'WAITING',
+    );
+    expect((await h.queue()).body.visits[0].call).toMatchObject({
+      status: 'DECLINED',
+      declineReason: 'عم عالج حالة تانية',
+    });
+  });
+
+  it('answers once, only my own calls, never a withdrawn one', async () => {
+    const h = await er();
+    const sami = await h.doctor('د. سامي', 'قلبية', 'AVAILABLE');
+    const nour = await h.doctor('د. نور', 'قلبية', 'AVAILABLE');
+    const first = (await h.call(sami.id)).body.call;
+
+    expect((await as(nour.token).accept(first.id)).status).toBe(404);
+    expect((await as(sami.token).accept(first.id)).status).toBe(200);
+    const again = await as(sami.token).decline(first.id, 'x');
+    expect(again.status).toBe(409);
+    expect(again.body.error.code).toBe('CALL_ANSWERED');
+
+    const other = await er();
+    const zaid = await other.doctor('د. زيد', 'قلبية', 'AVAILABLE');
+    const withdrawn = (await other.call(zaid.id)).body.call;
+    await other.cancel(withdrawn.id);
+    expect((await as(zaid.token).accept(withdrawn.id)).body.error.code).toBe('CALL_ANSWERED');
+    expect((await as(h.nurse.token).calls()).status).toBe(403);
+  });
+
+  it('the nurse’s screens hear the answer live', async () => {
+    const h = await er();
+    const sami = await h.doctor('د. سامي', 'قلبية', 'AVAILABLE');
+    const { call } = (await h.call(sami.id)).body;
+    const socket = connectClient(url, {
+      auth: { token: h.nurse.token },
+      transports: ['websocket'],
+      reconnection: false,
+      forceNew: true,
+    });
+    sockets.push(socket);
+    const heard: string[] = [];
+    socket.on('refresh', ({ queryKeys }: { queryKeys: string[][] }) =>
+      heard.push(...queryKeys.map((k) => k[0])),
+    );
+    await new Promise((resolve) => socket.once('ready', resolve));
+
+    await as(sami.token).accept(call.id);
+    await new Promise((resolve) => setTimeout(resolve, 250));
+
+    expect(heard).toEqual(['er-queue', 'er-visit']);
+  });
+});

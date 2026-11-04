@@ -1,14 +1,16 @@
 import {
   createPrescriptionSchema,
   createReportSchema,
+  declineCallSchema,
   doctorStatusSchema,
   patientSearchSchema,
 } from '@nabd/shared';
-import { Router } from 'express';
+import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import { authenticate, requireRole, session } from '../middleware/auth.js';
 import { emitRefresh, rooms } from '../realtime/realtime.js';
 import { getMyStatus, setMyStatus } from '../services/doctor.service.js';
+import { answerCall, listMyCalls } from '../services/doctorCall.service.js';
 import {
   addPrescription,
   addReport,
@@ -80,4 +82,39 @@ doctorRouter.post(
     emitRefresh(rooms.role(auth.hospitalId, 'PHARMACIST'), [['prescriptions']]);
     res.status(201).json({ prescription });
   },
+);
+
+// Emergency calls: the list, and accepting or declining one (task 2.9).
+doctorRouter.get('/me/calls', requireRole('DOCTOR'), async (req, res) => {
+  const { auth, db } = session(req);
+  res.json(await listMyCalls(db, auth.userId));
+});
+
+const callParam = z.object({ id: z.uuid() });
+
+async function answer(req: Request, res: Response, accept: boolean) {
+  const { auth, db } = session(req);
+  const { id } = callParam.parse(req.params);
+  const result = await answerCall(
+    db,
+    auth.userId,
+    id,
+    accept ? { accept: true } : { accept: false, reason: declineCallSchema.parse(req.body).reason },
+  );
+  // The nurse sees the answer at once; the doctor's other screens update too.
+  if (result.erDepartmentId) {
+    emitRefresh(rooms.department(result.erDepartmentId), [
+      ['er-queue'],
+      ['er-visit', result.visitId],
+    ]);
+  }
+  emitRefresh(rooms.user(auth.userId), [['doctor-calls'], ['my-patients']]);
+  res.json({ call: result.call });
+}
+
+doctorRouter.post('/me/calls/:id/accept', requireRole('DOCTOR'), (req, res) =>
+  answer(req, res, true),
+);
+doctorRouter.post('/me/calls/:id/decline', requireRole('DOCTOR'), (req, res) =>
+  answer(req, res, false),
 );

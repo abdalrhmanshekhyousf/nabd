@@ -182,3 +182,21 @@ export function isOverdue(level: number | null, arrivedAt: string, now = Date.no
   const waited = (now - new Date(arrivedAt).getTime()) / 60_000;
   return level === 1 ? waited >= 1 : waited > target;
 }
+
+/** A call as the doctor sees it on their calls page (task 2.9). */
+export type DoctorCallItem = {
+  id: string;
+  status: DoctorCallStatus;
+  createdAt: string;
+  respondedAt: string | null;
+  declineReason: string | null;
+  calledBy: string | null;
+  visit: {
+    id: string;
+    status: TriageStatus;
+    level: number | null;
+    chiefComplaint: string | null;
+    arrivedAt: string;
+    patient: ErVisit['patient'];
+  };
+};

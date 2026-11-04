@@ -104,3 +104,7 @@ export type OverrideLevelData = z.output<typeof overrideLevelSchema>;
 /** POST /er/visits/:id/calls: call this doctor to the patient (task 2.16). */
 export const callDoctorSchema = z.object({ doctorId: id() });
 export type CallDoctorInput = z.infer<typeof callDoctorSchema>;
+
+/** POST /doctors/me/calls/:id/decline: a doctor says why they cannot come (task 2.9). */
+export const declineCallSchema = z.object({ reason: requiredText(200) });
+export type DeclineCallInput = z.infer<typeof declineCallSchema>;
