@@ -75,7 +75,8 @@ describe('the triage form', () => {
     expect(res.body.visit).toMatchObject({
       ...TRIAGE,
       status: 'WAITING',
-      level: null,
+      suggestedLevel: 2,
+      level: 2,
       assessedAt: expect.any(String),
     });
     expect((await me.read(h.visit.id)).body.visit.temperature).toBe(37.8);
@@ -126,5 +127,61 @@ describe('the triage form', () => {
 
     expect((await me.read(other.visit.id)).status).toBe(404);
     expect((await me.triage(other.visit.id, TRIAGE)).status).toBe(404);
+  });
+});
+
+describe('the suggested ESI level (task 2.13)', () => {
+  const calm = {
+    ...TRIAGE,
+    pulse: 76,
+    systolic: 120,
+    diastolic: 80,
+    respiratoryRate: 16,
+    oxygenSaturation: 98,
+    temperature: 36.8,
+    painScore: 2,
+    expectedExams: 0,
+  };
+
+  it('is worked out on the server and becomes the level, with its reasons', async () => {
+    const h = await withVisit();
+    const me = await h.nurse(h.er.id);
+
+    const notBreathing = (await me.triage(h.visit.id, { ...calm, breathing: false })).body.visit;
+    expect(notBreathing).toMatchObject({
+      suggestedLevel: 1,
+      level: 1,
+      reasons: [{ code: 'NOT_BREATHING' }],
+    });
+
+    const severe = (await me.triage(h.visit.id, TRIAGE)).body.visit;
+    expect(severe.reasons).toEqual([
+      { code: 'ABNORMAL_VITALS', signs: ['pulse', 'respiratoryRate', 'oxygenSaturation'] },
+      { code: 'SEVERE_PAIN', score: 8 },
+    ]);
+
+    const minor = (await me.triage(h.visit.id, calm)).body.visit;
+    expect(minor).toMatchObject({
+      suggestedLevel: 5,
+      level: 5,
+      reasons: [{ code: 'EXAMS', count: 0 }],
+    });
+  });
+
+  it('keeps a level the nurse set with a reason when the form is saved again', async () => {
+    const h = await withVisit();
+    const me = await h.nurse(h.er.id);
+    await prisma.triageAssessment.update({
+      where: { id: h.visit.id },
+      data: { level: 2, overrideReason: 'شكله تعبان أكتر من أرقامه' },
+    });
+
+    const visit = (await me.triage(h.visit.id, calm)).body.visit;
+
+    expect(visit).toMatchObject({
+      suggestedLevel: 5,
+      level: 2,
+      overrideReason: 'شكله تعبان أكتر من أرقامه',
+    });
   });
 });

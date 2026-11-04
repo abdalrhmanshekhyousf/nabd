@@ -66,4 +66,61 @@ export type ErVisit = {
   suggestedLevel: number | null;
   level: number | null;
   overrideReason: string | null;
+  /** Why the suggested level, once assessed (task 2.13). */
+  reasons: EsiReason[];
 };
+
+/** Why a level was suggested, so the nurse sees the reasoning (task 2.13). */
+export type EsiReason =
+  | { code: 'NOT_BREATHING' }
+  | { code: 'UNRESPONSIVE' }
+  | { code: 'ALTERED_CONSCIOUSNESS' }
+  | { code: 'ABNORMAL_VITALS'; signs: VitalSign[] }
+  | { code: 'SEVERE_PAIN'; score: number }
+  | { code: 'EXAMS'; count: number };
+
+/** What the suggestion reads from the triage form; anything may still be missing. */
+export type EsiInput = {
+  breathing?: boolean | null;
+  consciousness?: Consciousness | null;
+  painScore?: number | null;
+} & Partial<Record<VitalSign, number | null>> & { expectedExams?: number | null };
+
+/** Above this pain score the case is level 2. */
+export const SEVERE_PAIN_ABOVE = 7;
+
+const SIGNS = Object.keys(VITAL_RANGES) as VitalSign[];
+
+/**
+ * Suggests an ESI level from the triage form (task 2.13), following the
+ * project report, in this order:
+ * 1. not breathing or unresponsive → 1;
+ * 2. a danger sign → 2: altered consciousness (responds only to voice or
+ *    pain), any measured vital sign outside the normal range, or pain above 7;
+ * 3. otherwise by expected tests: two or more → 3, one → 4, none → 5.
+ * Unmeasured values never count. Without the number of tests (form not
+ * finished), it answers 3: the safer of the remaining levels.
+ */
+export function suggestEsiLevel(input: EsiInput): { level: EsiLevel; reasons: EsiReason[] } {
+  const critical: EsiReason[] = [];
+  if (input.breathing === false) critical.push({ code: 'NOT_BREATHING' });
+  if (input.consciousness === 'UNRESPONSIVE') critical.push({ code: 'UNRESPONSIVE' });
+  if (critical.length > 0) return { level: 1, reasons: critical };
+
+  const danger: EsiReason[] = [];
+  if (input.consciousness === 'VERBAL' || input.consciousness === 'PAIN') {
+    danger.push({ code: 'ALTERED_CONSCIOUSNESS' });
+  }
+  const abnormal = SIGNS.filter((sign) => isAbnormal(sign, input[sign]));
+  if (abnormal.length > 0) danger.push({ code: 'ABNORMAL_VITALS', signs: abnormal });
+  const pain = input.painScore;
+  if (typeof pain === 'number' && pain > SEVERE_PAIN_ABOVE) {
+    danger.push({ code: 'SEVERE_PAIN', score: pain });
+  }
+  if (danger.length > 0) return { level: 2, reasons: danger };
+
+  const exams = input.expectedExams;
+  if (exams === null || exams === undefined) return { level: 3, reasons: [] };
+  const level = exams >= 2 ? 3 : exams === 1 ? 4 : 5;
+  return { level, reasons: [{ code: 'EXAMS', count: Math.min(exams, 2) }] };
+}

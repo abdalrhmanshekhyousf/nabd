@@ -45,6 +45,7 @@ const VISIT: ErVisit = {
   suggestedLevel: null,
   level: null,
   overrideReason: null,
+  reasons: [],
 };
 
 beforeAll(() => {
@@ -131,5 +132,32 @@ describe('TriagePage', () => {
     renderApp('/nurse/triage/0199a3d2-6c55-7000-8000-0000000000ff');
 
     expect(await screen.findByText('ما لقينا هالزيارة')).toBeInTheDocument();
+  });
+
+  it('suggests the ESI level live as the form changes, with the reasons', async () => {
+    renderApp(`/nurse/triage/${VISIT_ID}`);
+    const user = userEvent.setup();
+    await screen.findByRole('heading', { name: 'مريض مجهول الهوية' });
+    const suggestion = screen.getByRole('region', { name: 'المستوى المقترح' });
+    expect(suggestion).toHaveTextContent('المستوى 3');
+    expect(suggestion).toHaveTextContent('كمّل التقييم ليصير الاقتراح أدق');
+
+    const breathing = screen.getByRole('radiogroup', { name: 'عم يتنفس؟' });
+    await user.click(within(breathing).getByRole('radio', { name: 'لا' }));
+    expect(suggestion).toHaveTextContent('المستوى 1 · فوري');
+    expect(suggestion).toHaveTextContent('ما عم يتنفس');
+
+    await user.click(within(breathing).getByRole('radio', { name: 'نعم' }));
+    await user.click(screen.getByRole('radio', { name: /^واعي/ }));
+    await user.type(screen.getByLabelText('النبض'), '130');
+    await user.type(screen.getByLabelText('نسبة الأكسجة'), '89');
+    expect(suggestion).toHaveTextContent('المستوى 2 · خلال دقائق');
+    expect(suggestion).toHaveTextContent('برّا الطبيعي: النبض، نسبة الأكسجة');
+
+    await user.clear(screen.getByLabelText('النبض'));
+    await user.clear(screen.getByLabelText('نسبة الأكسجة'));
+    await user.click(screen.getByRole('radio', { name: 'فحص واحد' }));
+    expect(suggestion).toHaveTextContent('المستوى 4 · بسيط');
+    expect(suggestion).toHaveTextContent('بيحتاج فحص واحد');
   });
 });

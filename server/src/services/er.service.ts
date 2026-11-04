@@ -1,4 +1,9 @@
-import type { ErVisit, QuickRegistrationData, TriageData } from '@nabd/shared';
+import {
+  suggestEsiLevel,
+  type ErVisit,
+  type QuickRegistrationData,
+  type TriageData,
+} from '@nabd/shared';
 import type { Prisma } from '../generated/prisma/client.js';
 import type { ScopedPrisma } from '../lib/scopedPrisma.js';
 import { HttpError } from '../middleware/errorHandler.js';
@@ -84,6 +89,7 @@ type VisitRow = Prisma.TriageAssessmentGetPayload<{ include: typeof visitInclude
 
 /** The shape the ER screens use; the temperature leaves the database as a Decimal. */
 export function toErVisit(visit: VisitRow): ErVisit {
+  const temperature = visit.temperature === null ? null : Number(visit.temperature);
   return {
     id: visit.id,
     status: visit.status,
@@ -102,12 +108,13 @@ export function toErVisit(visit: VisitRow): ErVisit {
     diastolic: visit.diastolic,
     respiratoryRate: visit.respiratoryRate,
     oxygenSaturation: visit.oxygenSaturation,
-    temperature: visit.temperature === null ? null : Number(visit.temperature),
+    temperature,
     painScore: visit.painScore,
     expectedExams: visit.expectedExams,
     suggestedLevel: visit.suggestedLevel,
     level: visit.level,
     overrideReason: visit.overrideReason,
+    reasons: visit.assessedAt ? suggestEsiLevel({ ...visit, temperature }).reasons : [],
   };
 }
 
@@ -119,17 +126,28 @@ export async function getVisit(db: ScopedPrisma, id: string) {
 
 /**
  * Saves the triage form (task 2.12) for a visit that is still open; the nurse
- * who assessed it is recorded. The ESI level is suggested from it in 2.13.
+ * who assessed it is recorded, and the ESI level is suggested from it (2.13).
  */
 export async function saveTriage(db: ScopedPrisma, nurseId: string, id: string, input: TriageData) {
-  const visit = await db.triageAssessment.findUnique({ where: { id }, select: { status: true } });
+  const visit = await db.triageAssessment.findUnique({
+    where: { id },
+    select: { status: true, level: true, overrideReason: true },
+  });
   if (!visit) throw new HttpError(404, 'NOT_FOUND', 'Visit not found');
   if (visit.status === 'TRANSFERRED' || visit.status === 'DISCHARGED') {
     throw new HttpError(409, 'VISIT_CLOSED', 'This visit is closed');
   }
+  const { level: suggestedLevel } = suggestEsiLevel(input);
   const saved = await db.triageAssessment.update({
     where: { id },
-    data: { ...input, nurseId, assessedAt: new Date() },
+    data: {
+      ...input,
+      nurseId,
+      assessedAt: new Date(),
+      suggestedLevel,
+      // The suggestion becomes the level, unless the nurse set another with a reason (2.14).
+      level: visit.overrideReason ? visit.level : suggestedLevel,
+    },
     include: visitInclude,
   });
   return toErVisit(saved);

@@ -3,6 +3,7 @@ import {
   CONSCIOUSNESS_LEVELS,
   EXPECTED_EXAMS,
   isAbnormal,
+  suggestEsiLevel,
   triageSchema,
   VITAL_RANGES,
   type ErVisit,
@@ -17,6 +18,7 @@ import { Controller, useForm, useWatch, type Resolver } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 import { queryKeys } from '@/app/queryKeys';
+import { EsiSuggestion } from '@/components/er/EsiSuggestion';
 import { patientFacts, patientName } from '@/components/patients/patientDisplay';
 import { Button, Card, Input, Spinner } from '@/components/ui';
 import { api, describeApiError } from '@/lib/api';
@@ -182,6 +184,8 @@ function TriageForm({ visit }: { visit: ErVisit }) {
   });
   const watched = useWatch({ control });
   const pain = watched.painScore ?? 0;
+  // The same rules the server applies on save, shown while the form is filled.
+  const suggestion = suggestEsiLevel(watched);
 
   const onSubmit = handleSubmit(
     async (values) => {
@@ -356,6 +360,12 @@ function TriageForm({ visit }: { visit: ErVisit }) {
           )}
         />
       </Section>
+
+      <EsiSuggestion
+        level={suggestion.level}
+        reasons={suggestion.reasons}
+        savedLevel={visit.level}
+      />
 
       <div className="space-y-2">
         <Button
