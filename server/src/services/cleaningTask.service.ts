@@ -1,8 +1,10 @@
-import type { CleaningRequestView } from '@nabd/shared';
+import type { CleaningRequestView, CreateCleaningRequestData } from '@nabd/shared';
 import type { Prisma } from '../generated/prisma/client.js';
 import type { ScopedPrisma } from '../lib/scopedPrisma.js';
 import { HttpError } from '../middleware/errorHandler.js';
 import { emitRefresh, rooms } from '../realtime/realtime.js';
+import { announceCleaning } from './cleaning.service.js';
+import { sendNotification } from './notification.service.js';
 import { announceStep, orActorsOf, stepRoom, type StepEffects } from './orTransition.service.js';
 
 type Tx = Parameters<Parameters<ScopedPrisma['$transaction']>[0]>[0];
@@ -155,4 +157,81 @@ export async function moveRequest(
     include: requestInclude,
   });
   return toView(row, cleanerId);
+}
+
+/** The department this nurse works in, which their cleaning requests go to. */
+async function nurseDepartment(db: ScopedPrisma, nurseId: string) {
+  const profile = await db.staffProfile.findUnique({
+    where: { userId: nurseId },
+    select: { departmentId: true },
+  });
+  if (!profile?.departmentId) {
+    throw new HttpError(403, 'FORBIDDEN', 'You are not in a department yet');
+  }
+  return profile.departmentId;
+}
+
+/**
+ * A nurse asks for a place in their department to be cleaned (task 2.25). Its
+ * cleaners are told, and their boards list it at once.
+ */
+export async function requestCleaning(
+  db: ScopedPrisma,
+  hospitalId: string,
+  nurseId: string,
+  { place, note }: CreateCleaningRequestData,
+) {
+  const departmentId = await nurseDepartment(db, nurseId);
+  const row = await db.cleaningRequest.create({
+    data: { hospitalId, departmentId, place, note, requestedById: nurseId },
+    include: requestInclude,
+  });
+  await sendNotification(db, hospitalId, {
+    to: { role: 'CLEANER', departmentId },
+    type: 'CLEANING_REQUEST',
+    data: { place },
+    link: '/cleaning/tasks',
+  });
+  announceCleaning(departmentId);
+  return toView(row, nurseId);
+}
+
+/** My department's cleaning jobs of the last day, so nurses see how theirs are going. */
+export async function departmentRequests(db: ScopedPrisma, nurseId: string) {
+  const departmentId = await nurseDepartment(db, nurseId);
+  const rows = await db.cleaningRequest.findMany({
+    where: {
+      departmentId,
+      kind: 'CLEANING',
+      OR: [
+        { status: { in: ['PENDING', 'IN_PROGRESS'] } },
+        { createdAt: { gt: new Date(Date.now() - 24 * 3_600_000) } },
+      ],
+    },
+    include: requestInclude,
+    orderBy: { createdAt: 'desc' },
+  });
+  return rows.map((row) => ({ ...toView(row, nurseId), mine: row.requestedById === nurseId }));
+}
+
+/** The nurse withdraws their own request before anyone has started on it. */
+export async function cancelCleaning(db: ScopedPrisma, nurseId: string, id: string) {
+  const job = await db.cleaningRequest.findFirst({
+    where: { id, requestedById: nurseId, kind: 'CLEANING' },
+    select: { status: true, departmentId: true },
+  });
+  if (!job) throw new HttpError(404, 'NOT_FOUND', 'Request not found');
+  const { count } = await db.cleaningRequest.updateMany({
+    where: { id, status: 'PENDING' },
+    data: { status: 'CANCELLED' },
+  });
+  if (count === 0) {
+    throw new HttpError(409, 'INVALID_TRANSITION', 'A started request cannot be cancelled');
+  }
+  announceCleaning(job.departmentId);
+  const row = await db.cleaningRequest.findUniqueOrThrow({
+    where: { id },
+    include: requestInclude,
+  });
+  return { ...toView(row, nurseId), mine: true };
 }

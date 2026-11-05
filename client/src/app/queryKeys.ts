@@ -23,5 +23,7 @@ export const queryKeys = {
   orBoard: ['operating-rooms', 'board'] as const,
   /** The cleaner's jobs (task 2.24); the server refreshes this key. */
   cleaningRequests: ['cleaning-requests'] as const,
+  /** A nurse's department requests (task 2.25), refreshed with the cleaners' key. */
+  departmentCleaning: ['cleaning-requests', 'department'] as const,
   publicHospitals: (search: string) => ['public-hospitals', search] as const,
 };

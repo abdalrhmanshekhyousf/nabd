@@ -18,6 +18,7 @@ import {
   dischargeSchema,
   erStatusSchema,
   createBookingSchema,
+  createCleaningRequestSchema,
   emergencyBookingSchema,
   rescheduleBookingSchema,
   overlaps,
@@ -663,5 +664,15 @@ describe('bookings', () => {
     expect(
       overlaps(slot, { startsAt: '2026-11-05T08:00:00Z', endsAt: '2026-11-05T10:00:00Z' }),
     ).toBe(false);
+  });
+});
+
+describe('cleaning requests', () => {
+  it('needs a place; the note is optional', () => {
+    expect(createCleaningRequestSchema.parse({ place: ' ممر القسم ', note: '' })).toEqual({
+      place: 'ممر القسم',
+      note: null,
+    });
+    expect(createCleaningRequestSchema.safeParse({ place: '', note: null }).success).toBe(false);
   });
 });

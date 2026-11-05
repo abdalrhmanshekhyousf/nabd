@@ -68,7 +68,30 @@ async function hospital() {
   }
   const job = (departmentId: string, place: string) =>
     prisma.cleaningRequest.create({ data: { hospitalId: id, departmentId, place } });
-  return { id, er, operations, ward, cleaner, endedRoom, job };
+  async function nurse(fullName: string, departmentId: string | null) {
+    const user = await createUser(id, {
+      email: `n-${crypto.randomUUID()}@nabd.test`,
+      password: 'x',
+      role: 'NURSE',
+    });
+    await prisma.user.update({ where: { id: user.id }, data: { fullName } });
+    await prisma.staffProfile.create({ data: { hospitalId: id, userId: user.id, departmentId } });
+    const auth = {
+      Authorization: `Bearer ${signAccessToken({ sub: user.id, hospitalId: id, role: 'NURSE' })}`,
+    };
+    return {
+      ...user,
+      ask: (body: object) =>
+        request(app)
+          .post('/api/cleaning-requests')
+          .set(auth)
+          .send({ note: null, ...body }),
+      list: () => request(app).get('/api/cleaning-requests/department').set(auth),
+      cancel: (requestId: string) =>
+        request(app).delete(`/api/cleaning-requests/${requestId}`).set(auth),
+    };
+  }
+  return { id, er, operations, ward, cleaner, endedRoom, job, nurse };
 }
 
 const roomStatus = async (id: string) =>
@@ -198,5 +221,76 @@ describe('cleaner board (task 2.24)', () => {
     expect((await prisma.cleaningRequest.findUniqueOrThrow({ where: { id: job.id } })).status).toBe(
       'DONE',
     );
+  });
+});
+
+describe('cleaning requests from nurses (task 2.25)', () => {
+  it('a nurse asks for her department; its cleaners are told and see it', async () => {
+    const h = await hospital();
+    const salma = await h.nurse('سلمى', h.ward.id);
+    const umm = await h.cleaner('أم علي', [h.ward.id]);
+    const abu = await h.cleaner('أبو محمد', [h.er.id]);
+
+    const res = await salma.ask({ place: 'غرفة 12', note: 'انسكب دوا عالأرض' });
+
+    expect(res.status).toBe(201);
+    expect(res.body.request).toMatchObject({
+      kind: 'CLEANING',
+      status: 'PENDING',
+      place: 'غرفة 12',
+      note: 'انسكب دوا عالأرض',
+      requestedBy: 'سلمى',
+      department: { code: 'CARDIOLOGY' },
+    });
+    expect(await prisma.notification.findMany({ where: { userId: umm.id } })).toEqual([
+      expect.objectContaining({
+        type: 'CLEANING_REQUEST',
+        urgent: false,
+        data: { place: 'غرفة 12' },
+        link: '/cleaning/tasks',
+      }),
+    ]);
+    expect(await prisma.notification.count({ where: { userId: abu.id } })).toBe(0);
+    expect((await umm.board()).body.requests.map((r: { place: string }) => r.place)).toEqual([
+      'غرفة 12',
+    ]);
+    expect((await abu.board()).body.requests).toEqual([]);
+  });
+
+  it('nurses of the department follow its requests; the asker may cancel hers until started', async () => {
+    const h = await hospital();
+    const salma = await h.nurse('سلمى', h.ward.id);
+    const huda = await h.nurse('هدى', h.ward.id);
+    const lina = await h.nurse('لينا', h.er.id);
+    const umm = await h.cleaner('أم علي', [h.ward.id]);
+    const first = (await salma.ask({ place: 'غرفة 12' })).body.request;
+    const second = (await salma.ask({ place: 'الممر' })).body.request;
+
+    const seen = (await huda.list()).body.requests;
+    expect(seen.map((r: { place: string; mine: boolean }) => [r.place, r.mine])).toEqual([
+      ['الممر', false],
+      ['غرفة 12', false],
+    ]);
+    expect((await lina.list()).body.requests).toEqual([]);
+    expect((await huda.cancel(first.id)).status).toBe(404);
+
+    await umm.start(first.id);
+    expect((await salma.cancel(first.id)).status).toBe(409);
+    expect((await salma.cancel(second.id)).body.request.status).toBe('CANCELLED');
+    expect((await umm.board()).body.requests.map((r: { place: string }) => r.place)).toEqual([
+      'غرفة 12',
+    ]);
+    expect((await salma.list()).body.requests[1]).toMatchObject({
+      place: 'غرفة 12',
+      status: 'IN_PROGRESS',
+      assignedTo: { fullName: 'أم علي' },
+      mine: true,
+    });
+  });
+
+  it('a nurse without a department, or an empty place, is refused', async () => {
+    const h = await hospital();
+    expect((await (await h.nurse('ريم', null)).ask({ place: 'الممر' })).status).toBe(403);
+    expect((await (await h.nurse('سلمى', h.ward.id)).ask({ place: '  ' })).status).toBe(400);
   });
 });
