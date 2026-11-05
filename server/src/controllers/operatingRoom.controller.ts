@@ -1,9 +1,15 @@
-import { operatingRoomSchema, operatingRoomServiceSchema } from '@nabd/shared';
+import {
+  operatingRoomSchema,
+  operatingRoomServiceSchema,
+  OPERATING_ROOM_STATUSES,
+} from '@nabd/shared';
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 import { session } from '../middleware/auth.js';
 import * as operatingRoomService from '../services/operatingRoom.service.js';
+import { orActorsOf, transitionRoom } from '../services/orTransition.service.js';
 import { roomHistory } from '../services/roomStatus.service.js';
+import { emitRefresh, rooms } from '../realtime/realtime.js';
 
 const idParam = z.object({ id: z.uuid() });
 
@@ -54,4 +60,28 @@ export async function remove(req: Request, res: Response) {
   const { id } = idParam.parse(req.params);
   await operatingRoomService.deleteOperatingRoom(db, id);
   res.status(204).end();
+}
+
+/** Which of the room steps I may take (task 2.19), for the screens to show the right buttons. */
+export async function myActors(req: Request, res: Response) {
+  const { auth, db } = session(req);
+  res.json({ actors: await orActorsOf(db, auth.userId) });
+}
+
+/** One step of an operating room's cycle, by whoever the state machine allows (task 2.19). */
+export async function transition(req: Request, res: Response) {
+  const { auth, db } = session(req);
+  const { id } = idParam.parse(req.params);
+  const { to } = z
+    .object({ to: z.enum(OPERATING_ROOM_STATUSES, 'validation.required') })
+    .parse(req.body);
+  const operatingRoom = await transitionRoom(db, {
+    hospitalId: auth.hospitalId,
+    userId: auth.userId,
+    roomId: id,
+    to,
+  });
+  // Every screen showing the rooms (the live board, 2.26) updates.
+  emitRefresh(rooms.hospital(auth.hospitalId), [['operating-rooms']]);
+  res.json({ operatingRoom });
 }

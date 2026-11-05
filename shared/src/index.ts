@@ -5,6 +5,7 @@ export * from './notifications.js';
 export * from './medicalRecord.js';
 export * from './triage.js';
 export * from './operations.js';
+export * from './orStateMachine.js';
 export * from './roles.js';
 export * from './schemas/auth.js';
 export * from './schemas/common.js';

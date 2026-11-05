@@ -64,6 +64,14 @@ const MESSAGES: Record<ErrorCode, Record<Language, string>> = {
     ar: 'الطبيب مو متفرّغ هلق، اختار طبيب متفرّغ',
     en: 'This doctor is not available now; choose an available one',
   },
+  INVALID_TRANSITION: {
+    ar: 'الغرفة مو بالحالة اللي بتسمح بهالخطوة',
+    en: 'The room is not in a state that allows this step',
+  },
+  USE_BOOKING: {
+    ar: 'هالخطوة بتصير من الحجز، مش من زر الغرفة',
+    en: 'This step happens through a booking, not a room button',
+  },
   CALL_ANSWERED: {
     ar: 'هالاستدعاء انرد عليه أو انلغى',
     en: 'This call was already answered or cancelled',

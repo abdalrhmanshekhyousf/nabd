@@ -142,6 +142,12 @@ describe('LoginPage', () => {
 
   it('asks which hospital when the account exists in several', async () => {
     fake.respond((config) => {
+      // After signing in, the app loads other things (no body): answer them plainly.
+      if (config.url !== '/auth/login') {
+        return config.url === '/notifications'
+          ? { status: 200, data: { notifications: [], unread: 0 } }
+          : { status: 200, data: {} };
+      }
       const body = JSON.parse(config.data as string);
       if (!body.hospitalId) {
         return {
@@ -169,7 +175,8 @@ describe('LoginPage', () => {
     await u.click(within(list).getByRole('button', { name: /مستشفى الشفاء/ }));
 
     await waitFor(() => expect(path(router)).toBe('/patient'));
-    expect(JSON.parse(fake.calls.at(-1)!.data as string).hospitalId).toBe('h2');
+    const logins = fake.calls.filter((call) => call.url === '/auth/login');
+    expect(JSON.parse(logins.at(-1)!.data as string).hospitalId).toBe('h2');
   });
 
   it('shows and hides the password', async () => {
