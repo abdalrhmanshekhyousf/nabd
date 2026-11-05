@@ -458,3 +458,98 @@ describe('the patient leaves the ER (task 2.17)', () => {
     });
   });
 });
+
+describe('emergency surgery from the ER (task 2.21)', () => {
+  const ROOM_A = '0199a3d2-6c55-7000-8000-0000000000b1';
+  const ROOM_B = '0199a3d2-6c55-7000-8000-0000000000b2';
+  const ROOM_C = '0199a3d2-6c55-7000-8000-0000000000b3';
+  const at = (minutes: number) => new Date(Date.now() + minutes * 60_000).toISOString();
+
+  beforeEach(() => {
+    const current = { ...VISIT, level: 1, suggestedLevel: 1, assessedAt: new Date().toISOString() };
+    fake.respond((config) => {
+      if (config.url === `/er/visits/${VISIT_ID}`) return { status: 200, data: { visit: current } };
+      if (config.url === '/operating-rooms') {
+        const now = new Date().toISOString();
+        return {
+          status: 200,
+          data: {
+            operatingRooms: [
+              { id: ROOM_A, name: 'غرفة 1', status: 'BOOKED', statusChangedAt: now },
+              { id: ROOM_B, name: 'غرفة 2', status: 'IN_SURGERY', statusChangedAt: now },
+              { id: ROOM_C, name: 'غرفة 3', status: 'BOOKED', statusChangedAt: now },
+            ],
+          },
+        };
+      }
+      if (config.url === '/bookings' && config.method === 'get') {
+        const slot = (id: string, room: string, from: number, to: number, kind = 'SCHEDULED') => ({
+          id,
+          kind,
+          status: 'SCHEDULED',
+          operatingRoom: { id: room, name: room === ROOM_A ? 'غرفة 1' : 'غرفة 3' },
+          startsAt: at(from),
+          endsAt: at(to),
+          surgeonName: 'د. نور',
+          mine: false,
+          procedure: null,
+          patient: null,
+        });
+        return {
+          status: 200,
+          data: {
+            bookings: [slot('b1', ROOM_A, 20, 80), slot('b2', ROOM_C, -10, 50, 'EMERGENCY')],
+          },
+        };
+      }
+      if (config.url === '/bookings/emergency') {
+        return {
+          status: 201,
+          data: {
+            postponed: 1,
+            booking: { id: 'e1', kind: 'EMERGENCY', operatingRoom: { id: ROOM_A, name: 'غرفة 1' } },
+          },
+        };
+      }
+      if (config.url === '/notifications')
+        return { status: 200, data: { notifications: [], unread: 0 } };
+      return { status: 200, data: {} };
+    });
+  });
+
+  it('shows what each room would postpone, picks the usable one and books it now', async () => {
+    renderApp(`/nurse/triage/${VISIT_ID}`);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'حجز عملية طارئة' }));
+    const dialog = await screen.findByRole('dialog', { name: 'حجز عملية طارئة' });
+    expect(dialog).toHaveTextContent('مريض مجهول الهوية');
+
+    const room1 = await within(dialog).findByRole('radio', { name: 'غرفة 1' });
+    expect(room1).toHaveTextContent(/رح يتأجّل/);
+    expect(room1).toHaveAttribute('aria-checked', 'true');
+    expect(within(dialog).getByRole('radio', { name: 'غرفة 2' })).toBeDisabled();
+    expect(within(dialog).getByRole('radio', { name: 'غرفة 3' })).toHaveTextContent(
+      'فيها عملية طارئة',
+    );
+    expect(within(dialog).getByRole('radio', { name: 'غرفة 3' })).toBeDisabled();
+
+    await user.click(within(dialog).getByRole('button', { name: 'احجز هلق' }));
+    expect(await within(dialog).findByText('هالحقل مطلوب')).toBeInTheDocument();
+    await user.type(within(dialog).getByLabelText(/العملية/), 'فتح بطن');
+    await user.selectOptions(within(dialog).getByRole('combobox', { name: /المدة/ }), '120');
+    await user.click(within(dialog).getByRole('button', { name: 'احجز هلق' }));
+
+    expect(
+      await screen.findByText('انحجزت غرفة 1 للطوارئ، وانبعت إشعار لأطباء الحجوزات المتأجّلة'),
+    ).toBeInTheDocument();
+    const post = fake.calls.find((c) => c.url === '/bookings/emergency')!;
+    expect(JSON.parse(post.data as string)).toEqual({
+      operatingRoomId: ROOM_A,
+      visitId: VISIT_ID,
+      patientId: null,
+      procedure: 'فتح بطن',
+      durationMinutes: 120,
+      notes: '',
+    });
+  });
+});

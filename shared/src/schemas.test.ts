@@ -18,6 +18,8 @@ import {
   dischargeSchema,
   erStatusSchema,
   createBookingSchema,
+  emergencyBookingSchema,
+  rescheduleBookingSchema,
   overlaps,
   overrideReasonMissing,
   isAbnormal,
@@ -615,6 +617,36 @@ describe('bookings', () => {
     ).toBe(false);
     expect(createBookingSchema.safeParse({ ...booking, durationMinutes: 5 }).success).toBe(false);
     expect(createBookingSchema.safeParse({ ...booking, startsAt: 'tomorrow' }).success).toBe(false);
+  });
+
+  it('an emergency booking names either the ER visit or my patient, not both', () => {
+    const urgent = {
+      operatingRoomId: booking.operatingRoomId,
+      procedure: 'فتح بطن',
+      durationMinutes: 120,
+      notes: null,
+    };
+    const visitId = '0199a3d2-6c55-7000-8000-000000000003';
+    expect(emergencyBookingSchema.parse({ ...urgent, visitId })).toMatchObject({
+      visitId,
+      patientId: null,
+    });
+    expect(
+      emergencyBookingSchema.safeParse({ ...urgent, patientId: booking.patientId }).success,
+    ).toBe(true);
+    expect(emergencyBookingSchema.safeParse(urgent).success).toBe(false);
+    expect(
+      emergencyBookingSchema.safeParse({ ...urgent, visitId, patientId: booking.patientId })
+        .success,
+    ).toBe(false);
+  });
+
+  it('rescheduling takes a new future time', () => {
+    const next = { operatingRoomId: booking.operatingRoomId, startsAt: soon, durationMinutes: 60 };
+    expect(rescheduleBookingSchema.parse(next)).toEqual(next);
+    expect(
+      rescheduleBookingSchema.safeParse({ ...next, startsAt: '2020-01-01T10:00:00Z' }).success,
+    ).toBe(false);
   });
 
   it('knows which slots overlap; touching ends do not', () => {

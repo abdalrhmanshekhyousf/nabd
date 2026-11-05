@@ -1,6 +1,7 @@
 import {
   BOOKING_DURATIONS,
   createBookingSchema,
+  rescheduleBookingSchema,
   overlaps,
   type BookingView,
   type PatientSummary,
@@ -9,9 +10,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
 import { CalendarCheck, Clock, TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
-import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { queryKeys } from '@/app/queryKeys';
+import { durationLabel } from '@/components/bookings/durationLabel';
 import type { OperatingRoom } from '@/components/operatingRooms/orStyles';
 import { patientName } from '@/components/patients/patientDisplay';
 import { Button, Input, Modal, Select, Textarea } from '@/components/ui';
@@ -22,32 +23,41 @@ import { calm } from '@/lib/motion';
 import { notify } from '@/lib/notify';
 import { playSound } from '@/lib/sound';
 
-function durationLabel(minutes: number, t: TFunction) {
-  if (minutes < 60) return t('bookings.minutes', { count: minutes });
-  const hours = Math.floor(minutes / 60);
-  return minutes % 60
-    ? t('bookings.hoursHalf', { count: hours })
-    : t('bookings.hours', { count: hours });
-}
+/** "HH:MM" of an ISO time, in local time. */
+const clock = (iso: string) => {
+  const date = new Date(iso);
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+};
+
+/** The listed length closest to a booking's own. */
+const lengthOf = ({ startsAt, endsAt }: BookingView) => {
+  const minutes = (new Date(endsAt).getTime() - new Date(startsAt).getTime()) / 60_000;
+  return BOOKING_DURATIONS.reduce((best, m) =>
+    Math.abs(m - minutes) < Math.abs(best - minutes) ? m : best,
+  );
+};
 
 function BookingForm({
   initialDay,
   rooms,
+  moving,
   onDone,
 }: {
   initialDay: string;
   rooms: OperatingRoom[];
+  /** Rescheduling this booking (task 2.21) instead of making a new one. */
+  moving?: BookingView;
   onDone: () => void;
 }) {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const [values, setValues] = useState({
-    patientId: '',
-    operatingRoomId: '',
+    patientId: moving?.patient?.id ?? '',
+    operatingRoomId: moving?.operatingRoom?.id ?? '',
     day: initialDay,
-    time: '09:00',
-    durationMinutes: 60,
-    procedure: '',
+    time: moving ? clock(moving.startsAt) : '09:00',
+    durationMinutes: moving ? lengthOf(moving) : 60,
+    procedure: moving?.procedure ?? '',
     notes: '',
   });
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
@@ -58,6 +68,7 @@ function BookingForm({
     queryKey: queryKeys.myPatients(''),
     queryFn: async () =>
       (await api.get<{ patients: PatientSummary[] }>('/doctors/me/patients')).data.patients,
+    enabled: !moving,
   });
   // The chosen day's bookings, to warn about a clash before saving.
   const { data: dayBookings = [] } = useQuery({
@@ -76,30 +87,39 @@ function BookingForm({
   };
   const roomBookings = dayBookings.filter(
     (booking) =>
-      booking.operatingRoom?.id === values.operatingRoomId && booking.status !== 'COMPLETED',
+      booking.operatingRoom?.id === values.operatingRoomId &&
+      booking.status !== 'COMPLETED' &&
+      booking.id !== moving?.id,
   );
   const clash = slot ? roomBookings.find((booking) => overlaps(booking, slot)) : undefined;
   const room = rooms.find((candidate) => candidate.id === values.operatingRoomId);
 
   const save = useMutation({
-    mutationFn: async () =>
-      (
-        await api.post<{ booking: BookingView }>(
-          '/bookings',
-          {
-            operatingRoomId: values.operatingRoomId,
-            patientId: values.patientId,
-            procedure: values.procedure,
-            startsAt,
-            durationMinutes: values.durationMinutes,
-            notes: values.notes,
-          },
-          { skipErrorToast: true },
-        )
-      ).data.booking,
+    mutationFn: async () => {
+      const when = {
+        operatingRoomId: values.operatingRoomId,
+        startsAt,
+        durationMinutes: values.durationMinutes,
+      };
+      const response = moving
+        ? await api.patch<{ booking: BookingView }>(`/bookings/${moving.id}`, when, {
+            skipErrorToast: true,
+          })
+        : await api.post<{ booking: BookingView }>(
+            '/bookings',
+            {
+              ...when,
+              patientId: values.patientId,
+              procedure: values.procedure,
+              notes: values.notes,
+            },
+            { skipErrorToast: true },
+          );
+      return response.data.booking;
+    },
     onSuccess: (booking) => {
       notify.success(
-        t('bookings.booked', {
+        t(moving ? 'bookings.rescheduled' : 'bookings.booked', {
           room: booking.operatingRoom?.name,
           when: new Intl.DateTimeFormat(i18n.language, {
             dateStyle: 'medium',
@@ -130,7 +150,10 @@ function BookingForm({
       className="space-y-4"
       onSubmit={(event) => {
         event.preventDefault();
-        const parsed = createBookingSchema.safeParse({ ...values, startsAt: startsAt ?? '' });
+        const parsed = (moving ? rescheduleBookingSchema : createBookingSchema).safeParse({
+          ...values,
+          startsAt: startsAt ?? '',
+        });
         if (!parsed.success) {
           const found: Record<string, string> = {};
           for (const issue of parsed.error.issues) {
@@ -144,24 +167,33 @@ function BookingForm({
         save.mutate();
       }}
     >
-      {patients.length === 0 && (
-        <p className="rounded-lg bg-warning/10 p-3 text-sm text-warning">
-          {t('bookings.noPatients')}
+      {moving ? (
+        <p className="rounded-lg bg-surface-muted/70 p-3 text-sm text-foreground">
+          {moving.procedure}
+          {moving.patient ? ` · ${patientName(moving.patient, t)}` : ''}
         </p>
+      ) : (
+        patients.length === 0 && (
+          <p className="rounded-lg bg-warning/10 p-3 text-sm text-warning">
+            {t('bookings.noPatients')}
+          </p>
+        )
       )}
       <div className="grid gap-4 sm:grid-cols-2">
-        <Select
-          label={t('bookings.patient')}
-          placeholder={t('bookings.choosePatient')}
-          required
-          options={patients.map((patient) => ({
-            value: patient.patientId,
-            label: patientName(patient, t),
-          }))}
-          value={values.patientId}
-          onChange={(event) => set('patientId')(event.target.value)}
-          error={errors.patientId}
-        />
+        {!moving && (
+          <Select
+            label={t('bookings.patient')}
+            placeholder={t('bookings.choosePatient')}
+            required
+            options={patients.map((patient) => ({
+              value: patient.patientId,
+              label: patientName(patient, t),
+            }))}
+            value={values.patientId}
+            onChange={(event) => set('patientId')(event.target.value)}
+            error={errors.patientId}
+          />
+        )}
         <Select
           label={t('bookings.room')}
           placeholder={t('bookings.chooseRoom')}
@@ -250,20 +282,24 @@ function BookingForm({
         )}
       </AnimatePresence>
 
-      <Input
-        label={t('bookings.procedure')}
-        placeholder={t('bookings.procedurePlaceholder')}
-        required
-        value={values.procedure}
-        onChange={(event) => set('procedure')(event.target.value)}
-        error={errors.procedure}
-      />
-      <Textarea
-        label={t('bookings.notes')}
-        rows={2}
-        value={values.notes}
-        onChange={(event) => set('notes')(event.target.value)}
-      />
+      {!moving && (
+        <>
+          <Input
+            label={t('bookings.procedure')}
+            placeholder={t('bookings.procedurePlaceholder')}
+            required
+            value={values.procedure}
+            onChange={(event) => set('procedure')(event.target.value)}
+            error={errors.procedure}
+          />
+          <Textarea
+            label={t('bookings.notes')}
+            rows={2}
+            value={values.notes}
+            onChange={(event) => set('notes')(event.target.value)}
+          />
+        </>
+      )}
 
       <div className="sticky -bottom-4 -mx-4 -mb-4 flex flex-col-reverse gap-2 border-t border-border bg-surface p-4 sm:-bottom-5 sm:-mx-5 sm:-mb-5 sm:flex-row sm:justify-end sm:px-5">
         <Button variant="ghost" onClick={onDone}>
@@ -275,29 +311,50 @@ function BookingForm({
           disabled={Boolean(clash)}
           icon={<CalendarCheck className="size-4" />}
         >
-          {t('bookings.book')}
+          {moving ? t('bookings.reschedule') : t('bookings.book')}
         </Button>
       </div>
     </form>
   );
 }
 
-// A doctor books an operating room for one of their patients (task 2.20).
+// A doctor books an operating room for one of their patients (task 2.20), or
+// gives their booking a new time (2.21).
 export function BookingDialog({
   open,
   onClose,
   day,
   rooms,
+  moving,
 }: {
   open: boolean;
   onClose: () => void;
   day: string;
   rooms: OperatingRoom[];
+  moving?: BookingView | null;
 }) {
   const { t } = useTranslation();
   return (
-    <Modal open={open} onClose={onClose} title={t('bookings.dialog')} size="lg">
-      {open && <BookingForm initialDay={day} rooms={rooms} onDone={onClose} />}
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={
+        moving
+          ? t('bookings.rescheduleTitle', { procedure: moving.procedure })
+          : t('bookings.dialog')
+      }
+      description={moving?.status === 'POSTPONED' ? t('bookings.postponedHint') : undefined}
+      size="lg"
+    >
+      {open && (
+        <BookingForm
+          key={moving?.id ?? 'new'}
+          initialDay={day}
+          rooms={rooms}
+          moving={moving ?? undefined}
+          onDone={onClose}
+        />
+      )}
     </Modal>
   );
 }

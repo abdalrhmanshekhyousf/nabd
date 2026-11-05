@@ -76,6 +76,10 @@ const MESSAGES: Record<ErrorCode, Record<Language, string>> = {
     ar: 'الغرفة خارج الخدمة',
     en: 'This room is out of service',
   },
+  ROOM_BUSY: {
+    ar: 'الغرفة مشغولة هلق (عملية أو تعقيم)، اختار غرفة تانية',
+    en: 'The room is in use right now (surgery or sterilization); choose another',
+  },
   USE_BOOKING: {
     ar: 'هالخطوة بتصير من الحجز، مش من زر الغرفة',
     en: 'This step happens through a booking, not a room button',

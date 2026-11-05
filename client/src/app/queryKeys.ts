@@ -17,5 +17,7 @@ export const queryKeys = {
   doctorCalls: ['doctor-calls'] as const,
   bookingsDay: (day: string) => ['bookings', 'day', day] as const,
   myBookings: ['bookings', 'mine'] as const,
+  /** The next hours of every room, for an emergency booking (task 2.21). */
+  bookingsAhead: ['bookings', 'ahead'] as const,
   publicHospitals: (search: string) => ['public-hospitals', search] as const,
 };

@@ -1,11 +1,21 @@
 import type { BookingView } from '@nabd/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
-import { CalendarPlus, ChevronLeft, ChevronRight, Clock, HeartPulse, Trash2 } from 'lucide-react';
+import {
+  CalendarClock,
+  CalendarPlus,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  HeartPulse,
+  Siren,
+  Trash2,
+} from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { queryKeys } from '@/app/queryKeys';
 import { BookingDialog } from '@/components/bookings/BookingDialog';
+import { EmergencyBookingDialog } from '@/components/bookings/EmergencyBookingDialog';
 import { OR_TONE, type OperatingRoom } from '@/components/operatingRooms/orStyles';
 import { patientName } from '@/components/patients/patientDisplay';
 import { Button, Card, Modal, Spinner, StatusBadge } from '@/components/ui';
@@ -26,7 +36,11 @@ function BookingSlot({ booking }: { booking: BookingView }) {
       transition={calm}
       className={cn(
         'flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-lg border-s-4 px-3 py-2 text-sm',
-        booking.mine ? 'border-accent bg-accent-soft/60' : 'border-border bg-surface-muted/70',
+        booking.kind === 'EMERGENCY'
+          ? 'border-danger bg-danger/8'
+          : booking.mine
+            ? 'border-accent bg-accent-soft/60'
+            : 'border-border bg-surface-muted/70',
       )}
     >
       <Clock className="size-3.5 shrink-0 text-muted" aria-hidden="true" />
@@ -34,10 +48,20 @@ function BookingSlot({ booking }: { booking: BookingView }) {
         <bdi>{time.format(new Date(booking.startsAt))}</bdi>–
         <bdi>{time.format(new Date(booking.endsAt))}</bdi>
       </span>
+      {booking.kind === 'EMERGENCY' && (
+        <span className="inline-flex items-center gap-1 rounded-md bg-danger px-1.5 py-0.5 text-xs font-semibold text-danger-foreground">
+          <Siren className="size-3" aria-hidden="true" />
+          {t('bookings.emergency.label')}
+        </span>
+      )}
       <span className="min-w-0 text-muted">
-        {booking.mine
-          ? `${t('bookings.mine')} · ${booking.procedure}${booking.patient ? ` · ${patientName(booking.patient, t)}` : ''}`
-          : t('bookings.taken', { surgeon: booking.surgeonName })}
+        {booking.kind === 'EMERGENCY' && !booking.mine
+          ? booking.surgeonName
+            ? t('bookings.taken', { surgeon: booking.surgeonName })
+            : t('bookings.emergency.label')
+          : booking.mine
+            ? `${t('bookings.mine')} · ${booking.procedure}${booking.patient ? ` · ${patientName(booking.patient, t)}` : ''}`
+            : t('bookings.taken', { surgeon: booking.surgeonName })}
       </span>
     </motion.li>
   );
@@ -50,6 +74,8 @@ export function OrBookingsPage() {
   const [day, setDay] = useState(dayKey);
   const [booking, setBooking] = useState(false);
   const [cancelling, setCancelling] = useState<BookingView | null>(null);
+  const [moving, setMoving] = useState<{ booking: BookingView; day: string } | null>(null);
+  const [emergency, setEmergency] = useState(false);
 
   const { data: rooms = [], isPending: roomsPending } = useQuery({
     queryKey: queryKeys.operatingRooms,
@@ -97,9 +123,18 @@ export function OrBookingsPage() {
           <h2 className="text-xl font-bold text-foreground">{t('bookings.title')}</h2>
           <p className="text-sm text-muted">{t('bookings.description')}</p>
         </div>
-        <Button icon={<CalendarPlus className="size-4" />} onClick={() => setBooking(true)}>
-          {t('bookings.new')}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="danger"
+            icon={<Siren className="size-4" />}
+            onClick={() => setEmergency(true)}
+          >
+            {t('bookings.emergency.open')}
+          </Button>
+          <Button icon={<CalendarPlus className="size-4" />} onClick={() => setBooking(true)}>
+            {t('bookings.new')}
+          </Button>
+        </div>
       </motion.div>
 
       <motion.section {...enter(1)} aria-label={t('bookings.schedule')} className="space-y-3">
@@ -193,9 +228,46 @@ export function OrBookingsPage() {
                     {item.operatingRoom?.name} · {when.format(new Date(item.startsAt))}
                   </p>
                 </div>
-                <StatusBadge tone={item.status === 'POSTPONED' ? 'warning' : 'info'}>
-                  {t(`bookings.status.${item.status}`)}
+                <StatusBadge
+                  tone={
+                    item.status === 'POSTPONED'
+                      ? 'warning'
+                      : item.kind === 'EMERGENCY'
+                        ? 'danger'
+                        : 'info'
+                  }
+                >
+                  {item.kind === 'EMERGENCY'
+                    ? t('bookings.emergency.label')
+                    : t(`bookings.status.${item.status}`)}
                 </StatusBadge>
+                {item.kind === 'SCHEDULED' &&
+                  (item.status === 'SCHEDULED' || item.status === 'POSTPONED') && (
+                    <Button
+                      size={item.status === 'POSTPONED' ? 'sm' : 'icon'}
+                      variant={item.status === 'POSTPONED' ? 'outline' : 'ghost'}
+                      className={item.status === 'POSTPONED' ? undefined : 'size-9 text-muted'}
+                      aria-label={t('bookings.reschedule')}
+                      icon={
+                        item.status === 'POSTPONED' ? (
+                          <CalendarClock className="size-4" />
+                        ) : undefined
+                      }
+                      onClick={() =>
+                        setMoving({
+                          booking: item,
+                          // A postponed booking whose time passed moves from today.
+                          day: dayKey(new Date(Math.max(Date.now(), Date.parse(item.startsAt)))),
+                        })
+                      }
+                    >
+                      {item.status === 'POSTPONED' ? (
+                        t('bookings.reschedule')
+                      ) : (
+                        <CalendarClock className="size-4" />
+                      )}
+                    </Button>
+                  )}
                 {(item.status === 'SCHEDULED' || item.status === 'POSTPONED') && (
                   <Button
                     size="icon"
@@ -213,7 +285,21 @@ export function OrBookingsPage() {
         )}
       </motion.section>
 
-      <BookingDialog open={booking} onClose={() => setBooking(false)} day={day} rooms={rooms} />
+      <BookingDialog
+        open={booking || moving !== null}
+        onClose={() => {
+          setBooking(false);
+          setMoving(null);
+        }}
+        day={moving?.day ?? day}
+        rooms={rooms}
+        moving={moving?.booking}
+      />
+      <EmergencyBookingDialog
+        open={emergency}
+        onClose={() => setEmergency(false)}
+        target={{ mine: true }}
+      />
       <Modal
         open={cancelling !== null}
         onClose={() => setCancelling(null)}

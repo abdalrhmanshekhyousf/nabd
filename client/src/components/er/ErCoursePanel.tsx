@@ -1,11 +1,12 @@
 import { isClosed, type ErVisit } from '@nabd/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { ArrowRightLeft, DoorOpen, Hospital, Lock } from 'lucide-react';
+import { ArrowRightLeft, DoorOpen, Hospital, Lock, Siren } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import { queryKeys } from '@/app/queryKeys';
+import { EmergencyBookingDialog } from '@/components/bookings/EmergencyBookingDialog';
 import { departmentLabel, type Department } from '@/components/departments/departmentDisplay';
 import { patientName } from '@/components/patients/patientDisplay';
 import { Button, Card, Modal, Select, Textarea } from '@/components/ui';
@@ -15,7 +16,7 @@ import { calm } from '@/lib/motion';
 import { notify } from '@/lib/notify';
 import { playSound } from '@/lib/sound';
 
-type Action = 'transfer' | 'discharge' | null;
+type Action = 'transfer' | 'discharge' | 'operation' | null;
 
 function useCourse(visit: ErVisit) {
   const queryClient = useQueryClient();
@@ -252,6 +253,13 @@ export function ErCoursePanel({ visit }: { visit: ErVisit }) {
       </div>
       <div className="flex flex-wrap gap-2">
         <Button
+          variant="danger"
+          icon={<Siren className="size-4" />}
+          onClick={() => setAction('operation')}
+        >
+          {t('bookings.emergency.fromEr')}
+        </Button>
+        <Button
           variant="outline"
           icon={<ArrowRightLeft className="size-4" />}
           onClick={() => setAction('transfer')}
@@ -267,7 +275,7 @@ export function ErCoursePanel({ visit }: { visit: ErVisit }) {
         </Button>
       </div>
       <Modal
-        open={action !== null}
+        open={action === 'transfer' || action === 'discharge'}
         onClose={() => setAction(null)}
         title={
           action === 'discharge'
@@ -281,8 +289,15 @@ export function ErCoursePanel({ visit }: { visit: ErVisit }) {
         }
         size="sm"
       >
-        {action && <CloseForm visit={visit} kind={action} onDone={() => setAction(null)} />}
+        {(action === 'transfer' || action === 'discharge') && (
+          <CloseForm visit={visit} kind={action} onDone={() => setAction(null)} />
+        )}
       </Modal>
+      <EmergencyBookingDialog
+        open={action === 'operation'}
+        onClose={() => setAction(null)}
+        target={{ visitId: visit.id, patientLabel: patientName(visit.patient, t) }}
+      />
     </Card>
   );
 }

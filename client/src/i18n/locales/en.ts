@@ -632,6 +632,25 @@ export const en: Translation = {
     clash: 'Overlaps a booking {{from}}–{{to}}; choose another time or room',
     book: 'Confirm booking',
     booked: '{{room}} booked {{when}}',
+    reschedule: 'Reschedule',
+    rescheduleTitle: 'A new time for {{procedure}}',
+    rescheduled: 'Booking moved to {{room}} {{when}}',
+    postponedHint: 'Postponed for an emergency operation; choose a new time.',
+    emergency: {
+      open: 'Emergency booking',
+      fromEr: 'Book emergency surgery',
+      title: 'Book emergency surgery',
+      hint: 'The operation starts now. Any scheduled booking in its way is postponed and its doctor gets an urgent notice.',
+      label: 'Emergency',
+      ready: 'Free and ready',
+      busy: 'In use right now',
+      taken: 'An emergency is on',
+      willPostpone: 'Will postpone: {{slots}}',
+      book: 'Book now',
+      booked: '{{room}} booked for the emergency',
+      bookedPostponed:
+        '{{room}} booked for the emergency; the postponed bookings’ doctors were notified',
+    },
     status: {
       SCHEDULED: 'Scheduled',
       POSTPONED: 'Postponed',
@@ -883,6 +902,7 @@ export const en: Translation = {
       APPOINTMENT_CANCELLED: 'Your appointment was cancelled, please rebook',
     },
     body: {
+      OPERATION_POSTPONED: '{{procedure}} · {{room}}: an emergency came in, choose a new time',
       DOCTOR_CALL: '{{patient}} · {{complaint}} · triage level {{level}}',
       CLEANING_REQUEST: 'Place: {{place}}',
     },

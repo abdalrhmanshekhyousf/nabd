@@ -15,6 +15,7 @@ import { renderApp } from '@/test/renderApp';
 
 const fake = fakeApi(api);
 const R1 = '11111111-1111-4111-8111-111111111111';
+const R2 = '33333333-3333-4333-8333-333333333333';
 const P1 = '22222222-2222-4222-8222-222222222222';
 
 const DOCTOR: SessionUser = {
@@ -30,7 +31,7 @@ const DOCTOR: SessionUser = {
 const tomorrow = addDays(dayKey(), 1);
 const ROOMS: OperatingRoom[] = [
   { id: R1, name: 'غرفة 1', status: 'BOOKED', statusChangedAt: new Date().toISOString() },
-  { id: 'r2', name: 'غرفة 2', status: 'AVAILABLE', statusChangedAt: new Date().toISOString() },
+  { id: R2, name: 'غرفة 2', status: 'AVAILABLE', statusChangedAt: new Date().toISOString() },
   { id: 'r3', name: 'غرفة 3', status: 'OUT_OF_SERVICE', statusChangedAt: new Date().toISOString() },
 ];
 const PATIENT: PatientSummary = {
@@ -109,6 +110,26 @@ beforeEach(() => {
         procedure: body.procedure,
       });
       return { status: 201, data: { booking: created } };
+    }
+    if (config.url === '/bookings/b1' && config.method === 'patch') {
+      const body = JSON.parse(config.data as string);
+      const moved = { ...MINE, status: 'SCHEDULED' as const, startsAt: body.startsAt };
+      mine = [moved];
+      return { status: 200, data: { booking: moved } };
+    }
+    if (config.url === '/bookings/emergency') {
+      return {
+        status: 201,
+        data: {
+          postponed: 0,
+          booking: {
+            ...MINE,
+            id: 'e1',
+            kind: 'EMERGENCY',
+            operatingRoom: { id: R2, name: 'غرفة 2' },
+          },
+        },
+      };
     }
     if (config.url === '/bookings/b1' && config.method === 'delete') {
       mine = [];
@@ -205,5 +226,56 @@ describe('OrBookingsPage', () => {
     expect(await screen.findByText('انلغى الحجز')).toBeInTheDocument();
     expect(fake.calls.some((c) => c.url === '/bookings/b1' && c.method === 'delete')).toBe(true);
     expect(await within(upcoming).findByText('ما عندك حجوزات جاية')).toBeInTheDocument();
+  });
+});
+
+describe('OrBookingsPage: postponed and emergency bookings (task 2.21)', () => {
+  it('a postponed booking says so and is rescheduled to a new time', async () => {
+    mine = [{ ...MINE, status: 'POSTPONED' }];
+    renderApp('/doctor/or-bookings');
+    const user = userEvent.setup();
+    const upcoming = await screen.findByRole('region', { name: 'حجوزاتي الجاية' });
+    expect(await within(upcoming).findByText('مؤجّل')).toBeInTheDocument();
+
+    await user.click(within(upcoming).getByRole('button', { name: 'إعادة جدولة' }));
+    const dialog = await screen.findByRole('dialog', { name: 'وقت جديد لـ استئصال زائدة' });
+    expect(dialog).toHaveTextContent('تأجّل بسبب عملية طارئة');
+    expect(within(dialog).queryByLabelText(/المريض/)).toBeNull();
+    const time = within(dialog).getByLabelText(/الساعة/);
+    expect(time).toHaveValue('08:00');
+    await user.clear(time);
+    await user.type(time, '13:00');
+    await user.click(within(dialog).getByRole('button', { name: 'إعادة جدولة' }));
+
+    expect(await screen.findByText(/انتقل الحجز لـ غرفة 1/)).toBeInTheDocument();
+    const patch = fake.calls.find((c) => c.method === 'patch')!;
+    expect(patch.url).toBe('/bookings/b1');
+    expect(JSON.parse(patch.data as string)).toEqual({
+      operatingRoomId: R1,
+      startsAt: atTime(tomorrow, '13:00'),
+      durationMinutes: 60,
+    });
+    expect(await within(upcoming).findByText('مجدول')).toBeInTheDocument();
+  });
+
+  it('a doctor books an emergency for one of their patients', async () => {
+    renderApp('/doctor/or-bookings');
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'حجز طارئ' }));
+    const dialog = await screen.findByRole('dialog', { name: 'حجز عملية طارئة' });
+    await user.selectOptions(
+      await within(dialog).findByRole('combobox', { name: /المريض/ }),
+      await within(dialog).findByRole('option', { name: 'سارة' }),
+    );
+    expect(await within(dialog).findByRole('radio', { name: 'غرفة 2' })).toHaveTextContent(
+      'فاضية وجاهزة',
+    );
+    expect(within(dialog).queryByRole('radio', { name: 'غرفة 3' })).toBeNull();
+    await user.type(within(dialog).getByLabelText(/العملية/), 'فتح بطن');
+    await user.click(within(dialog).getByRole('button', { name: 'احجز هلق' }));
+
+    expect(await screen.findByText('انحجزت غرفة 2 للطوارئ')).toBeInTheDocument();
+    const post = fake.calls.find((c) => c.url === '/bookings/emergency')!;
+    expect(JSON.parse(post.data as string)).toMatchObject({ patientId: P1, visitId: null });
   });
 });
