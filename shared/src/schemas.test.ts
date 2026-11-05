@@ -17,6 +17,8 @@ import {
   transferSchema,
   dischargeSchema,
   erStatusSchema,
+  createBookingSchema,
+  overlaps,
   overrideReasonMissing,
   isAbnormal,
   updateStaffSchema,
@@ -592,5 +594,42 @@ describe('ER status, transfer and discharge', () => {
   it('a transfer needs a department; notes are optional', () => {
     expect(transferSchema.safeParse({ departmentId: '', note: null }).success).toBe(false);
     expect(dischargeSchema.parse({ note: '' })).toEqual({ note: null });
+  });
+});
+
+describe('bookings', () => {
+  const soon = new Date(Date.now() + 3_600_000).toISOString();
+  const booking = {
+    operatingRoomId: '0199a3d2-6c55-7000-8000-000000000001',
+    patientId: '0199a3d2-6c55-7000-8000-000000000002',
+    procedure: 'استئصال زائدة',
+    startsAt: soon,
+    durationMinutes: 90,
+    notes: '',
+  };
+
+  it('takes a future start and a sensible length', () => {
+    expect(createBookingSchema.parse(booking)).toMatchObject({ durationMinutes: 90, notes: null });
+    expect(
+      createBookingSchema.safeParse({ ...booking, startsAt: '2020-01-01T10:00:00Z' }).success,
+    ).toBe(false);
+    expect(createBookingSchema.safeParse({ ...booking, durationMinutes: 5 }).success).toBe(false);
+    expect(createBookingSchema.safeParse({ ...booking, startsAt: 'tomorrow' }).success).toBe(false);
+  });
+
+  it('knows which slots overlap; touching ends do not', () => {
+    const slot = { startsAt: '2026-11-05T10:00:00Z', endsAt: '2026-11-05T11:00:00Z' };
+    expect(
+      overlaps(slot, { startsAt: '2026-11-05T10:30:00Z', endsAt: '2026-11-05T12:00:00Z' }),
+    ).toBe(true);
+    expect(
+      overlaps(slot, { startsAt: '2026-11-05T09:00:00Z', endsAt: '2026-11-05T13:00:00Z' }),
+    ).toBe(true);
+    expect(
+      overlaps(slot, { startsAt: '2026-11-05T11:00:00Z', endsAt: '2026-11-05T12:00:00Z' }),
+    ).toBe(false);
+    expect(
+      overlaps(slot, { startsAt: '2026-11-05T08:00:00Z', endsAt: '2026-11-05T10:00:00Z' }),
+    ).toBe(false);
   });
 });

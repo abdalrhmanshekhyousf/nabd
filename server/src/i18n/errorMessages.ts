@@ -68,6 +68,14 @@ const MESSAGES: Record<ErrorCode, Record<Language, string>> = {
     ar: 'الغرفة مو بالحالة اللي بتسمح بهالخطوة',
     en: 'The room is not in a state that allows this step',
   },
+  BOOKING_CONFLICT: {
+    ar: 'الغرفة محجوزة بهالوقت، اختار وقت أو غرفة تانية',
+    en: 'The room is booked at that time; choose another time or room',
+  },
+  ROOM_OUT_OF_SERVICE: {
+    ar: 'الغرفة خارج الخدمة',
+    en: 'This room is out of service',
+  },
   USE_BOOKING: {
     ar: 'هالخطوة بتصير من الحجز، مش من زر الغرفة',
     en: 'This step happens through a booking, not a room button',

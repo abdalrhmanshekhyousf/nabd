@@ -12,6 +12,7 @@ export * from './schemas/common.js';
 export * from './schemas/department.js';
 export * from './schemas/doctor.js';
 export * from './schemas/er.js';
+export * from './schemas/booking.js';
 export * from './schemas/hospital.js';
 export * from './schemas/me.js';
 export * from './schemas/medicalRecord.js';

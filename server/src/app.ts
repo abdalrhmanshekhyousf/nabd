@@ -13,6 +13,7 @@ import { meRouter } from './routes/me.routes.js';
 import { operatingRoomRouter } from './routes/operatingRoom.routes.js';
 import { bedRouter, roomRouter } from './routes/room.routes.js';
 import { assignmentRouter } from './routes/assignment.routes.js';
+import { bookingRouter } from './routes/booking.routes.js';
 import { devRouter } from './routes/dev.routes.js';
 import { doctorRouter } from './routes/doctor.routes.js';
 import { erRouter } from './routes/er.routes.js';
@@ -48,6 +49,7 @@ export function createApp() {
   app.use('/api/notifications', notificationRouter);
   app.use('/api/doctors', doctorRouter);
   app.use('/api/er', erRouter);
+  app.use('/api/bookings', bookingRouter);
   if (!env.isProduction) app.use('/api/dev', devRouter);
 
   app.use(notFound);

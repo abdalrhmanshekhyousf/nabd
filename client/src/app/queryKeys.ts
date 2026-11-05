@@ -15,5 +15,7 @@ export const queryKeys = {
   erVisit: (id: string) => ['er-visit', id] as const,
   doctors: ['doctors'] as const,
   doctorCalls: ['doctor-calls'] as const,
+  bookingsDay: (day: string) => ['bookings', 'day', day] as const,
+  myBookings: ['bookings', 'mine'] as const,
   publicHospitals: (search: string) => ['public-hospitals', search] as const,
 };
