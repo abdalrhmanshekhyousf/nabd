@@ -80,6 +80,10 @@ const MESSAGES: Record<ErrorCode, Record<Language, string>> = {
     ar: 'الغرفة مشغولة هلق (عملية أو تعقيم)، اختار غرفة تانية',
     en: 'The room is in use right now (surgery or sterilization); choose another',
   },
+  ALREADY_TAKEN: {
+    ar: 'حدا تاني أخد هالطلب قبلك',
+    en: 'Someone else already took this request',
+  },
   USE_BOOKING: {
     ar: 'هالخطوة بتصير من الحجز، مش من زر الغرفة',
     en: 'This step happens through a booking, not a room button',

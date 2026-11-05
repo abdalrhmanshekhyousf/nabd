@@ -21,5 +21,7 @@ export const queryKeys = {
   bookingsAhead: ['bookings', 'ahead'] as const,
   /** Under operating-rooms, so every room or booking change refreshes it (task 2.22). */
   orBoard: ['operating-rooms', 'board'] as const,
+  /** The cleaner's jobs (task 2.24); the server refreshes this key. */
+  cleaningRequests: ['cleaning-requests'] as const,
   publicHospitals: (search: string) => ['public-hospitals', search] as const,
 };

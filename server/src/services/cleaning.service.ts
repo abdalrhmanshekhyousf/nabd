@@ -67,8 +67,73 @@ export async function announceSterilization(
     to: { role: 'CLEANER', departmentId },
     type: 'OPERATION_ENDED',
     data: { room, procedure },
-    link: '/cleaner/tasks',
+    link: '/cleaning/tasks',
   });
   // The cleaners' boards (2.24) list the new request.
   emitRefresh(rooms.department(departmentId), [['cleaning-requests']]);
+}
+
+/** Every cleaner board covering this department updates (task 2.24). */
+export function announceCleaning(departmentId: string) {
+  emitRefresh(rooms.department(departmentId), [['cleaning-requests']]);
+}
+
+/**
+ * The room's sterilization has started (task 2.24): its open request is now
+ * this worker's. A room sterilized without a request gets one, so the work is
+ * on record. Returns the request's department.
+ */
+export async function startSterilization(tx: Tx, roomId: string, workerId: string) {
+  const now = new Date();
+  const open = await tx.cleaningRequest.findFirst({
+    where: { operatingRoomId: roomId, kind: 'STERILIZATION', status: 'PENDING' },
+    orderBy: { createdAt: 'asc' },
+    select: { id: true, departmentId: true },
+  });
+  if (open) {
+    await tx.cleaningRequest.update({
+      where: { id: open.id },
+      data: { status: 'IN_PROGRESS', assignedToId: workerId, startedAt: now },
+    });
+    return open.departmentId;
+  }
+  const [operations, room] = await Promise.all([
+    tx.department.findFirst({ where: { code: 'OPERATIONS' }, select: { id: true } }),
+    tx.operatingRoom.findUniqueOrThrow({
+      where: { id: roomId },
+      select: { name: true, hospitalId: true },
+    }),
+  ]);
+  if (!operations) return null;
+  await tx.cleaningRequest.create({
+    data: {
+      hospitalId: room.hospitalId,
+      departmentId: operations.id,
+      kind: 'STERILIZATION',
+      status: 'IN_PROGRESS',
+      operatingRoomId: roomId,
+      place: room.name,
+      assignedToId: workerId,
+      startedAt: now,
+    },
+  });
+  return operations.id;
+}
+
+/** The room is sterilized: its open request is done. Returns the request's department. */
+export async function finishSterilization(tx: Tx, roomId: string) {
+  const open = await tx.cleaningRequest.findFirst({
+    where: {
+      operatingRoomId: roomId,
+      kind: 'STERILIZATION',
+      status: { in: ['PENDING', 'IN_PROGRESS'] },
+    },
+    select: { id: true, departmentId: true },
+  });
+  if (!open) return null;
+  await tx.cleaningRequest.update({
+    where: { id: open.id },
+    data: { status: 'DONE', finishedAt: new Date() },
+  });
+  return open.departmentId;
 }

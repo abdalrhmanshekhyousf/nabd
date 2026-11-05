@@ -1,3 +1,4 @@
+import type { DepartmentCode } from './schemas/department.js';
 import type { OperatingRoomStatus } from './schemas/operatingRoom.js';
 import type { Gender } from './schemas/patient.js';
 /** Operating room bookings (task 2.18). Match the Prisma enums. */
@@ -78,4 +79,23 @@ export type OrBoardRoom = {
   statusChangedAt: string;
   current: BookingView | null;
   queue: BookingView[];
+};
+
+/** A cleaning or sterilization job as the cleaners' board shows it (task 2.24). */
+export type CleaningRequestView = {
+  id: string;
+  kind: CleaningKind;
+  status: CleaningStatus;
+  department: { id: string; name: string; code: DepartmentCode | null };
+  /** The room, bed or place to clean, as written when requested. */
+  place: string | null;
+  operatingRoom: { id: string; name: string } | null;
+  note: string | null;
+  requestedBy: string | null;
+  assignedTo: { id: string; fullName: string } | null;
+  /** Taken by the person looking at it. */
+  mine: boolean;
+  createdAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
 };

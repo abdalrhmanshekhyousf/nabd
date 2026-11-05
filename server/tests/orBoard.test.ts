@@ -226,7 +226,7 @@ describe('ending an operation calls the sterilization team (task 2.23)', () => {
         type: 'OPERATION_ENDED',
         urgent: true,
         data: { room: 'غرفة 1', procedure: 'فتح بطن' },
-        link: '/cleaner/tasks',
+        link: '/cleaning/tasks',
       }),
     ]);
     expect(await prisma.notification.count({ where: { userId: erCleaner.id } })).toBe(0);
