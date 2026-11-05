@@ -1,3 +1,4 @@
+import type { OperatingRoomStatus } from './schemas/operatingRoom.js';
 import type { Gender } from './schemas/patient.js';
 /** Operating room bookings (task 2.18). Match the Prisma enums. */
 export const BOOKING_KINDS = ['SCHEDULED', 'EMERGENCY'] as const;
@@ -50,8 +51,11 @@ export type BookingView = {
   endsAt: string;
   surgeonName: string;
   mine: boolean;
-  /** Only on my own bookings. */
+  /** When the operation really started (task 2.22). */
+  startedAt: string | null;
+  /** Only on my own bookings, and for the operating room team. */
   procedure: string | null;
+  notes: string | null;
   patient: {
     id: string;
     fullName: string | null;
@@ -62,3 +66,16 @@ export type BookingView = {
 };
 
 export const BOOKING_DURATIONS = [30, 60, 90, 120, 180, 240, 360] as const;
+
+/**
+ * One room on the operating room nurse's board (task 2.22): the operation in
+ * it now, and the ones waiting for it, emergencies first.
+ */
+export type OrBoardRoom = {
+  id: string;
+  name: string;
+  status: OperatingRoomStatus;
+  statusChangedAt: string;
+  current: BookingView | null;
+  queue: BookingView[];
+};

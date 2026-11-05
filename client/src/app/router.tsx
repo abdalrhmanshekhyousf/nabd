@@ -19,6 +19,7 @@ import { NotFoundPage } from '@/pages/NotFoundPage';
 import { DoctorCallsPage } from '@/pages/doctor/DoctorCallsPage';
 import { DoctorPatientsPage } from '@/pages/doctor/DoctorPatientsPage';
 import { OrBookingsPage } from '@/pages/doctor/OrBookingsPage';
+import { OrBoardPage } from '@/pages/nurse/OrBoardPage';
 import { PatientFilePage } from '@/pages/doctor/PatientFilePage';
 import { ErQueuePage } from '@/pages/nurse/ErQueuePage';
 import { NewCasePage } from '@/pages/nurse/NewCasePage';
@@ -51,6 +52,7 @@ export const BUILT_PAGES: Partial<Record<`${Role}:${string}`, ReactElement>> = {
   'DOCTOR:calls': <DoctorCallsPage />,
   'DOCTOR:or-bookings': <OrBookingsPage />,
   'NURSE:emergency': <ErQueuePage />,
+  'NURSE:operating-rooms': <OrBoardPage />,
   'NURSE:new-case': <NewCasePage />,
 };
 

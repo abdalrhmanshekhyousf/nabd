@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import {
+  board,
   create,
   history,
   list,
@@ -18,6 +19,7 @@ export const operatingRoomRouter = Router();
 operatingRoomRouter.use(authenticate);
 operatingRoomRouter.get('/', list);
 operatingRoomRouter.get('/me', myActors);
+operatingRoomRouter.get('/board', board);
 operatingRoomRouter.post('/', requireRole('ADMIN'), create);
 operatingRoomRouter.patch('/:id', requireRole('ADMIN'), rename);
 operatingRoomRouter.patch('/:id/service', requireRole('ADMIN'), setService);

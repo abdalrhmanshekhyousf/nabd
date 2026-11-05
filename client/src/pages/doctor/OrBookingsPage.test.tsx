@@ -62,7 +62,9 @@ function booking(
     endsAt: atTime(day, to),
     surgeonName: 'د. نور',
     mine: false,
+    startedAt: null,
     procedure: null,
+    notes: null,
     patient: null,
     ...overrides,
   };

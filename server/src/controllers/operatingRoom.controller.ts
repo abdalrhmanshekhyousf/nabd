@@ -6,6 +6,8 @@ import {
 import type { Request, Response } from 'express';
 import { z } from 'zod';
 import { session } from '../middleware/auth.js';
+import { HttpError } from '../middleware/errorHandler.js';
+import { orBoard } from '../services/booking.service.js';
 import * as operatingRoomService from '../services/operatingRoom.service.js';
 import { orActorsOf, transitionRoom } from '../services/orTransition.service.js';
 import { roomHistory } from '../services/roomStatus.service.js';
@@ -68,20 +70,35 @@ export async function myActors(req: Request, res: Response) {
   res.json({ actors: await orActorsOf(db, auth.userId) });
 }
 
+/** The operating room nurse's board (task 2.22); the admin sees it too. */
+export async function board(req: Request, res: Response) {
+  const { auth, db } = session(req);
+  const actors = await orActorsOf(db, auth.userId);
+  if (!actors.includes('OR_NURSE') && !actors.includes('ADMIN')) {
+    throw new HttpError(403, 'FORBIDDEN', 'The board is for the operating room team');
+  }
+  res.json({ rooms: await orBoard(db, auth.userId) });
+}
+
 /** One step of an operating room's cycle, by whoever the state machine allows (task 2.19). */
 export async function transition(req: Request, res: Response) {
   const { auth, db } = session(req);
   const { id } = idParam.parse(req.params);
-  const { to } = z
-    .object({ to: z.enum(OPERATING_ROOM_STATUSES, 'validation.required') })
+  const { to, bookingId } = z
+    .object({
+      to: z.enum(OPERATING_ROOM_STATUSES, 'validation.required'),
+      // Which waiting booking to prepare for (task 2.22); the first one if left out.
+      bookingId: z.uuid().nullable().default(null),
+    })
     .parse(req.body);
   const operatingRoom = await transitionRoom(db, {
     hospitalId: auth.hospitalId,
     userId: auth.userId,
     roomId: id,
     to,
+    bookingId,
   });
-  // Every screen showing the rooms (the live board, 2.26) updates.
-  emitRefresh(rooms.hospital(auth.hospitalId), [['operating-rooms']]);
+  // Every screen showing the rooms or bookings (the live board, 2.26) updates.
+  emitRefresh(rooms.hospital(auth.hospitalId), [['operating-rooms'], ['bookings']]);
   res.json({ operatingRoom });
 }

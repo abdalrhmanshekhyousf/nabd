@@ -23,9 +23,13 @@ const bookingInclude = {
 
 type BookingRow = Prisma.OperationBookingGetPayload<{ include: typeof bookingInclude }>;
 
-/** Another doctor's booking shows only that the room is taken, not for whom. */
-function toView(booking: BookingRow, viewerId: string): BookingView {
+/**
+ * Another doctor's booking shows only that the room is taken, not for whom.
+ * The operating room team sees everything (`reveal`, task 2.22).
+ */
+function toView(booking: BookingRow, viewerId: string, reveal = false): BookingView {
   const mine = booking.surgeonId === viewerId || booking.bookedById === viewerId;
+  const shown = mine || reveal;
   return {
     id: booking.id,
     kind: booking.kind,
@@ -35,9 +39,11 @@ function toView(booking: BookingRow, viewerId: string): BookingView {
     endsAt: booking.endsAt.toISOString(),
     surgeonName: booking.surgeonName,
     mine,
-    procedure: mine ? booking.procedure : null,
+    startedAt: booking.startedAt?.toISOString() ?? null,
+    procedure: shown ? booking.procedure : null,
+    notes: shown ? booking.notes : null,
     patient:
-      mine && booking.patient
+      shown && booking.patient
         ? { ...booking.patient, dateOfBirth: booking.patient.dateOfBirth?.toISOString() ?? null }
         : null,
   };
@@ -302,6 +308,51 @@ export async function rescheduleBooking(
     return moved;
   });
   return toView(booking, doctorId);
+}
+
+/** Emergencies first, then by time: the order a room takes its bookings in. */
+export const QUEUE_ORDER = [
+  { kind: 'desc' },
+  { startsAt: 'asc' },
+] as const satisfies Prisma.OperationBookingOrderByWithRelationInput[];
+
+/**
+ * The operating room nurse's board (task 2.22): each room, the operation in
+ * it now, and what waits for it in the next day.
+ */
+export async function orBoard(db: ScopedPrisma, viewerId: string) {
+  const now = new Date();
+  const [operatingRooms, bookings] = await Promise.all([
+    db.operatingRoom.findMany({
+      select: { id: true, name: true, status: true, statusChangedAt: true },
+      orderBy: { name: 'asc' },
+    }),
+    db.operationBooking.findMany({
+      where: {
+        operatingRoomId: { not: null },
+        OR: [
+          { status: 'IN_PROGRESS' },
+          {
+            status: 'SCHEDULED',
+            endsAt: { gt: now },
+            startsAt: { lt: new Date(now.getTime() + 24 * 3_600_000) },
+          },
+        ],
+      },
+      include: bookingInclude,
+      orderBy: [...QUEUE_ORDER],
+    }),
+  ]);
+  return operatingRooms.map((room) => {
+    const own = bookings.filter((b) => b.operatingRoomId === room.id);
+    const current = own.find((b) => b.status === 'IN_PROGRESS');
+    return {
+      ...room,
+      statusChangedAt: room.statusChangedAt.toISOString(),
+      current: current ? toView(current, viewerId, true) : null,
+      queue: own.filter((b) => b.status === 'SCHEDULED').map((b) => toView(b, viewerId, true)),
+    };
+  });
 }
 
 /** Every booking holding a room during the range, for the schedule (all rooms). */

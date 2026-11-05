@@ -204,6 +204,6 @@ describe('operating room transitions (task 2.19)', () => {
     await admin.step(h.room.id, 'OUT_OF_SERVICE');
     await new Promise((resolve) => setTimeout(resolve, 250));
 
-    expect(heard).toEqual(['operating-rooms']);
+    expect(heard).toEqual(['operating-rooms', 'bookings']);
   });
 });

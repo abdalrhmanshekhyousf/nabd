@@ -19,5 +19,7 @@ export const queryKeys = {
   myBookings: ['bookings', 'mine'] as const,
   /** The next hours of every room, for an emergency booking (task 2.21). */
   bookingsAhead: ['bookings', 'ahead'] as const,
+  /** Under operating-rooms, so every room or booking change refreshes it (task 2.22). */
+  orBoard: ['operating-rooms', 'board'] as const,
   publicHospitals: (search: string) => ['public-hospitals', search] as const,
 };
