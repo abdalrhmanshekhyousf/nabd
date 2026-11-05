@@ -289,11 +289,12 @@ export const en: Translation = {
     done: {
       PREPARING: 'Preparing {{room}}',
       IN_SURGERY: 'Operation started in {{room}}',
-      AWAITING_STERILIZATION: 'Operation ended in {{room}}; it awaits sterilization',
+      AWAITING_STERILIZATION: 'Operation ended in {{room}}; the sterilization team was called',
     },
     endTitle: 'End {{procedure}}?',
     endTitleRoom: 'End the operation in {{room}}?',
-    endBody: '{{room}} will wait for sterilization.',
+    endBody:
+      '{{room}} will wait for sterilization, and the sterilization team gets an urgent notice.',
     hint: {
       AVAILABLE: 'Free, nothing booked right now',
       BOOKED: 'Booked',
@@ -946,6 +947,7 @@ export const en: Translation = {
       APPOINTMENT_CANCELLED: 'Your appointment was cancelled, please rebook',
     },
     body: {
+      OPERATION_ENDED: 'Room: {{room}}, ready to sterilize',
       OPERATION_POSTPONED: '{{procedure}} · {{room}}: an emergency came in, choose a new time',
       DOCTOR_CALL: '{{patient}} · {{complaint}} · triage level {{level}}',
       CLEANING_REQUEST: 'Place: {{place}}',

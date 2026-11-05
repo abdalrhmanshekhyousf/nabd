@@ -2,6 +2,11 @@ import { checkTransition, type OperatingRoomStatus, type OrActor } from '@nabd/s
 import type { Prisma } from '../generated/prisma/client.js';
 import type { ScopedPrisma } from '../lib/scopedPrisma.js';
 import { HttpError } from '../middleware/errorHandler.js';
+import {
+  announceSterilization,
+  requestSterilization,
+  type SterilizationNotice,
+} from './cleaning.service.js';
 import { changeRoomStatus } from './roomStatus.service.js';
 
 /**
@@ -109,7 +114,7 @@ export async function transitionRoom(
   },
 ) {
   const actors = await orActorsOf(db, userId);
-  await db.$transaction(async (tx) => {
+  const notice = await db.$transaction(async (tx): Promise<SterilizationNotice | null> => {
     await tx.$queryRaw`SELECT id FROM "OperatingRoom" WHERE id = ${roomId}::uuid FOR UPDATE`;
     const room = await tx.operatingRoom.findUnique({
       where: { id: roomId },
@@ -130,7 +135,12 @@ export async function transitionRoom(
     }
     const moved = viaBooking ? bookingId : await moveBooking(tx, roomId, to, bookingId);
     await changeRoomStatus(tx, { hospitalId, roomId, to, actorId: userId, bookingId: moved });
+    // The operation ended: the room is sterilized next (task 2.23).
+    return to === 'AWAITING_STERILIZATION'
+      ? requestSterilization(tx, { hospitalId, roomId, requestedById: userId, bookingId: moved })
+      : null;
   });
+  if (notice) await announceSterilization(db, hospitalId, notice);
   return db.operatingRoom.findUniqueOrThrow({
     where: { id: roomId },
     select: { id: true, name: true, status: true, statusChangedAt: true },

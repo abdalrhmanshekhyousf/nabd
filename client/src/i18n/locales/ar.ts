@@ -286,11 +286,11 @@ export const ar = {
     done: {
       PREPARING: 'بلّش تحضير {{room}}',
       IN_SURGERY: 'بلّشت العملية بـ {{room}}',
-      AWAITING_STERILIZATION: 'خلصت العملية بـ {{room}}، والغرفة بانتظار التعقيم',
+      AWAITING_STERILIZATION: 'خلصت العملية بـ {{room}}، وانبعت طلب تعقيم لفريق التعقيم',
     },
     endTitle: 'إنهاء {{procedure}}؟',
     endTitleRoom: 'إنهاء العملية بـ {{room}}؟',
-    endBody: '{{room}} رح تصير بانتظار التعقيم.',
+    endBody: '{{room}} رح تصير بانتظار التعقيم، وبيوصل إشعار عاجل لفريق التعقيم.',
     hint: {
       AVAILABLE: 'فاضية، ما في حجز عليها هلق',
       BOOKED: 'محجوزة',
@@ -939,6 +939,7 @@ export const ar = {
       APPOINTMENT_CANCELLED: 'انلغى موعدك، احجز من جديد',
     },
     body: {
+      OPERATION_ENDED: 'الغرفة: {{room}}، جاهزة للتعقيم',
       OPERATION_POSTPONED: '{{procedure}} · {{room}}: إجت عملية طارئة، اختار وقت جديد',
       DOCTOR_CALL: '{{patient}} · {{complaint}} · مستوى الخطورة {{level}}',
       CLEANING_REQUEST: 'المكان: {{place}}',

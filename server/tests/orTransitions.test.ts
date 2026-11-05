@@ -206,4 +206,40 @@ describe('operating room transitions (task 2.19)', () => {
 
     expect(heard).toEqual(['operating-rooms', 'bookings']);
   });
+
+  it('the sterilizer hears the end of an operation live, with an urgent notice', async () => {
+    const h = await theatre();
+    const doctor = await h.person('DOCTOR', 'د. سامي', h.ward.id);
+    const orNurse = await h.person('NURSE', 'رامي', h.operations.id);
+    const sterilizer = await h.person('CLEANER', 'أبو محمد', undefined, [h.operations.id]);
+    await transitionRoom(forHospital(h.id), {
+      hospitalId: h.id,
+      userId: doctor.id,
+      roomId: h.room.id,
+      to: 'BOOKED',
+      viaBooking: true,
+    });
+    await orNurse.step(h.room.id, 'PREPARING');
+    await orNurse.step(h.room.id, 'IN_SURGERY');
+    const socket = connectClient(url, {
+      auth: { token: sterilizer.token },
+      transports: ['websocket'],
+      reconnection: false,
+      forceNew: true,
+    });
+    sockets.push(socket);
+    const notices: { type: string; urgent: boolean }[] = [];
+    const heard: string[] = [];
+    socket.on('notification', (n: { type: string; urgent: boolean }) => notices.push(n));
+    socket.on('refresh', ({ queryKeys }: { queryKeys: string[][] }) =>
+      heard.push(...queryKeys.map((k) => k[0])),
+    );
+    await new Promise((resolve) => socket.once('ready', resolve));
+
+    await orNurse.step(h.room.id, 'AWAITING_STERILIZATION');
+    await new Promise((resolve) => setTimeout(resolve, 250));
+
+    expect(notices).toEqual([expect.objectContaining({ type: 'OPERATION_ENDED', urgent: true })]);
+    expect(heard).toContain('cleaning-requests');
+  });
 });

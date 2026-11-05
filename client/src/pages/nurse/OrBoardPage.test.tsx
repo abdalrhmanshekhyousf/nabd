@@ -159,7 +159,7 @@ describe('OrBoardPage', () => {
 
     await user.click(within(dialog).getByRole('button', { name: 'إنهاء العملية' }));
     expect(
-      await screen.findByText('خلصت العملية بـ غرفة 2، والغرفة بانتظار التعقيم'),
+      await screen.findByText('خلصت العملية بـ غرفة 2، وانبعت طلب تعقيم لفريق التعقيم'),
     ).toBeInTheDocument();
     expect(postOf('r2')).toEqual({ to: 'AWAITING_STERILIZATION' });
   });

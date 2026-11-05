@@ -75,7 +75,24 @@ async function theatre() {
         endsAt: inMinutes(startsIn + 60),
       },
     });
-  return { id, er, operations, room, person, book };
+  /** A cleaner covering these departments. */
+  async function cleaner(fullName: string, departmentIds: string[]) {
+    const user = await createUser(id, {
+      email: `c-${crypto.randomUUID()}@nabd.test`,
+      password: 'x',
+      role: 'CLEANER',
+    });
+    await prisma.user.update({ where: { id: user.id }, data: { fullName } });
+    await prisma.cleanerAssignment.createMany({
+      data: departmentIds.map((departmentId) => ({
+        hospitalId: id,
+        userId: user.id,
+        departmentId,
+      })),
+    });
+    return user;
+  }
+  return { id, er, operations, room, person, book, cleaner };
 }
 
 const bookingOf = (id: string) => prisma.operationBooking.findUniqueOrThrow({ where: { id } });
@@ -180,5 +197,59 @@ describe('operating room nurse board (task 2.22)', () => {
     expect(
       await prisma.operatingRoomStatusChange.count({ where: { operatingRoomId: h.room.id } }),
     ).toBe(1);
+  });
+});
+
+describe('ending an operation calls the sterilization team (task 2.23)', () => {
+  it('saves a sterilization request and urgently notifies the cleaners covering operations only', async () => {
+    const h = await theatre();
+    const orNurse = await h.person('NURSE', 'رامي', h.operations.id);
+    const sterilizer = await h.cleaner('أبو محمد', [h.operations.id, h.er.id]);
+    const erCleaner = await h.cleaner('أم علي', [h.er.id]);
+    await h.book('فتح بطن', 0, 'EMERGENCY');
+    for (const to of ['PREPARING', 'IN_SURGERY', 'AWAITING_STERILIZATION']) {
+      expect((await orNurse.step(h.room.id, to)).status).toBe(200);
+    }
+
+    expect(await prisma.cleaningRequest.findMany({ where: { hospitalId: h.id } })).toEqual([
+      expect.objectContaining({
+        kind: 'STERILIZATION',
+        status: 'PENDING',
+        departmentId: h.operations.id,
+        operatingRoomId: h.room.id,
+        place: 'غرفة 1',
+        requestedById: orNurse.id,
+      }),
+    ]);
+    expect(await prisma.notification.findMany({ where: { userId: sterilizer.id } })).toEqual([
+      expect.objectContaining({
+        type: 'OPERATION_ENDED',
+        urgent: true,
+        data: { room: 'غرفة 1', procedure: 'فتح بطن' },
+        link: '/cleaner/tasks',
+      }),
+    ]);
+    expect(await prisma.notification.count({ where: { userId: erCleaner.id } })).toBe(0);
+  });
+
+  it('no second request while one is still open, and none for the other steps', async () => {
+    const h = await theatre();
+    const orNurse = await h.person('NURSE', 'رامي', h.operations.id);
+    await h.book('فتح بطن', 0);
+    await orNurse.step(h.room.id, 'PREPARING');
+    await orNurse.step(h.room.id, 'IN_SURGERY');
+    expect(await prisma.cleaningRequest.count({ where: { hospitalId: h.id } })).toBe(0);
+    await prisma.cleaningRequest.create({
+      data: {
+        hospitalId: h.id,
+        departmentId: h.operations.id,
+        kind: 'STERILIZATION',
+        operatingRoomId: h.room.id,
+      },
+    });
+
+    await orNurse.step(h.room.id, 'AWAITING_STERILIZATION');
+
+    expect(await prisma.cleaningRequest.count({ where: { hospitalId: h.id } })).toBe(1);
   });
 });
