@@ -152,6 +152,23 @@ enum PrescriptionStatus {
   CANCELLED
 }
 
+// Matches INVENTORY_CATEGORIES in @nabd/shared (task 3.1): the pharmacy, the
+// lab and imaging each keep their own stock.
+enum InventoryCategory {
+  DRUG
+  LAB
+  RADIOLOGY
+}
+
+// Matches STOCK_MOVEMENT_KINDS in @nabd/shared: stock received, given out for
+// a prescription (3.10), used up by the lab or imaging, or corrected by hand.
+enum StockMovementKind {
+  RESTOCK
+  DISPENSE
+  USE
+  ADJUST
+}
+
 // Matches NOTIFICATION_TYPES in @nabd/shared (task 2.2).
 enum NotificationType {
   DOCTOR_CALL
@@ -206,6 +223,8 @@ model Hospital {
   operationBookings  OperationBooking[]
   roomStatusChanges  OperatingRoomStatusChange[]
   cleaningRequests   CleaningRequest[]
+  inventoryItems     InventoryItem[]
+  stockMovements     StockMovement[]
 }
 
 model Department {
@@ -319,6 +338,7 @@ model User {
   roomStatusChanges    OperatingRoomStatusChange[] @relation("RoomStatusChanger")
   cleaningRequested    CleaningRequest[]           @relation("CleaningRequester")
   cleaningJobs         CleaningRequest[]           @relation("CleaningWorker")
+  stockMovements       StockMovement[]             @relation("StockMover")
 
   @@unique([hospitalId, email])
   @@index([hospitalId, role])
@@ -485,8 +505,9 @@ model PrescriptionItem {
   durationDays   Int?
   instructions   String?
 
-  hospital     Hospital     @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  prescription Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  hospital     Hospital        @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  prescription Prescription    @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  movements    StockMovement[]
 
   @@index([prescriptionId])
 }
@@ -648,6 +669,56 @@ model CleaningRequest {
 
   // A cleaner's board: their departments' open jobs (2.24).
   @@index([hospitalId, departmentId, status])
+}
+
+// ─── Inventory (task 3.1) ─────────────────────────────────────────────────────
+
+// One stocked thing: a medicine, a lab reagent, a film. Below its minimum the
+// department is warned (3.3). Quantities never go below zero (see the migration).
+model InventoryItem {
+  id          String            @id @default(uuid(7)) @db.Uuid
+  hospitalId  String            @db.Uuid
+  category    InventoryCategory
+  name        String
+  // How it is counted: box, ampoule, strip, film…
+  unit        String
+  quantity    Int               @default(0)
+  minQuantity Int               @default(0)
+  notes       String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  hospital  Hospital        @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  movements StockMovement[]
+
+  @@unique([hospitalId, category, name])
+  @@index([hospitalId, category])
+}
+
+// Every change of an item's quantity: by how much, what it left, who and why.
+// Quantities change only through these (moveStock in inventory.service.ts).
+model StockMovement {
+  id                 String            @id @default(uuid(7)) @db.Uuid
+  hospitalId         String            @db.Uuid
+  itemId             String            @db.Uuid
+  kind               StockMovementKind
+  // Positive in, negative out.
+  change             Int
+  quantityAfter      Int
+  reason             String?
+  byId               String?           @db.Uuid
+  byName             String
+  // The prescription line it was dispensed for (3.10).
+  prescriptionItemId String?           @db.Uuid
+  createdAt          DateTime          @default(now())
+
+  hospital         Hospital          @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  item             InventoryItem     @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  by               User?             @relation("StockMover", fields: [byId], references: [id], onDelete: SetNull)
+  prescriptionItem PrescriptionItem? @relation(fields: [prescriptionItemId], references: [id], onDelete: SetNull)
+
+  @@index([itemId, createdAt])
+  @@index([hospitalId, createdAt])
 }
 
 // ─── System ───────────────────────────────────────────────────────────────────

@@ -84,6 +84,10 @@ const MESSAGES: Record<ErrorCode, Record<Language, string>> = {
     ar: 'حدا تاني أخد هالطلب قبلك',
     en: 'Someone else already took this request',
   },
+  OUT_OF_STOCK: {
+    ar: 'الكمية بالمخزون ما بتكفي',
+    en: 'Not enough in stock',
+  },
   USE_BOOKING: {
     ar: 'هالخطوة بتصير من الحجز، مش من زر الغرفة',
     en: 'This step happens through a booking, not a room button',
