@@ -54,7 +54,8 @@ inventoryRouter.post('/', async (req, res) => {
 inventoryRouter.patch('/:id', async (req, res) => {
   const { auth, db, category } = context(req);
   const { id } = idParam.parse(req.params);
-  const item = await updateItem(db, category, id, updateInventoryItemSchema.parse(req.body));
+  const input = updateInventoryItemSchema.parse(req.body);
+  const item = await updateItem(db, auth.hospitalId, auth.userId, category, id, input);
   announce(auth.hospitalId);
   res.json({ item });
 });

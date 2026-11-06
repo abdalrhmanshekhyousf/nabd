@@ -55,6 +55,8 @@ beforeEach(() => {
     item({
       id: 'stock',
       type: 'LOW_STOCK',
+      data: { item: 'سيفترياكسون 1 غ فيال', quantity: 12, unit: 'فيال', min: 40 },
+      link: '/pharmacy/inventory',
       createdAt: new Date(Date.now() - 5 * 60_000).toISOString(),
     }),
     item({
@@ -111,7 +113,9 @@ describe('NotificationsMenu', () => {
     const rows = within(panel).getAllByRole('listitem');
     expect(rows.map((row) => row.textContent)).toEqual([
       expect.stringContaining('استدعاء عاجل للإسعاف'),
-      expect.stringContaining('صنف قرب يخلص من المخزون'),
+      expect.stringContaining(
+        'صنف قرب يخلص من المخزونسيفترياكسون 1 غ فيال: بقي 12 فيال، والحد الأدنى 40',
+      ),
       expect.stringContaining('شكوى جديدة'),
     ]);
     expect(within(rows[0]).getByLabelText('عاجل')).toBeInTheDocument();

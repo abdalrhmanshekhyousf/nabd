@@ -13,6 +13,7 @@ import {
 import { Prisma, type InventoryItem } from '../generated/prisma/client.js';
 import type { ScopedPrisma } from '../lib/scopedPrisma.js';
 import { HttpError } from '../middleware/errorHandler.js';
+import { sendNotification } from './notification.service.js';
 
 type Tx = Parameters<Parameters<ScopedPrisma['$transaction']>[0]>[0];
 
@@ -83,6 +84,49 @@ export async function moveStock(
     movement,
     becameLow: !isLowStock(item) && isLowStock(updated),
   };
+}
+
+/** The role that looks after each kind of stock (the reverse of INVENTORY_CATEGORY_OF_ROLE). */
+const KEEPER: Record<InventoryCategory, Role> = {
+  DRUG: 'PHARMACIST',
+  LAB: 'LAB_TECHNICIAN',
+  RADIOLOGY: 'RADIOLOGIST',
+};
+/** Where each keeper's stock page is. */
+const STOCK_PAGE: Record<InventoryCategory, string> = {
+  DRUG: '/pharmacy/inventory',
+  LAB: '/lab/inventory',
+  RADIOLOGY: '/radiology/inventory',
+};
+
+/**
+ * An item just reached its minimum (task 3.3): everyone who looks after that
+ * stock is told, so someone orders more. The one who moved it already sees
+ * the warning on their screen. Called after every movement that can lower
+ * stock: by hand (3.2) and when dispensing a prescription (3.10).
+ */
+export async function announceLowStock(
+  db: ScopedPrisma,
+  hospitalId: string,
+  actorId: string,
+  item: Pick<InventoryItem, 'name' | 'unit' | 'quantity' | 'minQuantity' | 'category'>,
+) {
+  const keepers = await db.user.findMany({
+    where: { role: KEEPER[item.category], isActive: true, id: { not: actorId } },
+    select: { id: true },
+  });
+  if (keepers.length === 0) return;
+  await sendNotification(db, hospitalId, {
+    to: { userIds: keepers.map((keeper) => keeper.id) },
+    type: 'LOW_STOCK',
+    data: {
+      item: item.name,
+      quantity: item.quantity,
+      unit: item.unit,
+      min: item.minQuantity,
+    },
+    link: STOCK_PAGE[item.category],
+  });
 }
 
 function toItemView(item: InventoryItem): InventoryItemView {
@@ -166,6 +210,10 @@ export async function createItem(
       });
       return moved.item;
     });
+    // Added already under a real minimum: as good as running low.
+    if (item.minQuantity > 0 && isLowStock(item)) {
+      await announceLowStock(db, hospitalId, actorId, item);
+    }
     return toItemView(item);
   } catch (error) {
     rethrowDuplicate(error);
@@ -175,13 +223,20 @@ export async function createItem(
 /** The item's name, unit, minimum and notes; the quantity moves only by movements. */
 export async function updateItem(
   db: ScopedPrisma,
+  hospitalId: string,
+  actorId: string,
   category: InventoryCategory,
   id: string,
   data: UpdateInventoryItemData,
 ) {
-  await requireItem(db, id, category);
+  const before = await requireItem(db, id, category);
   try {
-    return toItemView(await db.inventoryItem.update({ where: { id }, data }));
+    const item = await db.inventoryItem.update({ where: { id }, data });
+    // A higher minimum can put what is on the shelf under it.
+    if (!isLowStock(before) && isLowStock(item)) {
+      await announceLowStock(db, hospitalId, actorId, item);
+    }
+    return toItemView(item);
   } catch (error) {
     rethrowDuplicate(error);
   }
@@ -225,6 +280,7 @@ export async function recordMovement(
       reason: input.reason,
     });
   });
+  if (result.becameLow) await announceLowStock(db, hospitalId, actorId, result.item);
   return { item: toItemView(result.item), becameLow: result.becameLow };
 }
 

@@ -1074,6 +1074,7 @@ export const ar = {
       APPOINTMENT_CANCELLED: 'انلغى موعدك، احجز من جديد',
     },
     body: {
+      LOW_STOCK: '{{item}}: بقي {{quantity}} {{unit}}، والحد الأدنى {{min}}',
       OPERATION_ENDED: 'الغرفة: {{room}}، جاهزة للتعقيم',
       OPERATION_POSTPONED: '{{procedure}} · {{room}}: إجت عملية طارئة، اختار وقت جديد',
       DOCTOR_CALL: '{{patient}} · {{complaint}} · مستوى الخطورة {{level}}',

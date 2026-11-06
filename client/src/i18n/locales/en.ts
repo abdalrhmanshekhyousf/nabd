@@ -1083,6 +1083,7 @@ export const en: Translation = {
       APPOINTMENT_CANCELLED: 'Your appointment was cancelled, please rebook',
     },
     body: {
+      LOW_STOCK: '{{item}}: {{quantity}} {{unit}} left, minimum {{min}}',
       OPERATION_ENDED: 'Room: {{room}}, ready to sterilize',
       OPERATION_POSTPONED: '{{procedure}} · {{room}}: an emergency came in, choose a new time',
       DOCTOR_CALL: '{{patient}} · {{complaint}} · triage level {{level}}',
