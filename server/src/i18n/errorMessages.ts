@@ -84,6 +84,10 @@ const MESSAGES: Record<ErrorCode, Record<Language, string>> = {
     ar: 'حدا تاني أخد هالطلب قبلك',
     en: 'Someone else already took this request',
   },
+  ITEM_EXISTS: {
+    ar: 'في مادة بنفس الاسم بالمخزون',
+    en: 'An item with this name is already in stock',
+  },
   OUT_OF_STOCK: {
     ar: 'الكمية بالمخزون ما بتكفي',
     en: 'Not enough in stock',

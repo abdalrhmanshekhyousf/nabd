@@ -27,5 +27,8 @@ export const queryKeys = {
   cleaningRequests: ['cleaning-requests'] as const,
   /** A nurse's department requests (task 2.25), refreshed with the cleaners' key. */
   departmentCleaning: ['cleaning-requests', 'department'] as const,
+  /** Stock lists (task 3.2), refreshed when any stock moves. */
+  inventory: (scope: string, search: string) => ['inventory', scope, search] as const,
+  inventoryLog: (itemId: string) => ['inventory', 'log', itemId] as const,
   publicHospitals: (search: string) => ['public-hospitals', search] as const,
 };

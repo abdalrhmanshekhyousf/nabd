@@ -1,6 +1,7 @@
-import { isOverdue } from '@nabd/shared';
+import { isLowStock, isOverdue } from '@nabd/shared';
 import { afterAll, describe, expect, it } from 'vitest';
 import { seedDemo } from '../prisma/demo.js';
+import { LAB, PHARMACY, RADIOLOGY } from '../prisma/inventoryCatalog.js';
 import { prisma } from '../src/lib/prisma.js';
 import { forHospital } from '../src/lib/scopedPrisma.js';
 import { getQueue } from '../src/services/er.service.js';
@@ -98,10 +99,43 @@ describe('the demo seed (task 2.27)', () => {
         prisma.triageAssessment.count({ where: { hospitalId } }),
         prisma.operationBooking.count({ where: { hospitalId } }),
         prisma.cleanerAssignment.count({ where: { hospitalId } }),
+        prisma.inventoryItem.count({ where: { hospitalId } }),
+        prisma.stockMovement.count({ where: { hospitalId } }),
       ]);
     const before = await count();
     const again = await seedDemo(details);
-    expect(again).toMatchObject({ activity: false, hospital: { id: hospitalId } });
+    expect(again).toMatchObject({ activity: false, stock: false, hospital: { id: hospitalId } });
     expect(await count()).toEqual(before);
+    // Seeding 225 stock items through the service takes a while.
+  }, 120_000);
+
+  it('stocks the pharmacy, the lab and imaging in full, a few already running low (task 3.2)', async () => {
+    expect(hospitalId).not.toBe('');
+    for (const [category, lines] of [
+      ['DRUG', PHARMACY],
+      ['LAB', LAB],
+      ['RADIOLOGY', RADIOLOGY],
+    ] as const) {
+      const items = await prisma.inventoryItem.findMany({ where: { hospitalId, category } });
+      expect(items).toHaveLength(lines.length);
+      const low = items.filter((item) => isLowStock(item)).length;
+      expect(low).toBeGreaterThan(0);
+      expect(low).toBeLessThan(items.length / 5);
+    }
+    // Every item opened with its stock as a movement by its keeper, plus a day's work.
+    const saline = await prisma.inventoryItem.findFirstOrThrow({
+      where: { hospitalId, name: 'سيروم ملحي 0.9% 500 مل' },
+      include: { movements: { orderBy: { createdAt: 'asc' } } },
+    });
+    expect(saline.movements.map((m) => [m.kind, m.change, m.byName])).toEqual([
+      ['RESTOCK', 240, 'رامي العطار'],
+      ['USE', -40, 'رامي العطار'],
+      ['RESTOCK', 100, 'رامي العطار'],
+      ['USE', -25, 'رامي العطار'],
+    ]);
+    expect(saline.quantity).toBe(275);
+    expect(
+      await prisma.inventoryItem.count({ where: { hospitalId, category: 'DRUG', quantity: 0 } }),
+    ).toBe(0);
   });
 });

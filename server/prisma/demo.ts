@@ -5,6 +5,7 @@
 import type { Role } from '../src/generated/prisma/enums.js';
 import { hashPassword } from '../src/lib/password.js';
 import { prisma } from '../src/lib/prisma.js';
+import { seedInventory } from './seedInventory.js';
 import { seedPhaseTwo } from './seedPhaseTwo.js';
 
 export const DEMO_HOSPITAL = {
@@ -151,5 +152,6 @@ export async function seedDemo(details: typeof DEMO_HOSPITAL = DEMO_HOSPITAL) {
   await seedEmergencyNurse(hospitalId);
   await seedMedicalFile(hospitalId);
   const activity = await seedPhaseTwo(hospitalId, passwordHash);
-  return { hospital, activity };
+  const stock = await seedInventory(hospitalId);
+  return { hospital, activity, stock };
 }

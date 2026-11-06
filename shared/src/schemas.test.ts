@@ -19,6 +19,8 @@ import {
   erStatusSchema,
   createBookingSchema,
   createCleaningRequestSchema,
+  createInventoryItemSchema,
+  stockMovementSchema,
   emergencyBookingSchema,
   rescheduleBookingSchema,
   overlaps,
@@ -674,5 +676,45 @@ describe('cleaning requests', () => {
       note: null,
     });
     expect(createCleaningRequestSchema.safeParse({ place: '', note: null }).success).toBe(false);
+  });
+});
+
+describe('inventory', () => {
+  it('a new item needs a name and unit; counts are whole and not negative', () => {
+    const item = {
+      name: ' سيروم ملحي 0.9% ',
+      unit: 'كيس',
+      quantity: 40,
+      minQuantity: 20,
+      notes: '',
+    };
+    expect(createInventoryItemSchema.parse(item)).toEqual({
+      name: 'سيروم ملحي 0.9%',
+      unit: 'كيس',
+      quantity: 40,
+      minQuantity: 20,
+      notes: null,
+    });
+    expect(createInventoryItemSchema.safeParse({ ...item, quantity: -1 }).success).toBe(false);
+    expect(createInventoryItemSchema.safeParse({ ...item, minQuantity: 2.5 }).success).toBe(false);
+    expect(createInventoryItemSchema.safeParse({ ...item, unit: '' }).success).toBe(false);
+  });
+
+  it('receiving and using take an amount; a count needs a reason', () => {
+    expect(stockMovementSchema.parse({ kind: 'RESTOCK', amount: 10, reason: null })).toEqual({
+      kind: 'RESTOCK',
+      amount: 10,
+      reason: null,
+    });
+    expect(stockMovementSchema.safeParse({ kind: 'USE', amount: 0, reason: null }).success).toBe(
+      false,
+    );
+    expect(stockMovementSchema.safeParse({ kind: 'ADJUST', counted: 7, reason: '' }).success).toBe(
+      false,
+    );
+    expect(
+      stockMovementSchema.safeParse({ kind: 'ADJUST', counted: 0, reason: 'جرد آخر الشهر' })
+        .success,
+    ).toBe(true);
   });
 });

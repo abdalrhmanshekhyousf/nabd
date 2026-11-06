@@ -15,6 +15,7 @@ export * from './schemas/doctor.js';
 export * from './schemas/er.js';
 export * from './schemas/booking.js';
 export * from './schemas/cleaning.js';
+export * from './schemas/inventory.js';
 export * from './schemas/hospital.js';
 export * from './schemas/me.js';
 export * from './schemas/medicalRecord.js';
