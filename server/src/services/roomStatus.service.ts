@@ -26,10 +26,12 @@ export async function changeRoomStatus(
     bookingId?: string | null;
   },
 ) {
-  const [room, actor] = await Promise.all([
-    tx.operatingRoom.findUnique({ where: { id: roomId }, select: { status: true } }),
-    tx.user.findUnique({ where: { id: actorId }, select: { fullName: true } }),
-  ]);
+  // One connection per transaction: one query after another.
+  const room = await tx.operatingRoom.findUnique({
+    where: { id: roomId },
+    select: { status: true },
+  });
+  const actor = await tx.user.findUnique({ where: { id: actorId }, select: { fullName: true } });
   if (!room) throw new HttpError(404, 'NOT_FOUND', 'Operating room not found');
   if (room.status === to) return null;
 

@@ -8,9 +8,12 @@ try {
   const { hospital, activity } = await seedDemo();
   console.info(`Hospital: ${hospital.name} (${hospital.id})`);
   console.info(`Demo accounts (password ${PASSWORD}):`);
-  for (const { role, email } of [...DEMO_USERS, ...PHASE_TWO_ACCOUNTS]) {
-    console.info(`  ${role.padEnd(15)} ${email}`);
-  }
+  for (const { role, email } of DEMO_USERS) console.info(`  ${role.padEnd(15)} ${email}`);
+  console.info(
+    `  + ${PHASE_TWO_ACCOUNTS.length} department team accounts:` +
+      ' dr.<dept>.<n>, rn.<dept>.<n>, cl.<dept>.<n> @nabd.demo' +
+      ' (dept: er, or, internal, neuro, ortho, cardio, plastic, eye, gyn, lab, radiology, pharmacy)',
+  );
   console.info(
     activity
       ? 'ER, operating rooms and cleaning activity added.'

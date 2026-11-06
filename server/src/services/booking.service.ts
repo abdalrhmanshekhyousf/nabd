@@ -110,12 +110,14 @@ async function releaseIfIdle(
   actorId: string,
   bookingId: string,
 ) {
-  const [room, waiting] = await Promise.all([
-    tx.operatingRoom.findUnique({ where: { id: roomId }, select: { status: true } }),
-    tx.operationBooking.count({
-      where: { operatingRoomId: roomId, status: 'SCHEDULED', endsAt: { gt: new Date() } },
-    }),
-  ]);
+  // One connection per transaction: one query after another.
+  const room = await tx.operatingRoom.findUnique({
+    where: { id: roomId },
+    select: { status: true },
+  });
+  const waiting = await tx.operationBooking.count({
+    where: { operatingRoomId: roomId, status: 'SCHEDULED', endsAt: { gt: new Date() } },
+  });
   if (room?.status === 'BOOKED' && waiting === 0) {
     await changeRoomStatus(tx, { hospitalId, roomId, to: 'AVAILABLE', actorId, bookingId });
   }

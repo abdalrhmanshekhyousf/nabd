@@ -137,7 +137,7 @@ export async function seedDemo(details: typeof DEMO_HOSPITAL = DEMO_HOSPITAL) {
           },
         }),
         ...(role === 'DOCTOR' && {
-          doctorProfile: { create: { hospitalId, specialty: 'Cardiology' } },
+          doctorProfile: { create: { hospitalId, specialty: 'قلبية' } },
         }),
         ...(role === 'PATIENT' && {
           patient: {

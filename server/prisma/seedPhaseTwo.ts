@@ -35,56 +35,176 @@ type Person = {
   covers?: DepartmentCode[];
 };
 
-/** The teams beyond the one account per role, each in their department. */
-const TEAM: Person[] = [
-  {
-    role: 'DOCTOR',
-    email: 'ortho@nabd.demo',
-    fullName: 'د. ريم الأتاسي',
-    department: 'ORTHOPEDICS',
-    specialty: 'جراحة عظمية',
-    status: 'AVAILABLE',
-  },
-  {
-    role: 'DOCTOR',
-    email: 'neuro@nabd.demo',
-    fullName: 'د. خالد المصري',
-    department: 'NEUROLOGY',
-    specialty: 'عصبية',
-    status: 'BUSY',
-  },
-  {
-    role: 'DOCTOR',
-    email: 'gyn@nabd.demo',
-    fullName: 'د. هالة النابلسي',
-    department: 'GYNECOLOGY',
-    specialty: 'نسائية وتوليد',
-    status: 'ON_LEAVE',
-  },
-  {
-    role: 'DOCTOR',
-    email: 'internal@nabd.demo',
-    fullName: 'د. مازن الصباغ',
-    department: 'INTERNAL_MEDICINE',
-    specialty: 'داخلية',
-    status: 'AVAILABLE',
-  },
-  { role: 'NURSE', email: 'er-nurse@nabd.demo', fullName: 'هدى منصور', department: 'EMERGENCY' },
-  { role: 'NURSE', email: 'or-nurse@nabd.demo', fullName: 'رامي حداد', department: 'OPERATIONS' },
-  {
-    role: 'NURSE',
-    email: 'ward-nurse@nabd.demo',
-    fullName: 'سلمى عيسى',
-    department: 'CARDIOLOGY',
-  },
-  {
-    role: 'CLEANER',
-    email: 'cleaner2@nabd.demo',
-    fullName: 'أم علي',
-    department: 'CARDIOLOGY',
-    covers: ['CARDIOLOGY', 'INTERNAL_MEDICINE'],
-  },
+/**
+ * Clinical departments: three doctors and three nurses each. The lab, imaging
+ * and pharmacy are run by their own specialists (the role accounts), so they
+ * only get cleaners. Each department has two cleaners.
+ */
+const CLINICAL: { code: DepartmentCode; slug: string; specialty: string }[] = [
+  { code: 'EMERGENCY', slug: 'er', specialty: 'طب طوارئ' },
+  { code: 'OPERATIONS', slug: 'or', specialty: 'جراحة عامة' },
+  { code: 'INTERNAL_MEDICINE', slug: 'internal', specialty: 'داخلية' },
+  { code: 'NEUROLOGY', slug: 'neuro', specialty: 'عصبية' },
+  { code: 'ORTHOPEDICS', slug: 'ortho', specialty: 'جراحة عظمية' },
+  { code: 'CARDIOLOGY', slug: 'cardio', specialty: 'قلبية' },
+  { code: 'PLASTIC_SURGERY', slug: 'plastic', specialty: 'جراحة تجميلية' },
+  { code: 'OPHTHALMOLOGY', slug: 'eye', specialty: 'عينية' },
+  { code: 'GYNECOLOGY', slug: 'gyn', specialty: 'نسائية وتوليد' },
 ];
+const SUPPORT: { code: DepartmentCode; slug: string }[] = [
+  { code: 'LABORATORY', slug: 'lab' },
+  { code: 'RADIOLOGY', slug: 'radiology' },
+  { code: 'PHARMACY', slug: 'pharmacy' },
+];
+
+const MEN = [
+  'أحمد',
+  'محمد',
+  'خالد',
+  'عمر',
+  'مازن',
+  'باسل',
+  'فادي',
+  'وسيم',
+  'طارق',
+  'زياد',
+  'نبيل',
+  'ماهر',
+  'حسام',
+  'جاد',
+  'كنان',
+  'يزن',
+  'إياد',
+  'سليم',
+  'مهند',
+  'غيث',
+  'أنس',
+  'بشار',
+  'مجد',
+  'عمار',
+];
+const WOMEN = [
+  'ريم',
+  'هالة',
+  'رنا',
+  'ديما',
+  'لمى',
+  'سارة',
+  'مريم',
+  'جود',
+  'تالا',
+  'رهف',
+  'بتول',
+  'آية',
+  'ميس',
+  'رشا',
+  'عبير',
+  'نسرين',
+  'سوزان',
+  'منى',
+  'هيا',
+  'ليلى',
+  'دانة',
+  'رغد',
+  'غنى',
+  'هدى',
+];
+const FAMILIES = [
+  'الأتاسي',
+  'المصري',
+  'النابلسي',
+  'الصباغ',
+  'حداد',
+  'عيسى',
+  'منصور',
+  'الشامي',
+  'العلي',
+  'الخطيب',
+  'قباني',
+  'الجابري',
+  'العظمة',
+  'الكيالي',
+  'الحمصي',
+  'السيد',
+  'الزعبي',
+  'الحسن',
+  'الأيوبي',
+  'البيطار',
+  'شحادة',
+  'الطويل',
+  'كرم',
+  'ديب',
+  'سلوم',
+];
+
+/** A few people the demo activity names, with names that read well in the story. */
+const NAMED: Record<string, string> = {
+  'dr.ortho.1@nabd.demo': 'د. ريم الأتاسي',
+  'rn.or.1@nabd.demo': 'رامي حداد',
+  'rn.cardio.1@nabd.demo': 'سلمى عيسى',
+};
+
+/**
+ * Every department's team. The first role accounts already fill a seat:
+ * doctor@ is a cardiologist, nurse@ an ER nurse, cleaner@ covers the
+ * operating rooms and the ER. Names come out the same on every run.
+ */
+function buildTeam(): Person[] {
+  const team: Person[] = [];
+  let n = 0;
+  const name = (woman: boolean) => {
+    n += 1;
+    const first = (woman ? WOMEN : MEN)[(n * 5) % 24];
+    return `${first} ${FAMILIES[(n * 7) % FAMILIES.length]}`;
+  };
+  for (const { code, slug, specialty } of CLINICAL) {
+    for (let i = 1; i <= 3; i++) {
+      if (code === 'CARDIOLOGY' && i === 1) continue; // doctor@nabd.demo
+      const email = `dr.${slug}.${i}@nabd.demo`;
+      team.push({
+        role: 'DOCTOR',
+        email,
+        fullName: NAMED[email] ?? `د. ${name(i % 2 === 0)}`,
+        department: code,
+        specialty,
+        status:
+          i === 3
+            ? 'BUSY'
+            : i === 2 && (code === 'GYNECOLOGY' || code === 'NEUROLOGY')
+              ? 'ON_LEAVE'
+              : 'AVAILABLE',
+      });
+    }
+    for (let i = 1; i <= 3; i++) {
+      if (code === 'EMERGENCY' && i === 1) continue; // nurse@nabd.demo
+      const email = `rn.${slug}.${i}@nabd.demo`;
+      team.push({
+        role: 'NURSE',
+        email,
+        fullName: NAMED[email] ?? name(i !== 2),
+        department: code,
+      });
+    }
+  }
+  for (const { code, slug } of [...CLINICAL, ...SUPPORT]) {
+    // cleaner@nabd.demo is the first cleaner of the operating rooms and the ER.
+    const first = code === 'OPERATIONS' || code === 'EMERGENCY' ? 2 : 1;
+    for (let i = first; i <= 2; i++) {
+      const woman = i === 1;
+      const [given, family] = name(false).split(' ');
+      team.push({
+        role: 'CLEANER',
+        email: `cl.${slug}.${i}@nabd.demo`,
+        fullName: woman ? `أم ${given}` : `أبو ${given} ${family}`,
+        department: code,
+        covers: [code],
+      });
+    }
+  }
+  return team;
+}
+
+const TEAM = buildTeam();
 
 const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60_000);
 
@@ -139,12 +259,20 @@ async function seedTeams(hospitalId: string, passwordHash: string) {
     }
   }
 
-  // The first accounts get a place too: the doctor in cardiology, the cleaner
-  // on the operating rooms (sterilization) and the ER.
-  await prisma.staffProfile.updateMany({
-    where: { hospitalId, departmentId: null, user: { email: 'doctor@nabd.demo' } },
-    data: { departmentId: dept('CARDIOLOGY') },
-  });
+  // The first accounts get a place too: the doctor in cardiology, the
+  // specialists in their departments, the cleaner on the operating rooms
+  // (sterilization) and the ER.
+  for (const [email, code] of [
+    ['doctor@nabd.demo', 'CARDIOLOGY'],
+    ['pharmacist@nabd.demo', 'PHARMACY'],
+    ['lab@nabd.demo', 'LABORATORY'],
+    ['radiology@nabd.demo', 'RADIOLOGY'],
+  ] as const) {
+    await prisma.staffProfile.updateMany({
+      where: { hospitalId, departmentId: null, user: { email } },
+      data: { departmentId: dept(code) },
+    });
+  }
   const cleaner = await prisma.user.findUnique({
     where: { hospitalId_email: { hospitalId, email: 'cleaner@nabd.demo' } },
   });
@@ -190,9 +318,9 @@ async function seedActivity(hospitalId: string) {
     [
       'nurse@nabd.demo',
       'doctor@nabd.demo',
-      'ortho@nabd.demo',
-      'or-nurse@nabd.demo',
-      'ward-nurse@nabd.demo',
+      'dr.ortho.1@nabd.demo',
+      'rn.or.1@nabd.demo',
+      'rn.cardio.1@nabd.demo',
     ].map(user),
   );
   const rooms = await prisma.operatingRoom.findMany({ where: { hospitalId } });

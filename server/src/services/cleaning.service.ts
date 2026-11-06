@@ -26,13 +26,21 @@ export async function requestSterilization(
     bookingId,
   }: { hospitalId: string; roomId: string; requestedById: string; bookingId: string | null },
 ): Promise<SterilizationNotice | null> {
-  const [operations, room, booking] = await Promise.all([
-    tx.department.findFirst({ where: { code: 'OPERATIONS' }, select: { id: true } }),
-    tx.operatingRoom.findUniqueOrThrow({ where: { id: roomId }, select: { name: true } }),
-    bookingId
-      ? tx.operationBooking.findUnique({ where: { id: bookingId }, select: { procedure: true } })
-      : null,
-  ]);
+  // A transaction runs on one connection, so its queries go one after another.
+  const operations = await tx.department.findFirst({
+    where: { code: 'OPERATIONS' },
+    select: { id: true },
+  });
+  const room = await tx.operatingRoom.findUniqueOrThrow({
+    where: { id: roomId },
+    select: { name: true },
+  });
+  const booking = bookingId
+    ? await tx.operationBooking.findUnique({
+        where: { id: bookingId },
+        select: { procedure: true },
+      })
+    : null;
   if (!operations) return null;
   const open = await tx.cleaningRequest.findFirst({
     where: {
@@ -97,13 +105,14 @@ export async function startSterilization(tx: Tx, roomId: string, workerId: strin
     });
     return open.departmentId;
   }
-  const [operations, room] = await Promise.all([
-    tx.department.findFirst({ where: { code: 'OPERATIONS' }, select: { id: true } }),
-    tx.operatingRoom.findUniqueOrThrow({
-      where: { id: roomId },
-      select: { name: true, hospitalId: true },
-    }),
-  ]);
+  const operations = await tx.department.findFirst({
+    where: { code: 'OPERATIONS' },
+    select: { id: true },
+  });
+  const room = await tx.operatingRoom.findUniqueOrThrow({
+    where: { id: roomId },
+    select: { name: true, hospitalId: true },
+  });
   if (!operations) return null;
   await tx.cleaningRequest.create({
     data: {

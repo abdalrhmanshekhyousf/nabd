@@ -31,16 +31,32 @@ describe('the demo seed (task 2.27)', () => {
     expect(new Set(doctors.map((d) => d.status))).toEqual(
       new Set(['AVAILABLE', 'BUSY', 'ON_LEAVE']),
     );
-    const staff = await prisma.staffProfile.findMany({
-      where: { hospitalId, user: { role: 'NURSE' } },
-      select: { department: { select: { code: true } } },
+    // Every clinical department: three doctors and three nurses; every
+    // department: two cleaners.
+    const departments = await prisma.department.findMany({
+      where: { hospitalId },
+      select: {
+        code: true,
+        staff: { select: { user: { select: { role: true } } } },
+        cleaners: { select: { userId: true } },
+      },
     });
-    expect(staff.map((s) => s.department?.code).sort()).toEqual([
-      'CARDIOLOGY',
-      'EMERGENCY',
-      'EMERGENCY',
-      'OPERATIONS',
-    ]);
+    expect(departments).toHaveLength(12);
+    for (const { code, staff, cleaners } of departments) {
+      const of = (role: string) => staff.filter((s) => s.user.role === role).length;
+      const clinical = !['LABORATORY', 'RADIOLOGY', 'PHARMACY'].includes(code!);
+      expect({
+        code,
+        doctors: of('DOCTOR'),
+        nurses: of('NURSE'),
+        cleaners: cleaners.length,
+      }).toEqual({
+        code,
+        doctors: clinical ? 3 : 0,
+        nurses: clinical ? 3 : 0,
+        cleaners: 2,
+      });
+    }
 
     // One not assessed yet (on top, to assess first), then every level, the urgent ones late.
     const queue = await getQueue(forHospital(hospitalId));
