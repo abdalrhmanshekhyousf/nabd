@@ -21,6 +21,8 @@ export const queryKeys = {
   bookingsAhead: ['bookings', 'ahead'] as const,
   /** Under operating-rooms, so every room or booking change refreshes it (task 2.22). */
   orBoard: ['operating-rooms', 'board'] as const,
+  /** The live board (task 2.26), refreshed with the rooms. */
+  orLive: ['operating-rooms', 'live'] as const,
   /** The cleaner's jobs (task 2.24); the server refreshes this key. */
   cleaningRequests: ['cleaning-requests'] as const,
   /** A nurse's department requests (task 2.25), refreshed with the cleaners' key. */

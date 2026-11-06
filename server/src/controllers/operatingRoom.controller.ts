@@ -39,15 +39,16 @@ export async function setService(req: Request, res: Response) {
   const { auth, db } = session(req);
   const { id } = idParam.parse(req.params);
   const { outOfService } = operatingRoomServiceSchema.parse(req.body);
-  res.json({
-    operatingRoom: await operatingRoomService.setOperatingRoomService(
-      db,
-      auth.hospitalId,
-      auth.userId,
-      id,
-      outOfService,
-    ),
-  });
+  const operatingRoom = await operatingRoomService.setOperatingRoomService(
+    db,
+    auth.hospitalId,
+    auth.userId,
+    id,
+    outOfService,
+  );
+  // The live boards (task 2.26) show it at once; bookings stop offering the room.
+  emitRefresh(rooms.hospital(auth.hospitalId), [['operating-rooms'], ['bookings']]);
+  res.json({ operatingRoom });
 }
 
 /** Who changed the room's status, from what to what, and when (task 2.18). */
@@ -78,6 +79,18 @@ export async function board(req: Request, res: Response) {
     throw new HttpError(403, 'FORBIDDEN', 'The board is for the operating room team');
   }
   res.json({ rooms: await orBoard(db, auth.userId) });
+}
+
+/**
+ * The live operating room board (task 2.26) for the admin, doctors and nurses:
+ * the operating room team sees every detail, others see who operates but not
+ * on whom, except their own bookings.
+ */
+export async function live(req: Request, res: Response) {
+  const { auth, db } = session(req);
+  const actors = await orActorsOf(db, auth.userId);
+  const reveal = actors.includes('OR_NURSE') || actors.includes('ADMIN');
+  res.json({ rooms: await orBoard(db, auth.userId, reveal) });
 }
 
 /** One step of an operating room's cycle, by whoever the state machine allows (task 2.19). */

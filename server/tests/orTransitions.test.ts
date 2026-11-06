@@ -242,4 +242,30 @@ describe('operating room transitions (task 2.19)', () => {
     expect(notices).toEqual([expect.objectContaining({ type: 'OPERATION_ENDED', urgent: true })]);
     expect(heard).toContain('cleaning-requests');
   });
+
+  it('taking a room out of service reaches every live board (task 2.26)', async () => {
+    const h = await theatre();
+    const watcher = await h.person('DOCTOR', 'د. نور', h.ward.id);
+    const admin = await h.person('ADMIN', 'المدير');
+    const socket = connectClient(url, {
+      auth: { token: watcher.token },
+      transports: ['websocket'],
+      reconnection: false,
+      forceNew: true,
+    });
+    sockets.push(socket);
+    const heard: string[] = [];
+    socket.on('refresh', ({ queryKeys }: { queryKeys: string[][] }) =>
+      heard.push(...queryKeys.map((k) => k[0])),
+    );
+    await new Promise((resolve) => socket.once('ready', resolve));
+
+    await request(app)
+      .patch(`/api/operating-rooms/${h.room.id}/service`)
+      .set('Authorization', `Bearer ${admin.token}`)
+      .send({ outOfService: true });
+    await new Promise((resolve) => setTimeout(resolve, 250));
+
+    expect(heard).toEqual(['operating-rooms', 'bookings']);
+  });
 });

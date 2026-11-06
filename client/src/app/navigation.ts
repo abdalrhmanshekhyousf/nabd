@@ -1,4 +1,5 @@
 import {
+  Activity,
   Ambulance,
   BedDouble,
   Building2,
@@ -75,6 +76,7 @@ export const NAV_BY_ROLE: Record<Role, NavGroup[]> = {
         { path: 'departments', labelKey: 'nav.departments', icon: Building2, phase: 1 },
         { path: 'rooms', labelKey: 'nav.roomsAndBeds', icon: BedDouble, phase: 1 },
         { path: 'operating-rooms', labelKey: 'nav.operatingRooms', icon: HeartPulse, phase: 1 },
+        { path: 'or-live', labelKey: 'nav.orLive', icon: Activity, phase: 2 },
         { path: 'staff', labelKey: 'nav.staff', icon: Users, phase: 1 },
         { path: 'assignments', labelKey: 'nav.assignments', icon: Network, phase: 1 },
         { path: 'settings', labelKey: 'nav.hospitalSettings', icon: Settings, phase: 1 },
@@ -105,6 +107,7 @@ export const NAV_BY_ROLE: Record<Role, NavGroup[]> = {
         { path: 'patients', labelKey: 'nav.myPatients', icon: UserRound, phase: 2 },
         { path: 'calls', labelKey: 'nav.emergencyCalls', icon: Siren, phase: 2 },
         { path: 'or-bookings', labelKey: 'nav.orBookings', icon: CalendarPlus, phase: 2 },
+        { path: 'or-live', labelKey: 'nav.orLive', icon: Activity, phase: 2 },
         { path: 'schedule', labelKey: 'nav.schedule', icon: CalendarDays, phase: 3 },
         { path: 'consultations', labelKey: 'nav.consultations', icon: MessagesSquare, phase: 3 },
       ],

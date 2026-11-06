@@ -61,6 +61,7 @@ const room = (
   statusChangedAt: new Date().toISOString(),
   current: null,
   queue: [],
+  sterilization: null,
   ...more,
 });
 
@@ -97,6 +98,7 @@ beforeEach(() => {
   ];
   useSessionStore.setState({ status: 'authenticated', user: NURSE });
   fake.respond((config) => {
+    if (config.url === '/operating-rooms/live') return { status: 200, data: { rooms: board } };
     if (config.url === '/operating-rooms/board') {
       return forbidden
         ? { status: 403, data: { error: { code: 'FORBIDDEN', message: 'no' } } }
@@ -164,9 +166,11 @@ describe('OrBoardPage', () => {
     expect(postOf('r2')).toEqual({ to: 'AWAITING_STERILIZATION' });
   });
 
-  it('tells nurses outside the operating rooms that the board is not theirs', async () => {
+  it('nurses outside the operating rooms get the live board instead', async () => {
     forbidden = true;
     renderApp('/nurse/operating-rooms');
-    expect(await screen.findByText('هالشاشة لفريق العمليات')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'حالة غرف العمليات' })).toBeInTheDocument();
+    expect(await screen.findByLabelText('غرفة 2')).toHaveTextContent('مدة العملية 1:05');
+    expect(screen.queryByRole('button', { name: 'إنهاء العملية' })).toBeNull();
   });
 });

@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { queryKeys } from '@/app/queryKeys';
 import { OR_PULSE, OR_TONE } from '@/components/operatingRooms/orStyles';
+import { OrLivePage } from '@/pages/OrLivePage';
 import { patientName } from '@/components/patients/patientDisplay';
 import { Button, Card, Modal, Select, Spinner, StatusBadge } from '@/components/ui';
 import { useNow } from '@/hooks/useNow';
@@ -260,6 +261,8 @@ export function OrBoardPage() {
   });
 
   const forbidden = board.isError && describeApiError(board.error).code === 'FORBIDDEN';
+  // Nurses outside the operating room team follow the rooms on the live board (2.26).
+  if (forbidden) return <OrLivePage />;
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">

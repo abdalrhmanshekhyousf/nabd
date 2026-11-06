@@ -320,12 +320,11 @@ export const QUEUE_ORDER = [
  * The operating room nurse's board (task 2.22): each room, the operation in
  * it now, and what waits for it in the next day.
  */
-export async function orBoard(db: ScopedPrisma, viewerId: string) {
+export async function orBoard(db: ScopedPrisma, viewerId: string, reveal = true) {
   const now = new Date();
-  const [operatingRooms, bookings] = await Promise.all([
+  const [operatingRooms, bookings, sterilizations] = await Promise.all([
     db.operatingRoom.findMany({
       select: { id: true, name: true, status: true, statusChangedAt: true },
-      orderBy: { name: 'asc' },
     }),
     db.operationBooking.findMany({
       where: {
@@ -342,18 +341,33 @@ export async function orBoard(db: ScopedPrisma, viewerId: string) {
       include: bookingInclude,
       orderBy: [...QUEUE_ORDER],
     }),
+    db.cleaningRequest.findMany({
+      where: {
+        kind: 'STERILIZATION',
+        operatingRoomId: { not: null },
+        status: { in: ['PENDING', 'IN_PROGRESS'] },
+      },
+      select: { operatingRoomId: true, status: true, assignedTo: { select: { fullName: true } } },
+    }),
   ]);
-  return operatingRooms.map((room) => {
-    const own = bookings.filter((b) => b.operatingRoomId === room.id);
-    const current = own.find((b) => b.status === 'IN_PROGRESS');
-    return {
-      ...room,
-      statusChangedAt: room.statusChangedAt.toISOString(),
-      current: current ? toView(current, viewerId, true) : null,
-      queue: own.filter((b) => b.status === 'SCHEDULED').map((b) => toView(b, viewerId, true)),
-    };
-  });
+  return operatingRooms
+    .sort((a, b) => naturally.compare(a.name, b.name))
+    .map((room) => {
+      const own = bookings.filter((b) => b.operatingRoomId === room.id);
+      const current = own.find((b) => b.status === 'IN_PROGRESS');
+      const job = sterilizations.find((s) => s.operatingRoomId === room.id);
+      return {
+        ...room,
+        statusChangedAt: room.statusChangedAt.toISOString(),
+        current: current ? toView(current, viewerId, reveal) : null,
+        queue: own.filter((b) => b.status === 'SCHEDULED').map((b) => toView(b, viewerId, reveal)),
+        sterilization: job ? { status: job.status, by: job.assignedTo?.fullName ?? null } : null,
+      };
+    });
 }
+
+/** Room names in natural order: "غرفة 2" before "غرفة 10". */
+const naturally = new Intl.Collator('ar', { numeric: true });
 
 /** Every booking holding a room during the range, for the schedule (all rooms). */
 export async function listBookings(db: ScopedPrisma, viewerId: string, from: Date, to: Date) {

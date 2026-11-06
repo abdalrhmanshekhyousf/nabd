@@ -79,6 +79,8 @@ export type OrBoardRoom = {
   statusChangedAt: string;
   current: BookingView | null;
   queue: BookingView[];
+  /** The room's open sterilization job and who is on it (task 2.26). */
+  sterilization: { status: CleaningStatus; by: string | null } | null;
 };
 
 /** A cleaning or sterilization job as the cleaners' board shows it (task 2.24). */
