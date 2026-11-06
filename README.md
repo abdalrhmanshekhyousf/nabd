@@ -76,6 +76,8 @@ psql -U postgres -c "CREATE DATABASE nabd_test;"
 **الحسابات التجريبية:** بعد `npm run db:seed` في حساب لكل دور، وكلمة السر لكلهن `Admin@12345` (بتتغيّر من `SEED_PASSWORD`):
 `admin@nabd.demo`، `doctor@nabd.demo`، `nurse@nabd.demo`، `pharmacist@nabd.demo`، `lab@nabd.demo`، `radiology@nabd.demo`، `cleaner@nabd.demo`، `reception@nabd.demo`، `accountant@nabd.demo`، `patient@nabd.demo`. وبوقت التطوير صفحة الدخول فيها أزرار للدخول بأي واحد منهن.
 
+وفي كمان فرق المستشفى (`server/prisma/seedPhaseTwo.ts`): أطباء بحالات مختلفة (`ortho@` بعملية هلق، `neuro@` مشغول، `gyn@` بإجازة، `internal@`)، ممرضة إسعاف تانية `er-nurse@`، ممرض عمليات `or-nurse@`، ممرضة قسم `ward-nurse@`، وعاملة نظافة تانية `cleaner2@` (كلهن `@nabd.demo`). وأول مرة بيتعبّى المستشفى: إسعاف فيه مريض بكل مستوى خطورة (والمستعجلين متأخرين)، استدعاء ناطر رد `doctor@`، غرفة عمليات قيد العملية، وحدة محجوزة، ووحدة بانتظار التعقيم، وطلب تنظيف. إذا المستشفى التجريبي فيه نشاط من قبل، ما بيضيف فوقه.
+
 السيرفر بيفحص الاتصال بقاعدة البيانات أول ما يشتغل، وإذا ما قدر يوصل بيوقف برسالة واضحة.
 
 ## الأوامر · Scripts
