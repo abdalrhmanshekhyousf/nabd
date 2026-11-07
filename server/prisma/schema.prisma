@@ -347,29 +347,30 @@ model User {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  hospital             Hospital                    @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  staffProfile         StaffProfile?
-  doctorProfile        DoctorProfile?
-  patient              Patient?
-  refreshTokens        RefreshToken[]
-  cleanerAssignments   CleanerAssignment[]
-  notifications        Notification[]
-  treatedRecords       MedicalRecord[]             @relation("TreatingDoctor")
-  writtenReports       DoctorReport[]              @relation("ReportAuthor")
-  writtenPrescriptions Prescription[]              @relation("PrescriptionAuthor")
-  triagedVisits        TriageAssessment[]          @relation("TriageNurse")
-  receivedCalls        DoctorCall[]                @relation("CalledDoctor")
-  placedCalls          DoctorCall[]                @relation("CallingNurse")
-  surgeries            OperationBooking[]          @relation("Surgeon")
-  bookingsMade         OperationBooking[]          @relation("BookedBy")
-  roomStatusChanges    OperatingRoomStatusChange[] @relation("RoomStatusChanger")
-  cleaningRequested    CleaningRequest[]           @relation("CleaningRequester")
-  cleaningJobs         CleaningRequest[]           @relation("CleaningWorker")
-  stockMovements       StockMovement[]             @relation("StockMover")
-  labTestsOrdered      LabTest[]                   @relation("LabTestDoctor")
-  labTestsDone         LabTest[]                   @relation("LabTestTechnician")
-  imagingOrdered       RadiologyImage[]            @relation("ImagingDoctor")
-  imagingDone          RadiologyImage[]            @relation("ImagingRadiologist")
+  hospital               Hospital                    @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  staffProfile           StaffProfile?
+  doctorProfile          DoctorProfile?
+  patient                Patient?
+  refreshTokens          RefreshToken[]
+  cleanerAssignments     CleanerAssignment[]
+  notifications          Notification[]
+  treatedRecords         MedicalRecord[]             @relation("TreatingDoctor")
+  writtenReports         DoctorReport[]              @relation("ReportAuthor")
+  writtenPrescriptions   Prescription[]              @relation("PrescriptionAuthor")
+  dispensedPrescriptions Prescription[]              @relation("PrescriptionDispenser")
+  triagedVisits          TriageAssessment[]          @relation("TriageNurse")
+  receivedCalls          DoctorCall[]                @relation("CalledDoctor")
+  placedCalls            DoctorCall[]                @relation("CallingNurse")
+  surgeries              OperationBooking[]          @relation("Surgeon")
+  bookingsMade           OperationBooking[]          @relation("BookedBy")
+  roomStatusChanges      OperatingRoomStatusChange[] @relation("RoomStatusChanger")
+  cleaningRequested      CleaningRequest[]           @relation("CleaningRequester")
+  cleaningJobs           CleaningRequest[]           @relation("CleaningWorker")
+  stockMovements         StockMovement[]             @relation("StockMover")
+  labTestsOrdered        LabTest[]                   @relation("LabTestDoctor")
+  labTestsDone           LabTest[]                   @relation("LabTestTechnician")
+  imagingOrdered         RadiologyImage[]            @relation("ImagingDoctor")
+  imagingDone            RadiologyImage[]            @relation("ImagingRadiologist")
 
   @@unique([hospitalId, email])
   @@index([hospitalId, role])
@@ -506,21 +507,25 @@ model DoctorReport {
 }
 
 model Prescription {
-  id          String             @id @default(uuid(7)) @db.Uuid
-  hospitalId  String             @db.Uuid
-  recordId    String             @db.Uuid
-  doctorId    String?            @db.Uuid
-  doctorName  String
-  status      PrescriptionStatus @default(PENDING)
-  notes       String?
-  dispensedAt DateTime?
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  id              String             @id @default(uuid(7)) @db.Uuid
+  hospitalId      String             @db.Uuid
+  recordId        String             @db.Uuid
+  doctorId        String?            @db.Uuid
+  doctorName      String
+  status          PrescriptionStatus @default(PENDING)
+  notes           String?
+  dispensedAt     DateTime?
+  // Who dispensed it (task 3.10); the name stays if their account goes.
+  dispensedById   String?            @db.Uuid
+  dispensedByName String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
 
-  hospital Hospital           @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  record   MedicalRecord      @relation(fields: [recordId], references: [id], onDelete: Cascade)
-  doctor   User?              @relation("PrescriptionAuthor", fields: [doctorId], references: [id], onDelete: SetNull)
-  items    PrescriptionItem[]
+  hospital    Hospital           @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  record      MedicalRecord      @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  doctor      User?              @relation("PrescriptionAuthor", fields: [doctorId], references: [id], onDelete: SetNull)
+  dispensedBy User?              @relation("PrescriptionDispenser", fields: [dispensedById], references: [id], onDelete: SetNull)
+  items       PrescriptionItem[]
 
   @@index([recordId, createdAt])
   // The pharmacy's queue (task 3.10).
@@ -529,14 +534,19 @@ model Prescription {
 
 // One medicine of a prescription; dispensing and reminders (3.10, 3.26) work per item.
 model PrescriptionItem {
-  id             String  @id @default(uuid(7)) @db.Uuid
-  hospitalId     String  @db.Uuid
-  prescriptionId String  @db.Uuid
-  drugName       String
-  dose           String
-  frequency      String
-  durationDays   Int?
-  instructions   String?
+  id                String  @id @default(uuid(7)) @db.Uuid
+  hospitalId        String  @db.Uuid
+  prescriptionId    String  @db.Uuid
+  drugName          String
+  dose              String
+  frequency         String
+  durationDays      Int?
+  instructions      String?
+  // What was handed over (task 3.10): how many of which stock item, or null
+  // when it was not available. The item's name and unit are kept as they were.
+  dispensedQuantity Int?
+  dispensedName     String?
+  dispensedUnit     String?
 
   hospital     Hospital        @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
   prescription Prescription    @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)

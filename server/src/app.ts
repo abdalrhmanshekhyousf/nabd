@@ -18,6 +18,7 @@ import { cleaningRouter } from './routes/cleaning.routes.js';
 import { imagingRouter } from './routes/imaging.routes.js';
 import { inventoryRouter } from './routes/inventory.routes.js';
 import { labRouter } from './routes/lab.routes.js';
+import { pharmacyRouter } from './routes/pharmacy.routes.js';
 import { devRouter } from './routes/dev.routes.js';
 import { doctorRouter } from './routes/doctor.routes.js';
 import { erRouter } from './routes/er.routes.js';
@@ -58,6 +59,7 @@ export function createApp() {
   app.use('/api/inventory', inventoryRouter);
   app.use('/api/lab-tests', labRouter);
   app.use('/api/imaging', imagingRouter);
+  app.use('/api/pharmacy', pharmacyRouter);
   if (!env.isProduction) app.use('/api/dev', devRouter);
 
   app.use(notFound);

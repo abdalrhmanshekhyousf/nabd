@@ -20,6 +20,7 @@ import {
   createBookingSchema,
   createCleaningRequestSchema,
   createInventoryItemSchema,
+  dispenseSchema,
   imagingOrderSchema,
   labOrderSchema,
   stockMovementSchema,
@@ -728,15 +729,11 @@ describe('lab orders', () => {
       priority: 'URGENT',
       notes: null,
     });
-    expect(labOrderSchema.safeParse({ codes: [], priority: 'ROUTINE', notes: null }).success).toBe(
+    expect(labOrderSchema.safeParse({ codes: [], priority: 'ROUTINE' }).success).toBe(false);
+    expect(labOrderSchema.safeParse({ codes: ['CBC', 'CBC'], priority: 'ROUTINE' }).success).toBe(
       false,
     );
-    expect(
-      labOrderSchema.safeParse({ codes: ['CBC', 'CBC'], priority: 'ROUTINE', notes: null }).success,
-    ).toBe(false);
-    expect(
-      labOrderSchema.safeParse({ codes: ['MAGIC'], priority: 'ROUTINE', notes: null }).success,
-    ).toBe(false);
+    expect(labOrderSchema.safeParse({ codes: ['MAGIC'], priority: 'ROUTINE' }).success).toBe(false);
   });
 });
 
@@ -751,5 +748,21 @@ describe('imaging orders', () => {
     });
     expect(imagingOrderSchema.safeParse({ ...order, modality: 'PET' }).success).toBe(false);
     expect(imagingOrderSchema.safeParse({ ...order, bodyPart: '' }).success).toBe(false);
+  });
+});
+
+describe('dispensing', () => {
+  const line = {
+    prescriptionItemId: '0199a3d2-6c55-7000-8000-000000000001',
+    inventoryItemId: '0199a3d2-6c55-7000-8000-000000000002',
+    quantity: 2,
+  };
+  it('each line hands over an item and a count, or nothing when out', () => {
+    expect(dispenseSchema.parse({ lines: [line] })).toEqual({ lines: [line] });
+    const out = { ...line, inventoryItemId: null, quantity: 0 };
+    expect(dispenseSchema.safeParse({ lines: [out] }).success).toBe(true);
+    expect(dispenseSchema.safeParse({ lines: [{ ...line, quantity: 0 }] }).success).toBe(false);
+    expect(dispenseSchema.safeParse({ lines: [{ ...out, quantity: 3 }] }).success).toBe(false);
+    expect(dispenseSchema.safeParse({ lines: [] }).success).toBe(false);
   });
 });

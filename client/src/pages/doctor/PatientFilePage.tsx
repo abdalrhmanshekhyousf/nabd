@@ -305,11 +305,22 @@ function PrescriptionCard({ prescription }: { prescription: PrescriptionView }) 
                 {item.durationDays ? ` · ${t('patients.days', { count: item.durationDays })}` : ''}
                 {item.instructions ? ` · ${item.instructions}` : ''}
               </p>
+              {prescription.status === 'DISPENSED' && (
+                <p className={cn('text-xs', item.dispensed ? 'text-success' : 'text-warning')}>
+                  {item.dispensed ? t('pharmacy.gave', item.dispensed) : t('pharmacy.notGiven')}
+                </p>
+              )}
             </div>
           </li>
         ))}
       </ul>
       {prescription.notes && <p className="text-xs text-muted">{prescription.notes}</p>}
+      {prescription.dispensedByName && prescription.dispensedAt && (
+        <p className="text-xs text-muted">
+          {t('pharmacy.dispensedBy', { name: prescription.dispensedByName })} ·{' '}
+          <bdi>{date.format(new Date(prescription.dispensedAt))}</bdi>
+        </p>
+      )}
     </Card>
   );
 }

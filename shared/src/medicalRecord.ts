@@ -27,6 +27,8 @@ export type PrescriptionView = {
   notes: string | null;
   createdAt: string;
   dispensedAt: string | null;
+  /** The pharmacist who dispensed it (task 3.10). */
+  dispensedByName: string | null;
   items: {
     id: string;
     drugName: string;
@@ -34,6 +36,8 @@ export type PrescriptionView = {
     frequency: string;
     durationDays: number | null;
     instructions: string | null;
+    /** What was handed over; null before dispensing or when it was not available. */
+    dispensed: { quantity: number; name: string; unit: string } | null;
   }[];
 };
 

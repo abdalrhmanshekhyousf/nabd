@@ -9,6 +9,7 @@ import type {
 import type { ScopedPrisma } from '../lib/scopedPrisma.js';
 import { HttpError } from '../middleware/errorHandler.js';
 import { toImagingView } from './imaging.service.js';
+import { toPrescriptionView } from './pharmacy.service.js';
 import { toLabView } from './lab.service.js';
 
 const day = (date: Date | null) => date?.toISOString().slice(0, 10) ?? null;
@@ -108,24 +109,7 @@ export async function getPatientFile(
       content: report.content,
       createdAt: report.createdAt.toISOString(),
     })),
-    prescriptions: record.prescriptions.map((prescription): PrescriptionView => ({
-      id: prescription.id,
-      doctorName: prescription.doctorName,
-      status: prescription.status,
-      notes: prescription.notes,
-      createdAt: prescription.createdAt.toISOString(),
-      dispensedAt: prescription.dispensedAt?.toISOString() ?? null,
-      items: prescription.items.map(
-        ({ id, drugName, dose, frequency, durationDays, instructions }) => ({
-          id,
-          drugName,
-          dose,
-          frequency,
-          durationDays,
-          instructions,
-        }),
-      ),
-    })),
+    prescriptions: record.prescriptions.map(toPrescriptionView),
   };
 }
 
@@ -188,22 +172,5 @@ export async function addPrescription(
     include: { items: true },
   });
   await touch(db, recordId);
-  return {
-    id: prescription.id,
-    doctorName: prescription.doctorName,
-    status: prescription.status,
-    notes: prescription.notes,
-    createdAt: prescription.createdAt.toISOString(),
-    dispensedAt: null,
-    items: prescription.items.map(
-      ({ id, drugName, dose, frequency, durationDays, instructions }) => ({
-        id,
-        drugName,
-        dose,
-        frequency,
-        durationDays,
-        instructions,
-      }),
-    ),
-  };
+  return toPrescriptionView(prescription);
 }

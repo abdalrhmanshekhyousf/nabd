@@ -98,6 +98,7 @@ const FILE: PatientFile = {
       notes: 'بعد الأكل',
       createdAt: new Date().toISOString(),
       dispensedAt: null,
+      dispensedByName: null,
       items: [
         {
           id: 'i1',
@@ -106,6 +107,7 @@ const FILE: PatientFile = {
           frequency: 'مرة باليوم',
           durationDays: 30,
           instructions: null,
+          dispensed: null,
         },
       ],
     },
@@ -146,8 +148,13 @@ beforeEach(() => {
         status: 'PENDING' as const,
         createdAt: new Date().toISOString(),
         dispensedAt: null,
+        dispensedByName: null,
         notes: body.notes || null,
-        items: body.items.map((item: object, i: number) => ({ id: `n${i}`, ...item })),
+        items: body.items.map((item: object, i: number) => ({
+          id: `n${i}`,
+          ...item,
+          dispensed: null,
+        })),
       };
       file.prescriptions.unshift(prescription);
       return { status: 201, data: { prescription } };
