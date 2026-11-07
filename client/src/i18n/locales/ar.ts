@@ -419,7 +419,7 @@ export const ar = {
     dispensedBy: 'صرفها {{name}}',
     gave: 'انصرف: {{quantity}} {{unit}} {{name}}',
     notGiven: 'ما كان متوفر',
-    days_zero: '',
+    days_zero: 'لـ {{count}} يوم',
     days_one: 'ليوم واحد',
     days_two: 'ليومين',
     days_few: 'لـ {{count}} أيام',

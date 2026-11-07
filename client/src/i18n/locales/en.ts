@@ -421,7 +421,7 @@ export const en: Translation = {
     dispensedBy: 'Dispensed by {{name}}',
     gave: 'Given: {{quantity}} {{unit}} {{name}}',
     notGiven: 'Not available',
-    days_zero: '',
+    days_zero: 'for {{count}} days',
     days_one: 'for 1 day',
     days_two: 'for 2 days',
     days_few: 'for {{count}} days',
