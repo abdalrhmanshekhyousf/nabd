@@ -1,4 +1,9 @@
-import { LOGO_MAX_BYTES, REPORT_MAX_BYTES } from '@nabd/shared';
+import {
+  IMAGING_MAX_BYTES,
+  IMAGING_MAX_FILES,
+  LOGO_MAX_BYTES,
+  REPORT_MAX_BYTES,
+} from '@nabd/shared';
 import type { RequestHandler } from 'express';
 import multer from 'multer';
 import { HttpError } from './errorHandler.js';
@@ -44,6 +49,26 @@ const reportParser = multer({
  */
 export const optionalReportUpload: RequestHandler = (req, res, next) => {
   reportParser(req, res, (error: unknown) => {
+    if (error instanceof multer.MulterError) {
+      next(
+        error.code === 'LIMIT_FILE_SIZE'
+          ? new HttpError(413, 'FILE_TOO_LARGE', error.message)
+          : new HttpError(400, 'VALIDATION_ERROR', error.message),
+      );
+      return;
+    }
+    next(error ?? undefined);
+  });
+};
+
+const imagesParser = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: IMAGING_MAX_BYTES, files: IMAGING_MAX_FILES },
+}).array('images', IMAGING_MAX_FILES);
+
+/** Up to ten "images" files of an imaging study (task 3.8); their type is checked later. */
+export const imagingUpload: RequestHandler = (req, res, next) => {
+  imagesParser(req, res, (error: unknown) => {
     if (error instanceof multer.MulterError) {
       next(
         error.code === 'LIMIT_FILE_SIZE'

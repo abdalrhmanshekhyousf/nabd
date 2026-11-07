@@ -171,6 +171,11 @@ function ImagingRow({ study, patientId }: { study: ImagingView; patientId: strin
           <p className="mt-1 text-sm whitespace-pre-line text-foreground">{study.report}</p>
         )}
       </div>
+      {study.imageCount > 0 && (
+        <StatusBadge tone="info">
+          {t('radiologyBoard.imageCount', { count: study.imageCount })}
+        </StatusBadge>
+      )}
       {study.abnormal && <StatusBadge tone="danger">{t('labTests.abnormal')}</StatusBadge>}
       <StatusBadge tone={LAB_TONE[study.status]}>{t(`imaging.status.${study.status}`)}</StatusBadge>
       {study.status === 'REQUESTED' && (

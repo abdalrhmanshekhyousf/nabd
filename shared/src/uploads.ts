@@ -17,3 +17,7 @@ export const REPORT_MAX_BYTES = 10 * 1024 * 1024;
 export type ReportMimeType = (typeof REPORT_MIME_TYPES)[number];
 /** Any file the server keeps. */
 export type StoredMimeType = LogoMimeType | ReportMimeType;
+
+/** Imaging studies (task 3.8): up to ten images (or PDF reports) per study. */
+export const IMAGING_MAX_FILES = 10;
+export const IMAGING_MAX_BYTES = 15 * 1024 * 1024;

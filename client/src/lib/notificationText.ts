@@ -22,5 +22,7 @@ function readable(data: NotificationItem['data']) {
     complaint: data.complaint ?? '—',
     // A lab test is sent by its code; the reader sees its name (task 3.5).
     test: data.code ? i18n.t(`labTests.codes.${data.code}` as never) : '—',
+    // An imaging study is sent by its type's code (task 3.8).
+    modalityName: data.modality ? i18n.t(`modalities.${data.modality}` as never) : '—',
   };
 }

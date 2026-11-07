@@ -45,3 +45,14 @@ export const imagingOrderSchema = z.object({
 
 export type ImagingOrderInput = z.input<typeof imagingOrderSchema>;
 export type ImagingOrderData = z.output<typeof imagingOrderSchema>;
+
+/**
+ * POST /imaging/:id/report (task 3.8), as a form with the images: the
+ * radiologist's report and whether the findings are abnormal.
+ */
+export const imagingReportSchema = z.object({
+  report: requiredText(4000),
+  abnormal: z.enum(['true', 'false'], 'validation.required').transform((value) => value === 'true'),
+});
+
+export type ImagingReportData = z.output<typeof imagingReportSchema>;
