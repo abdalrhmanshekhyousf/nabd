@@ -7,7 +7,7 @@ import type {
   PrescriptionView,
 } from '@nabd/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   ArrowRight,
   FileText,
@@ -15,6 +15,7 @@ import {
   FilePlus2,
   FlaskConical,
   Paperclip,
+  Images,
   Pill,
   ScanLine,
   Siren,
@@ -27,6 +28,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 import { queryKeys } from '@/app/queryKeys';
 import { ImagingOrderDialog } from '@/components/patients/ImagingOrderDialog';
+import { ImagingViewer } from '@/components/patients/ImagingViewer';
 import { LabOrderDialog } from '@/components/patients/LabOrderDialog';
 import { PatientAvatar } from '@/components/patients/PatientAvatar';
 import { patientFacts, patientName } from '@/components/patients/patientDisplay';
@@ -37,6 +39,7 @@ import { api, describeApiError } from '@/lib/api';
 import { cn } from '@/lib/cn';
 import { calm, enter } from '@/lib/motion';
 import { notify } from '@/lib/notify';
+import { playSound } from '@/lib/sound';
 import { openProtectedFile } from '@/lib/protectedFile';
 
 const PRESCRIPTION_TONE: Record<PrescriptionStatus, StatusTone> = {
@@ -132,6 +135,7 @@ function ImagingRow({ study, patientId }: { study: ImagingView; patientId: strin
   const queryClient = useQueryClient();
   const when = new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium', timeStyle: 'short' });
   const modality = t(`modalities.${study.modality}`);
+  const [viewing, setViewing] = useState(false);
   const cancel = useMutation({
     mutationFn: () => api.delete(`/doctors/me/imaging/${study.id}`),
     onSuccess: () => notify.success(t('imaging.cancelled', { modality, part: study.bodyPart })),
@@ -170,12 +174,33 @@ function ImagingRow({ study, patientId }: { study: ImagingView; patientId: strin
         {study.report && (
           <p className="mt-1 text-sm whitespace-pre-line text-foreground">{study.report}</p>
         )}
+        {study.imageCount > 0 && (
+          <button
+            type="button"
+            onClick={() => {
+              playSound('open');
+              setViewing(true);
+            }}
+            className="mt-1 inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:underline"
+          >
+            <Images className="size-4" aria-hidden="true" />
+            {t('imagingViewer.open', { count: study.imageCount })}
+          </button>
+        )}
+        <AnimatePresence>
+          {viewing && (
+            <ImagingViewer
+              studyId={study.id}
+              count={study.imageCount}
+              title={`${modality} · ${study.bodyPart}`}
+              onClose={() => {
+                playSound('close');
+                setViewing(false);
+              }}
+            />
+          )}
+        </AnimatePresence>
       </div>
-      {study.imageCount > 0 && (
-        <StatusBadge tone="info">
-          {t('radiologyBoard.imageCount', { count: study.imageCount })}
-        </StatusBadge>
-      )}
       {study.abnormal && <StatusBadge tone="danger">{t('labTests.abnormal')}</StatusBadge>}
       <StatusBadge tone={LAB_TONE[study.status]}>{t(`imaging.status.${study.status}`)}</StatusBadge>
       {study.status === 'REQUESTED' && (
