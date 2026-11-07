@@ -1,4 +1,5 @@
 import type {
+  ImagingView,
   LabTestStatus,
   LabTestView,
   PatientFile,
@@ -15,6 +16,7 @@ import {
   FlaskConical,
   Paperclip,
   Pill,
+  ScanLine,
   Siren,
   X,
   ShieldAlert,
@@ -24,6 +26,7 @@ import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 import { queryKeys } from '@/app/queryKeys';
+import { ImagingOrderDialog } from '@/components/patients/ImagingOrderDialog';
 import { LabOrderDialog } from '@/components/patients/LabOrderDialog';
 import { PatientAvatar } from '@/components/patients/PatientAvatar';
 import { patientFacts, patientName } from '@/components/patients/patientDisplay';
@@ -113,6 +116,69 @@ function LabTestRow({ test, patientId }: { test: LabTestView; patientId: string 
           variant="ghost"
           className="size-9 text-muted hover:bg-danger/10 hover:text-danger"
           aria-label={t('labTests.cancel')}
+          loading={cancel.isPending}
+          onClick={() => cancel.mutate()}
+        >
+          <X className="size-4" />
+        </Button>
+      )}
+    </motion.li>
+  );
+}
+
+/** One ordered imaging study: type and body part, its state, who ordered it; the report once ready. */
+function ImagingRow({ study, patientId }: { study: ImagingView; patientId: string }) {
+  const { t, i18n } = useTranslation();
+  const queryClient = useQueryClient();
+  const when = new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium', timeStyle: 'short' });
+  const modality = t(`modalities.${study.modality}`);
+  const cancel = useMutation({
+    mutationFn: () => api.delete(`/doctors/me/imaging/${study.id}`),
+    onSuccess: () => notify.success(t('imaging.cancelled', { modality, part: study.bodyPart })),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.patientFile(patientId) }),
+  });
+  return (
+    <motion.li
+      layout
+      initial={{ opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={calm}
+      aria-label={`${modality} · ${study.bodyPart}`}
+      className={cn(
+        'flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3',
+        study.status === 'CANCELLED' && 'opacity-60',
+      )}
+    >
+      <div className="min-w-0 flex-1 basis-52">
+        <p className="flex flex-wrap items-center gap-2 font-medium text-foreground">
+          {study.priority === 'URGENT' && (
+            <span className="inline-flex items-center gap-1 rounded-md bg-danger px-1.5 py-0.5 text-xs font-semibold text-danger-foreground">
+              <Siren className="size-3" aria-hidden="true" />
+              {t('labTests.priorities.URGENT')}
+            </span>
+          )}
+          <span className="rounded-md bg-accent-soft px-1.5 py-0.5 text-xs font-semibold text-accent">
+            {modality}
+          </span>
+          {study.bodyPart}
+        </p>
+        <p className="text-xs text-muted">
+          {t('imaging.orderedBy', { name: study.doctorName })} ·{' '}
+          <bdi>{when.format(new Date(study.createdAt))}</bdi>
+          {study.reason ? ` · ${study.reason}` : ''}
+        </p>
+        {study.report && (
+          <p className="mt-1 text-sm whitespace-pre-line text-foreground">{study.report}</p>
+        )}
+      </div>
+      {study.abnormal && <StatusBadge tone="danger">{t('labTests.abnormal')}</StatusBadge>}
+      <StatusBadge tone={LAB_TONE[study.status]}>{t(`imaging.status.${study.status}`)}</StatusBadge>
+      {study.status === 'REQUESTED' && (
+        <Button
+          size="icon"
+          variant="ghost"
+          className="size-9 text-muted hover:bg-danger/10 hover:text-danger"
+          aria-label={t('imaging.cancel')}
           loading={cancel.isPending}
           onClick={() => cancel.mutate()}
         >
@@ -223,7 +289,7 @@ function PrescriptionCard({ prescription }: { prescription: PrescriptionView }) 
 export function PatientFilePage() {
   const { t, i18n } = useTranslation();
   const { patientId = '' } = useParams();
-  const [dialog, setDialog] = useState<'report' | 'prescription' | 'lab' | null>(null);
+  const [dialog, setDialog] = useState<'report' | 'prescription' | 'lab' | 'imaging' | null>(null);
   const { data, isPending, error } = useQuery({
     queryKey: queryKeys.patientFile(patientId),
     queryFn: async () =>
@@ -267,7 +333,7 @@ export function PatientFilePage() {
     );
   }
 
-  const { patient, record, reports, prescriptions, labTests } = data;
+  const { patient, record, reports, prescriptions, labTests, imaging } = data;
   const details = [
     [t('patients.bloodType'), patient.bloodType],
     [t('patients.phone'), patient.phone],
@@ -354,6 +420,13 @@ export function PatientFilePage() {
         >
           {t('labTests.order')}
         </Button>
+        <Button
+          variant="outline"
+          icon={<ScanLine className="size-4" />}
+          onClick={() => setDialog('imaging')}
+        >
+          {t('imaging.order')}
+        </Button>
       </motion.div>
 
       <ReportDialog
@@ -368,6 +441,12 @@ export function PatientFilePage() {
         patientId={patientId}
         patientName={patientName(patient, t)}
         allergies={record.allergies}
+      />
+      <ImagingOrderDialog
+        open={dialog === 'imaging'}
+        onClose={() => setDialog(null)}
+        patientId={patientId}
+        patientName={patientName(patient, t)}
       />
       <LabOrderDialog
         open={dialog === 'lab'}
@@ -430,7 +509,21 @@ export function PatientFilePage() {
         )}
       </Section>
 
-      <Section icon={<Pill />} title={t('patients.prescriptionsTitle')} index={5}>
+      <Section icon={<ScanLine />} title={t('imaging.title')} index={5}>
+        {imaging.length === 0 ? (
+          <Empty text={t('imaging.none')} />
+        ) : (
+          <Card className="overflow-hidden">
+            <ul className="divide-y divide-border">
+              {imaging.map((study) => (
+                <ImagingRow key={study.id} study={study} patientId={patientId} />
+              ))}
+            </ul>
+          </Card>
+        )}
+      </Section>
+
+      <Section icon={<Pill />} title={t('patients.prescriptionsTitle')} index={6}>
         {prescriptions.length === 0 ? (
           <Empty text={t('patients.noPrescriptions')} />
         ) : (

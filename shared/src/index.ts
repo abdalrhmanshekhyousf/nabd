@@ -8,6 +8,7 @@ export * from './operations.js';
 export * from './orStateMachine.js';
 export * from './inventory.js';
 export * from './lab.js';
+export * from './imaging.js';
 export * from './roles.js';
 export * from './schemas/auth.js';
 export * from './schemas/common.js';

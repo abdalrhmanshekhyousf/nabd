@@ -1,3 +1,4 @@
+import type { ImagingView } from './imaging.js';
 import type { LabTestView } from './lab.js';
 /**
  * A prescription waits for the pharmacist, then is dispensed or cancelled
@@ -63,4 +64,6 @@ export type PatientFile = {
   prescriptions: PrescriptionView[];
   /** Ordered lab tests and their results (tasks 3.4, 3.5), latest first. */
   labTests: LabTestView[];
+  /** Ordered imaging studies and their reports (tasks 3.6–3.9), latest first. */
+  imaging: ImagingView[];
 };

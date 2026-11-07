@@ -8,6 +8,7 @@ import type {
 } from '@nabd/shared';
 import type { ScopedPrisma } from '../lib/scopedPrisma.js';
 import { HttpError } from '../middleware/errorHandler.js';
+import { toImagingView } from './imaging.service.js';
 import { toLabView } from './lab.service.js';
 
 const day = (date: Date | null) => date?.toISOString().slice(0, 10) ?? null;
@@ -72,6 +73,7 @@ export async function getPatientFile(
       reports: { orderBy: { createdAt: 'desc' } },
       prescriptions: { orderBy: { createdAt: 'desc' }, include: { items: true } },
       labTests: { orderBy: { createdAt: 'desc' } },
+      imaging: { orderBy: { createdAt: 'desc' } },
     },
   });
   if (!record) throw new HttpError(404, 'NOT_FOUND', 'Patient not found');
@@ -97,6 +99,7 @@ export async function getPatientFile(
       notes: record.notes,
     },
     labTests: record.labTests.map(toLabView),
+    imaging: record.imaging.map(toImagingView),
     reports: record.reports.map((report): DoctorReportView => ({
       id: report.id,
       doctorName: report.doctorName,

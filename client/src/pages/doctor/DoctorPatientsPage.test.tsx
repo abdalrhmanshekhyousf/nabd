@@ -89,6 +89,7 @@ const FILE: PatientFile = {
     },
   ],
   labTests: [],
+  imaging: [],
   prescriptions: [
     {
       id: 'p1',
@@ -170,6 +171,29 @@ beforeEach(() => {
       }));
       file.labTests.unshift(...tests);
       return { status: 201, data: { tests } };
+    }
+    if (config.method === 'post' && config.url === `/doctors/me/patients/${SARA}/imaging`) {
+      const body = JSON.parse(config.data as string);
+      const study = {
+        id: 'img1',
+        ...body,
+        reason: body.reason || null,
+        status: 'REQUESTED' as const,
+        doctorName: 'د. ريم العلي',
+        radiologistName: null,
+        report: null,
+        imageCount: 0,
+        abnormal: null,
+        createdAt: new Date().toISOString(),
+        startedAt: null,
+        completedAt: null,
+      };
+      file.imaging.unshift(study);
+      return { status: 201, data: { study } };
+    }
+    if (config.method === 'delete' && config.url === '/doctors/me/imaging/img1') {
+      file.imaging[0].status = 'CANCELLED';
+      return { status: 200, data: { study: file.imaging[0] } };
     }
     if (config.method === 'delete' && config.url?.startsWith('/doctors/me/lab-tests/')) {
       const id = config.url.split('/').pop();
@@ -376,5 +400,44 @@ describe('writing in the file', () => {
     await user.click(within(cbc).getByRole('button', { name: 'سحب الطلب' }));
     expect(await screen.findByText('انسحب طلب تعداد دم كامل CBC')).toBeInTheDocument();
     expect(await within(labs).findByText('منسحب')).toBeInTheDocument();
+  });
+
+  it('orders an urgent CT of the head with its question, then withdraws it (task 3.6)', async () => {
+    renderApp(`/doctor/patients/${SARA}`);
+    const user = userEvent.setup();
+    const section = await screen.findByRole('region', { name: 'الأشعة' });
+    expect(section).toHaveTextContent('ما في طلبات أشعة لسا.');
+
+    await user.click(screen.getByRole('button', { name: 'طلب أشعة' }));
+    const dialog = await screen.findByRole('dialog', { name: 'طلب أشعة لـ سارة الأحمد' });
+    await user.click(within(dialog).getByRole('button', { name: 'إرسال للأشعة' }));
+    expect(await within(dialog).findByText('هالحقل مطلوب')).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole('radio', { name: 'طبقي محوري' }));
+    // The suggestions follow the type.
+    expect(within(dialog).queryByRole('button', { name: 'صدر' })).toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: 'ركبة' })).toBeNull();
+    await user.click(within(dialog).getByRole('button', { name: 'رأس' }));
+    expect(within(dialog).getByLabelText(/المنطقة/)).toHaveValue('رأس');
+    await user.type(within(dialog).getByLabelText(/السؤال السريري/), 'صداع بعد سقوط');
+    await user.click(within(dialog).getByRole('radio', { name: 'مستعجل' }));
+    await user.click(within(dialog).getByRole('button', { name: 'إرسال للأشعة' }));
+
+    expect(await screen.findByText('انبعت طلب طبقي محوري · رأس للأشعة')).toBeInTheDocument();
+    const post = fake.calls.find((c) => c.url?.endsWith('/imaging'))!;
+    expect(JSON.parse(post.data as string)).toEqual({
+      modality: 'CT',
+      bodyPart: 'رأس',
+      reason: 'صداع بعد سقوط',
+      priority: 'URGENT',
+    });
+    const row = await within(section).findByLabelText('طبقي محوري · رأس');
+    expect(row).toHaveTextContent('مستعجل');
+    expect(row).toHaveTextContent('بانتظار الأشعة');
+    expect(row).toHaveTextContent('صداع بعد سقوط');
+
+    await user.click(within(row).getByRole('button', { name: 'سحب الطلب' }));
+    expect(await screen.findByText('انسحب طلب طبقي محوري · رأس')).toBeInTheDocument();
+    expect(await within(section).findByText('منسحب')).toBeInTheDocument();
   });
 });

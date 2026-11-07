@@ -20,6 +20,7 @@ import {
   createBookingSchema,
   createCleaningRequestSchema,
   createInventoryItemSchema,
+  imagingOrderSchema,
   labOrderSchema,
   stockMovementSchema,
   emergencyBookingSchema,
@@ -736,5 +737,19 @@ describe('lab orders', () => {
     expect(
       labOrderSchema.safeParse({ codes: ['MAGIC'], priority: 'ROUTINE', notes: null }).success,
     ).toBe(false);
+  });
+});
+
+describe('imaging orders', () => {
+  it('needs a modality and a body part; the reason is optional', () => {
+    const order = { modality: 'CT', bodyPart: ' رأس ', reason: '', priority: 'URGENT' };
+    expect(imagingOrderSchema.parse(order)).toEqual({
+      modality: 'CT',
+      bodyPart: 'رأس',
+      reason: null,
+      priority: 'URGENT',
+    });
+    expect(imagingOrderSchema.safeParse({ ...order, modality: 'PET' }).success).toBe(false);
+    expect(imagingOrderSchema.safeParse({ ...order, bodyPart: '' }).success).toBe(false);
   });
 });

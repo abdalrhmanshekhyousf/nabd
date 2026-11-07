@@ -178,7 +178,17 @@ enum LabTestStatus {
   CANCELLED
 }
 
-// Matches LAB_PRIORITIES in @nabd/shared: urgent ones go first on the lab board.
+// Matches IMAGING_STATUSES in @nabd/shared (task 3.6): ordered by the doctor,
+// taken by a radiologist of that modality (3.7, 3.8), reported, or withdrawn.
+enum ImagingStatus {
+  REQUESTED
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+// Matches LAB_PRIORITIES in @nabd/shared: urgent ones go first on the lab board
+// and on the radiology board.
 enum LabPriority {
   ROUTINE
   URGENT
@@ -241,6 +251,7 @@ model Hospital {
   inventoryItems     InventoryItem[]
   stockMovements     StockMovement[]
   labTests           LabTest[]
+  radiologyImages    RadiologyImage[]
 }
 
 model Department {
@@ -357,6 +368,8 @@ model User {
   stockMovements       StockMovement[]             @relation("StockMover")
   labTestsOrdered      LabTest[]                   @relation("LabTestDoctor")
   labTestsDone         LabTest[]                   @relation("LabTestTechnician")
+  imagingOrdered       RadiologyImage[]            @relation("ImagingDoctor")
+  imagingDone          RadiologyImage[]            @relation("ImagingRadiologist")
 
   @@unique([hospitalId, email])
   @@index([hospitalId, role])
@@ -459,12 +472,13 @@ model MedicalRecord {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  hospital      Hospital       @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  patient       Patient        @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  doctor        User?          @relation("TreatingDoctor", fields: [doctorId], references: [id], onDelete: SetNull)
+  hospital      Hospital         @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  patient       Patient          @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor        User?            @relation("TreatingDoctor", fields: [doctorId], references: [id], onDelete: SetNull)
   reports       DoctorReport[]
   prescriptions Prescription[]
   labTests      LabTest[]
+  imaging       RadiologyImage[]
 
   @@index([hospitalId, doctorId])
 }
@@ -724,6 +738,45 @@ model LabTest {
 
   // The lab board: by status, urgent first, oldest first (3.5).
   @@index([hospitalId, status, priority, createdAt])
+  @@index([recordId, createdAt])
+}
+
+// ─── Radiology (task 3.6) ─────────────────────────────────────────────────────
+
+// An imaging study a doctor ordered for a patient: which modality (each
+// radiologist handles one, 3.7) and what part of the body. The radiologist
+// uploads the images and writes the report (3.8); the doctor views them in the
+// file (3.9). The doctor's name stays if their account goes.
+model RadiologyImage {
+  id              String            @id @default(uuid(7)) @db.Uuid
+  hospitalId      String            @db.Uuid
+  recordId        String            @db.Uuid
+  modality        RadiologyModality
+  bodyPart        String
+  // Why it is asked for: the clinical question.
+  reason          String?
+  priority        LabPriority       @default(ROUTINE)
+  status          ImagingStatus     @default(REQUESTED)
+  doctorId        String?           @db.Uuid
+  doctorName      String
+  radiologistId   String?           @db.Uuid
+  radiologistName String?
+  // The radiologist's report and the stored image files (3.8).
+  report          String?
+  imageFiles      String[]          @default([])
+  abnormal        Boolean?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  hospital    Hospital      @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  record      MedicalRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  doctor      User?         @relation("ImagingDoctor", fields: [doctorId], references: [id], onDelete: SetNull)
+  radiologist User?         @relation("ImagingRadiologist", fields: [radiologistId], references: [id], onDelete: SetNull)
+
+  // A radiologist's board: their modality, by status, urgent first (3.7, 3.8).
+  @@index([hospitalId, modality, status, priority, createdAt])
   @@index([recordId, createdAt])
 }
 

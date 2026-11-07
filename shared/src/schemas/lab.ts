@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { LAB_PRIORITIES, LAB_TEST_CODES } from '../lab.js';
-import { optionalText } from './common.js';
+import { optionalText, requiredText } from './common.js';
+import { RADIOLOGY_MODALITIES } from './staff.js';
 
 /**
  * POST /doctors/me/patients/:id/lab-tests (task 3.4): one or more tests for my
@@ -30,3 +31,17 @@ export const labResultSchema = z.object({
 });
 
 export type LabResultData = z.output<typeof labResultSchema>;
+
+/**
+ * POST /doctors/me/patients/:id/imaging (task 3.6): a study of one modality,
+ * the part of the body, why it is asked for, routine or urgent.
+ */
+export const imagingOrderSchema = z.object({
+  modality: z.enum(RADIOLOGY_MODALITIES, 'validation.required'),
+  bodyPart: requiredText(80),
+  reason: optionalText(300),
+  priority: z.enum(LAB_PRIORITIES, 'validation.required'),
+});
+
+export type ImagingOrderInput = z.input<typeof imagingOrderSchema>;
+export type ImagingOrderData = z.output<typeof imagingOrderSchema>;

@@ -2,6 +2,7 @@ import {
   createPrescriptionSchema,
   createReportSchema,
   declineCallSchema,
+  imagingOrderSchema,
   labOrderSchema,
   doctorStatusSchema,
   patientSearchSchema,
@@ -12,6 +13,7 @@ import { authenticate, requireRole, session } from '../middleware/auth.js';
 import { emitRefresh, rooms } from '../realtime/realtime.js';
 import { getMyStatus, setMyStatus } from '../services/doctor.service.js';
 import { answerCall, listMyCalls } from '../services/doctorCall.service.js';
+import { cancelImaging, orderImaging } from '../services/imaging.service.js';
 import { cancelLabTest, orderLabTests } from '../services/lab.service.js';
 import {
   addPrescription,
@@ -103,6 +105,24 @@ doctorRouter.delete('/me/lab-tests/:id', requireRole('DOCTOR'), async (req, res)
   const test = await cancelLabTest(db, auth.hospitalId, auth.userId, id);
   emitRefresh(rooms.user(auth.userId), [['patient-file']]);
   res.json({ test });
+});
+
+// Imaging (task 3.6): ordered from the file, withdrawn before radiology starts.
+doctorRouter.post('/me/patients/:patientId/imaging', requireRole('DOCTOR'), async (req, res) => {
+  const { auth, db } = session(req);
+  const { patientId } = patientParam.parse(req.params);
+  const input = imagingOrderSchema.parse(req.body);
+  const study = await orderImaging(db, auth.hospitalId, auth.userId, patientId, input);
+  refreshFile(auth.userId, patientId);
+  res.status(201).json({ study });
+});
+
+doctorRouter.delete('/me/imaging/:id', requireRole('DOCTOR'), async (req, res) => {
+  const { auth, db } = session(req);
+  const { id } = z.object({ id: z.uuid() }).parse(req.params);
+  const study = await cancelImaging(db, auth.hospitalId, auth.userId, id);
+  emitRefresh(rooms.user(auth.userId), [['patient-file']]);
+  res.json({ study });
 });
 
 doctorRouter.get('/me/calls', requireRole('DOCTOR'), async (req, res) => {
