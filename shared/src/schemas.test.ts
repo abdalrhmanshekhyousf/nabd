@@ -20,6 +20,7 @@ import {
   createBookingSchema,
   createCleaningRequestSchema,
   createInventoryItemSchema,
+  labOrderSchema,
   stockMovementSchema,
   emergencyBookingSchema,
   rescheduleBookingSchema,
@@ -716,5 +717,24 @@ describe('inventory', () => {
       stockMovementSchema.safeParse({ kind: 'ADJUST', counted: 0, reason: 'جرد آخر الشهر' })
         .success,
     ).toBe(true);
+  });
+});
+
+describe('lab orders', () => {
+  it('takes known tests, once each, routine or urgent', () => {
+    expect(labOrderSchema.parse({ codes: ['CBC', 'CRP'], priority: 'URGENT', notes: '' })).toEqual({
+      codes: ['CBC', 'CRP'],
+      priority: 'URGENT',
+      notes: null,
+    });
+    expect(labOrderSchema.safeParse({ codes: [], priority: 'ROUTINE', notes: null }).success).toBe(
+      false,
+    );
+    expect(
+      labOrderSchema.safeParse({ codes: ['CBC', 'CBC'], priority: 'ROUTINE', notes: null }).success,
+    ).toBe(false);
+    expect(
+      labOrderSchema.safeParse({ codes: ['MAGIC'], priority: 'ROUTINE', notes: null }).success,
+    ).toBe(false);
   });
 });

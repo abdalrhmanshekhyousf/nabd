@@ -1,12 +1,21 @@
-import type { PatientFile, PrescriptionStatus, PrescriptionView } from '@nabd/shared';
-import { useQuery } from '@tanstack/react-query';
+import type {
+  LabTestStatus,
+  LabTestView,
+  PatientFile,
+  PrescriptionStatus,
+  PrescriptionView,
+} from '@nabd/shared';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
   ArrowRight,
   FileText,
   HeartPulse,
   FilePlus2,
+  FlaskConical,
   Pill,
+  Siren,
+  X,
   ShieldAlert,
   Stethoscope,
 } from 'lucide-react';
@@ -14,6 +23,7 @@ import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 import { queryKeys } from '@/app/queryKeys';
+import { LabOrderDialog } from '@/components/patients/LabOrderDialog';
 import { PatientAvatar } from '@/components/patients/PatientAvatar';
 import { patientFacts, patientName } from '@/components/patients/patientDisplay';
 import { PrescriptionDialog } from '@/components/patients/PrescriptionDialog';
@@ -22,12 +32,80 @@ import { Button, Card, Spinner, StatusBadge, type StatusTone } from '@/component
 import { api, describeApiError } from '@/lib/api';
 import { cn } from '@/lib/cn';
 import { calm, enter } from '@/lib/motion';
+import { notify } from '@/lib/notify';
 
 const PRESCRIPTION_TONE: Record<PrescriptionStatus, StatusTone> = {
   PENDING: 'warning',
   DISPENSED: 'success',
   CANCELLED: 'neutral',
 };
+
+const LAB_TONE: Record<LabTestStatus, StatusTone> = {
+  REQUESTED: 'warning',
+  IN_PROGRESS: 'info',
+  DONE: 'success',
+  CANCELLED: 'neutral',
+};
+
+/** One ordered test: what, its state, who ordered it and when; the result once ready. */
+function LabTestRow({ test, patientId }: { test: LabTestView; patientId: string }) {
+  const { t, i18n } = useTranslation();
+  const queryClient = useQueryClient();
+  const when = new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium', timeStyle: 'short' });
+  const name = t(`labTests.codes.${test.code}`);
+  const cancel = useMutation({
+    mutationFn: () => api.delete(`/doctors/me/lab-tests/${test.id}`),
+    onSuccess: () => notify.success(t('labTests.cancelled', { name })),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.patientFile(patientId) }),
+  });
+  return (
+    <motion.li
+      layout
+      initial={{ opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={calm}
+      aria-label={name}
+      className={cn(
+        'flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3',
+        test.status === 'CANCELLED' && 'opacity-60',
+      )}
+    >
+      <div className="min-w-0 flex-1 basis-52">
+        <p className="flex flex-wrap items-center gap-2 font-medium text-foreground">
+          {test.priority === 'URGENT' && (
+            <span className="inline-flex items-center gap-1 rounded-md bg-danger px-1.5 py-0.5 text-xs font-semibold text-danger-foreground">
+              <Siren className="size-3" aria-hidden="true" />
+              {t('labTests.priorities.URGENT')}
+            </span>
+          )}
+          {name}
+        </p>
+        <p className="text-xs text-muted">
+          {t('labTests.orderedBy', { name: test.doctorName })} ·{' '}
+          <bdi>{when.format(new Date(test.createdAt))}</bdi>
+          {test.notes ? ` · ${test.notes}` : ''}
+        </p>
+        {test.result && (
+          <p className="mt-1 text-sm whitespace-pre-line text-foreground">{test.result}</p>
+        )}
+      </div>
+      {test.abnormal && <StatusBadge tone="danger">{t('labTests.abnormal')}</StatusBadge>}
+      <StatusBadge tone={LAB_TONE[test.status]}>{t(`labTests.status.${test.status}`)}</StatusBadge>
+      {test.status === 'REQUESTED' && (
+        <Button
+          size="icon"
+          variant="ghost"
+          className="size-9 text-muted hover:bg-danger/10 hover:text-danger"
+          aria-label={t('labTests.cancel')}
+          loading={cancel.isPending}
+          onClick={() => cancel.mutate()}
+        >
+          <X className="size-4" />
+        </Button>
+      )}
+    </motion.li>
+  );
+}
 
 function Section({
   icon,
@@ -129,7 +207,7 @@ function PrescriptionCard({ prescription }: { prescription: PrescriptionView }) 
 export function PatientFilePage() {
   const { t, i18n } = useTranslation();
   const { patientId = '' } = useParams();
-  const [dialog, setDialog] = useState<'report' | 'prescription' | null>(null);
+  const [dialog, setDialog] = useState<'report' | 'prescription' | 'lab' | null>(null);
   const { data, isPending, error } = useQuery({
     queryKey: queryKeys.patientFile(patientId),
     queryFn: async () =>
@@ -173,7 +251,7 @@ export function PatientFilePage() {
     );
   }
 
-  const { patient, record, reports, prescriptions } = data;
+  const { patient, record, reports, prescriptions, labTests } = data;
   const details = [
     [t('patients.bloodType'), patient.bloodType],
     [t('patients.phone'), patient.phone],
@@ -253,6 +331,13 @@ export function PatientFilePage() {
         >
           {t('patients.newPrescription')}
         </Button>
+        <Button
+          variant="outline"
+          icon={<FlaskConical className="size-4" />}
+          onClick={() => setDialog('lab')}
+        >
+          {t('labTests.order')}
+        </Button>
       </motion.div>
 
       <ReportDialog
@@ -267,6 +352,12 @@ export function PatientFilePage() {
         patientId={patientId}
         patientName={patientName(patient, t)}
         allergies={record.allergies}
+      />
+      <LabOrderDialog
+        open={dialog === 'lab'}
+        onClose={() => setDialog(null)}
+        patientId={patientId}
+        patientName={patientName(patient, t)}
       />
 
       <Section icon={<FileText />} title={t('patients.reportsTitle')} index={3}>
@@ -309,7 +400,21 @@ export function PatientFilePage() {
         )}
       </Section>
 
-      <Section icon={<Pill />} title={t('patients.prescriptionsTitle')} index={4}>
+      <Section icon={<FlaskConical />} title={t('labTests.title')} index={4}>
+        {labTests.length === 0 ? (
+          <Empty text={t('labTests.none')} />
+        ) : (
+          <Card className="overflow-hidden">
+            <ul className="divide-y divide-border">
+              {labTests.map((test) => (
+                <LabTestRow key={test.id} test={test} patientId={patientId} />
+              ))}
+            </ul>
+          </Card>
+        )}
+      </Section>
+
+      <Section icon={<Pill />} title={t('patients.prescriptionsTitle')} index={5}>
         {prescriptions.length === 0 ? (
           <Empty text={t('patients.noPrescriptions')} />
         ) : (

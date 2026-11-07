@@ -88,6 +88,7 @@ const FILE: PatientFile = {
       createdAt: new Date(Date.now() - 14 * 86_400_000).toISOString(),
     },
   ],
+  labTests: [],
   prescriptions: [
     {
       id: 'p1',
@@ -149,6 +150,32 @@ beforeEach(() => {
       };
       file.prescriptions.unshift(prescription);
       return { status: 201, data: { prescription } };
+    }
+    if (config.method === 'post' && config.url === `/doctors/me/patients/${SARA}/lab-tests`) {
+      const body = JSON.parse(config.data as string);
+      const tests = body.codes.map((code: string, i: number) => ({
+        id: `lab${i}`,
+        code,
+        priority: body.priority,
+        status: 'REQUESTED' as const,
+        notes: body.notes || null,
+        doctorName: 'د. ريم العلي',
+        technicianName: null,
+        result: null,
+        hasResultFile: false,
+        abnormal: null,
+        createdAt: new Date().toISOString(),
+        startedAt: null,
+        completedAt: null,
+      }));
+      file.labTests.unshift(...tests);
+      return { status: 201, data: { tests } };
+    }
+    if (config.method === 'delete' && config.url?.startsWith('/doctors/me/lab-tests/')) {
+      const id = config.url.split('/').pop();
+      const test = file.labTests.find((t) => t.id === id)!;
+      test.status = 'CANCELLED';
+      return { status: 200, data: { test } };
     }
     if (config.url === '/doctors/me/patients') {
       const search = (config.params?.search as string | undefined) ?? '';
@@ -308,5 +335,46 @@ describe('writing in the file', () => {
     });
     const prescriptions = screen.getByRole('region', { name: 'الوصفات' });
     expect(await within(prescriptions).findByText(/أموكسيسيلين/)).toBeInTheDocument();
+  });
+
+  it('orders urgent lab tests from the file, then withdraws one (task 3.4)', async () => {
+    renderApp(`/doctor/patients/${SARA}`);
+    const user = userEvent.setup();
+    const labs = await screen.findByRole('region', { name: 'التحاليل' });
+    expect(labs).toHaveTextContent('ما في تحاليل لسا.');
+
+    await user.click(screen.getByRole('button', { name: 'طلب تحليل' }));
+    const dialog = await screen.findByRole('dialog', { name: 'طلب تحاليل لـ سارة الأحمد' });
+    await user.click(within(dialog).getByRole('button', { name: 'إرسال للمخبر' }));
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      'اختار تحليل واحد على الأقل',
+    );
+
+    await user.click(within(dialog).getByRole('button', { name: 'تعداد دم كامل CBC' }));
+    await user.click(within(dialog).getByRole('button', { name: 'التروبونين' }));
+    expect(within(dialog).getByRole('button', { name: 'التروبونين' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(dialog).toHaveTextContent('اخترت تحليلين');
+    await user.click(within(dialog).getByRole('radio', { name: 'مستعجل' }));
+    await user.type(within(dialog).getByLabelText(/ملاحظة للمخبر/), 'ألم صدري');
+    await user.click(within(dialog).getByRole('button', { name: 'إرسال للمخبر' }));
+
+    expect(await screen.findByText('انبعت تحليلين للمخبر')).toBeInTheDocument();
+    const post = fake.calls.find((c) => c.url?.endsWith('/lab-tests'))!;
+    expect(JSON.parse(post.data as string)).toEqual({
+      codes: ['CBC', 'TROPONIN'],
+      priority: 'URGENT',
+      notes: 'ألم صدري',
+    });
+    const cbc = await within(labs).findByLabelText('تعداد دم كامل CBC');
+    expect(cbc).toHaveTextContent('مستعجل');
+    expect(cbc).toHaveTextContent('بانتظار المخبر');
+    expect(cbc).toHaveTextContent('طلبه د. ريم العلي');
+
+    await user.click(within(cbc).getByRole('button', { name: 'سحب الطلب' }));
+    expect(await screen.findByText('انسحب طلب تعداد دم كامل CBC')).toBeInTheDocument();
+    expect(await within(labs).findByText('منسحب')).toBeInTheDocument();
   });
 });

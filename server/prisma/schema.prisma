@@ -169,6 +169,21 @@ enum StockMovementKind {
   ADJUST
 }
 
+// Matches LAB_TEST_STATUSES in @nabd/shared (task 3.4): ordered by the doctor,
+// taken by the lab (3.5), done with its result, or withdrawn by the doctor.
+enum LabTestStatus {
+  REQUESTED
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+// Matches LAB_PRIORITIES in @nabd/shared: urgent ones go first on the lab board.
+enum LabPriority {
+  ROUTINE
+  URGENT
+}
+
 // Matches NOTIFICATION_TYPES in @nabd/shared (task 2.2).
 enum NotificationType {
   DOCTOR_CALL
@@ -225,6 +240,7 @@ model Hospital {
   cleaningRequests   CleaningRequest[]
   inventoryItems     InventoryItem[]
   stockMovements     StockMovement[]
+  labTests           LabTest[]
 }
 
 model Department {
@@ -339,6 +355,8 @@ model User {
   cleaningRequested    CleaningRequest[]           @relation("CleaningRequester")
   cleaningJobs         CleaningRequest[]           @relation("CleaningWorker")
   stockMovements       StockMovement[]             @relation("StockMover")
+  labTestsOrdered      LabTest[]                   @relation("LabTestDoctor")
+  labTestsDone         LabTest[]                   @relation("LabTestTechnician")
 
   @@unique([hospitalId, email])
   @@index([hospitalId, role])
@@ -446,6 +464,7 @@ model MedicalRecord {
   doctor        User?          @relation("TreatingDoctor", fields: [doctorId], references: [id], onDelete: SetNull)
   reports       DoctorReport[]
   prescriptions Prescription[]
+  labTests      LabTest[]
 
   @@index([hospitalId, doctorId])
 }
@@ -669,6 +688,43 @@ model CleaningRequest {
 
   // A cleaner's board: their departments' open jobs (2.24).
   @@index([hospitalId, departmentId, status])
+}
+
+// ─── Laboratory (task 3.4) ────────────────────────────────────────────────────
+
+// One test a doctor ordered for a patient, from the test list (code). The lab
+// takes it, writes or uploads its result into the patient's file (3.5). Like
+// reports, it stays in the file with the doctor's name if their account goes.
+model LabTest {
+  id             String        @id @default(uuid(7)) @db.Uuid
+  hospitalId     String        @db.Uuid
+  recordId       String        @db.Uuid
+  // A code of LAB_TEST_CODES in @nabd/shared; each client names it in its language.
+  code           String
+  priority       LabPriority   @default(ROUTINE)
+  notes          String?
+  status         LabTestStatus @default(REQUESTED)
+  doctorId       String?       @db.Uuid
+  doctorName     String
+  technicianId   String?       @db.Uuid
+  technicianName String?
+  // The result (3.5): written values and/or an uploaded report file.
+  result         String?
+  resultFile     String?
+  abnormal       Boolean?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  hospital   Hospital      @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  record     MedicalRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  doctor     User?         @relation("LabTestDoctor", fields: [doctorId], references: [id], onDelete: SetNull)
+  technician User?         @relation("LabTestTechnician", fields: [technicianId], references: [id], onDelete: SetNull)
+
+  // The lab board: by status, urgent first, oldest first (3.5).
+  @@index([hospitalId, status, priority, createdAt])
+  @@index([recordId, createdAt])
 }
 
 // ─── Inventory (task 3.1) ─────────────────────────────────────────────────────

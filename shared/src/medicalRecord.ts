@@ -1,3 +1,4 @@
+import type { LabTestView } from './lab.js';
 /**
  * A prescription waits for the pharmacist, then is dispensed or cancelled
  * (tasks 2.6, 3.10). Matches the PrescriptionStatus enum.
@@ -60,4 +61,6 @@ export type PatientFile = {
   };
   reports: DoctorReportView[];
   prescriptions: PrescriptionView[];
+  /** Ordered lab tests and their results (tasks 3.4, 3.5), latest first. */
+  labTests: LabTestView[];
 };

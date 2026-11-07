@@ -2,6 +2,7 @@ import {
   createPrescriptionSchema,
   createReportSchema,
   declineCallSchema,
+  labOrderSchema,
   doctorStatusSchema,
   patientSearchSchema,
 } from '@nabd/shared';
@@ -11,6 +12,7 @@ import { authenticate, requireRole, session } from '../middleware/auth.js';
 import { emitRefresh, rooms } from '../realtime/realtime.js';
 import { getMyStatus, setMyStatus } from '../services/doctor.service.js';
 import { answerCall, listMyCalls } from '../services/doctorCall.service.js';
+import { cancelLabTest, orderLabTests } from '../services/lab.service.js';
 import {
   addPrescription,
   addReport,
@@ -85,6 +87,24 @@ doctorRouter.post(
 );
 
 // Emergency calls: the list, and accepting or declining one (task 2.9).
+// Lab tests (task 3.4): ordered from the file, withdrawn before the lab starts.
+doctorRouter.post('/me/patients/:patientId/lab-tests', requireRole('DOCTOR'), async (req, res) => {
+  const { auth, db } = session(req);
+  const { patientId } = patientParam.parse(req.params);
+  const input = labOrderSchema.parse(req.body);
+  const tests = await orderLabTests(db, auth.hospitalId, auth.userId, patientId, input);
+  refreshFile(auth.userId, patientId);
+  res.status(201).json({ tests });
+});
+
+doctorRouter.delete('/me/lab-tests/:id', requireRole('DOCTOR'), async (req, res) => {
+  const { auth, db } = session(req);
+  const { id } = z.object({ id: z.uuid() }).parse(req.params);
+  const test = await cancelLabTest(db, auth.hospitalId, auth.userId, id);
+  emitRefresh(rooms.user(auth.userId), [['patient-file']]);
+  res.json({ test });
+});
+
 doctorRouter.get('/me/calls', requireRole('DOCTOR'), async (req, res) => {
   const { auth, db } = session(req);
   res.json(await listMyCalls(db, auth.userId));
