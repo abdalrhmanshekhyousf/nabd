@@ -19,3 +19,14 @@ export const labOrderSchema = z.object({
 
 export type LabOrderInput = z.input<typeof labOrderSchema>;
 export type LabOrderData = z.output<typeof labOrderSchema>;
+
+/**
+ * POST /lab/tests/:id/result (task 3.5), sent as a form with an optional file:
+ * the values written out and/or the report file, and whether it is abnormal.
+ */
+export const labResultSchema = z.object({
+  result: optionalText(2000),
+  abnormal: z.enum(['true', 'false'], 'validation.required').transform((value) => value === 'true'),
+});
+
+export type LabResultData = z.output<typeof labResultSchema>;

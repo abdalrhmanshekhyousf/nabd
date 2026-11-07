@@ -13,6 +13,7 @@ import {
   HeartPulse,
   FilePlus2,
   FlaskConical,
+  Paperclip,
   Pill,
   Siren,
   X,
@@ -33,6 +34,7 @@ import { api, describeApiError } from '@/lib/api';
 import { cn } from '@/lib/cn';
 import { calm, enter } from '@/lib/motion';
 import { notify } from '@/lib/notify';
+import { openProtectedFile } from '@/lib/protectedFile';
 
 const PRESCRIPTION_TONE: Record<PrescriptionStatus, StatusTone> = {
   PENDING: 'warning',
@@ -87,6 +89,20 @@ function LabTestRow({ test, patientId }: { test: LabTestView; patientId: string 
         </p>
         {test.result && (
           <p className="mt-1 text-sm whitespace-pre-line text-foreground">{test.result}</p>
+        )}
+        {test.hasResultFile && (
+          <button
+            type="button"
+            onClick={() =>
+              openProtectedFile(`/lab-tests/${test.id}/file`).catch((error: unknown) =>
+                notify.error(describeApiError(error).message),
+              )
+            }
+            className="mt-1 inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:underline"
+          >
+            <Paperclip className="size-4" aria-hidden="true" />
+            {t('labBoard.viewFile')}
+          </button>
         )}
       </div>
       {test.abnormal && <StatusBadge tone="danger">{t('labTests.abnormal')}</StatusBadge>}

@@ -20,5 +20,7 @@ function readable(data: NotificationItem['data']) {
     patient: data.patient ?? i18n.t('patients.anonymous'),
     level: data.level ?? '—',
     complaint: data.complaint ?? '—',
+    // A lab test is sent by its code; the reader sees its name (task 3.5).
+    test: data.code ? i18n.t(`labTests.codes.${data.code}` as never) : '—',
   };
 }

@@ -6,3 +6,14 @@ export const LOGO_MIME_TYPES = ['image/png', 'image/jpeg', 'image/webp'] as cons
 export const LOGO_MAX_BYTES = 2 * 1024 * 1024;
 
 export type LogoMimeType = (typeof LOGO_MIME_TYPES)[number];
+
+/**
+ * Medical reports and results (lab results 3.5, imaging reports 3.8): PDF or
+ * a photo/scan of the paper.
+ */
+export const REPORT_MIME_TYPES = ['application/pdf', 'image/png', 'image/jpeg'] as const;
+export const REPORT_MAX_BYTES = 10 * 1024 * 1024;
+
+export type ReportMimeType = (typeof REPORT_MIME_TYPES)[number];
+/** Any file the server keeps. */
+export type StoredMimeType = LogoMimeType | ReportMimeType;

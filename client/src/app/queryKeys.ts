@@ -30,5 +30,7 @@ export const queryKeys = {
   /** Stock lists (task 3.2), refreshed when any stock moves. */
   inventory: (scope: string, search: string) => ['inventory', scope, search] as const,
   inventoryLog: (itemId: string) => ['inventory', 'log', itemId] as const,
+  /** The lab board (task 3.5); the server refreshes this key. */
+  labBoard: ['lab-tests'] as const,
   publicHospitals: (search: string) => ['public-hospitals', search] as const,
 };

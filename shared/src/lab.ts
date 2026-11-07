@@ -49,3 +49,15 @@ export type LabTestView = {
   startedAt: string | null;
   completedAt: string | null;
 };
+
+/** A test on the lab board (task 3.5): the test, and whose it is. */
+export type LabBoardItem = LabTestView & {
+  patient: {
+    id: string;
+    fullName: string | null;
+    isAnonymous: boolean;
+    gender: 'MALE' | 'FEMALE' | null;
+    dateOfBirth: string | null;
+  };
+  mine: boolean;
+};

@@ -1,4 +1,4 @@
-import { LOGO_MAX_BYTES } from '@nabd/shared';
+import { LOGO_MAX_BYTES, REPORT_MAX_BYTES } from '@nabd/shared';
 import type { RequestHandler } from 'express';
 import multer from 'multer';
 import { HttpError } from './errorHandler.js';
@@ -30,5 +30,28 @@ export const logoUpload: RequestHandler = (req, res, next) => {
       return;
     }
     next();
+  });
+};
+
+const reportParser = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: REPORT_MAX_BYTES, files: 1 },
+}).single('file');
+
+/**
+ * An optional "file" field for a medical report or result (task 3.5): the
+ * form may carry only written values.
+ */
+export const optionalReportUpload: RequestHandler = (req, res, next) => {
+  reportParser(req, res, (error: unknown) => {
+    if (error instanceof multer.MulterError) {
+      next(
+        error.code === 'LIMIT_FILE_SIZE'
+          ? new HttpError(413, 'FILE_TOO_LARGE', error.message)
+          : new HttpError(400, 'VALIDATION_ERROR', error.message),
+      );
+      return;
+    }
+    next(error ?? undefined);
   });
 };
