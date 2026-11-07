@@ -2,6 +2,7 @@ import { isLowStock, isOverdue } from '@nabd/shared';
 import { afterAll, describe, expect, it } from 'vitest';
 import { seedDemo } from '../prisma/demo.js';
 import { LAB, PHARMACY, RADIOLOGY } from '../prisma/inventoryCatalog.js';
+import { sampleOf } from '../prisma/seedInventory.js';
 import { prisma } from '../src/lib/prisma.js';
 import { forHospital } from '../src/lib/scopedPrisma.js';
 import { getQueue } from '../src/services/er.service.js';
@@ -21,7 +22,7 @@ afterAll(async () => {
 
 describe('the demo seed (task 2.27)', () => {
   it('fills the hospital with teams and a lively ER and operating rooms, once', async () => {
-    const first = await seedDemo(details);
+    const first = await seedDemo(details, { sampleStock: true });
     hospitalId = first.hospital.id;
     expect(first.activity).toBe(true);
 
@@ -103,13 +104,13 @@ describe('the demo seed (task 2.27)', () => {
         prisma.stockMovement.count({ where: { hospitalId } }),
       ]);
     const before = await count();
-    const again = await seedDemo(details);
+    const again = await seedDemo(details, { sampleStock: true });
     expect(again).toMatchObject({ activity: false, stock: false, hospital: { id: hospitalId } });
     expect(await count()).toEqual(before);
-    // Seeding 225 stock items through the service takes a while.
-  }, 120_000);
+    // The whole team and the activity go through the services.
+  }, 60_000);
 
-  it('stocks the pharmacy, the lab and imaging in full, a few already running low (task 3.2)', async () => {
+  it('stocks the pharmacy, the lab and imaging (a sample here), a few already running low (task 3.2)', async () => {
     expect(hospitalId).not.toBe('');
     for (const [category, lines] of [
       ['DRUG', PHARMACY],
@@ -117,10 +118,10 @@ describe('the demo seed (task 2.27)', () => {
       ['RADIOLOGY', RADIOLOGY],
     ] as const) {
       const items = await prisma.inventoryItem.findMany({ where: { hospitalId, category } });
-      expect(items).toHaveLength(lines.length);
+      expect(items).toHaveLength(sampleOf(lines).length);
       const low = items.filter((item) => isLowStock(item)).length;
       expect(low).toBeGreaterThan(0);
-      expect(low).toBeLessThan(items.length / 5);
+      expect(low).toBeLessThan(items.length);
     }
     // Every item opened with its stock as a movement by its keeper, plus a day's work.
     const saline = await prisma.inventoryItem.findFirstOrThrow({
@@ -137,5 +138,18 @@ describe('the demo seed (task 2.27)', () => {
     expect(
       await prisma.inventoryItem.count({ where: { hospitalId, category: 'DRUG', quantity: 0 } }),
     ).toBe(0);
+  });
+});
+
+describe('the stock catalog (task 3.2)', () => {
+  it('names each line once per list, and starts only a few low', () => {
+    for (const lines of [PHARMACY, LAB, RADIOLOGY]) {
+      const names = lines.map(([name]) => name);
+      expect(new Set(names).size).toBe(names.length);
+      const low = lines.filter(([, , quantity, min]) => quantity <= min).length;
+      expect(low).toBeGreaterThan(0);
+      expect(low).toBeLessThan(lines.length / 5);
+    }
+    expect(PHARMACY.length + LAB.length + RADIOLOGY.length).toBe(225);
   });
 });

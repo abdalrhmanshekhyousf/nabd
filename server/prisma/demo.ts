@@ -108,7 +108,10 @@ async function seedEmergencyNurse(hospitalId: string) {
 }
 
 /** Creates or completes the demo hospital; a test passes its own hospital details. */
-export async function seedDemo(details: typeof DEMO_HOSPITAL = DEMO_HOSPITAL) {
+export async function seedDemo(
+  details: typeof DEMO_HOSPITAL = DEMO_HOSPITAL,
+  { sampleStock = false } = {},
+) {
   const hospital =
     (await prisma.hospital.findFirst({ where: { name: details.name } })) ??
     (await prisma.hospital.create({ data: details }));
@@ -152,6 +155,6 @@ export async function seedDemo(details: typeof DEMO_HOSPITAL = DEMO_HOSPITAL) {
   await seedEmergencyNurse(hospitalId);
   await seedMedicalFile(hospitalId);
   const activity = await seedPhaseTwo(hospitalId, passwordHash);
-  const stock = await seedInventory(hospitalId);
+  const stock = await seedInventory(hospitalId, { sample: sampleStock });
   return { hospital, activity, stock };
 }

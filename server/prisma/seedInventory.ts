@@ -26,14 +26,25 @@ const DAY: Record<string, { kind: 'USE' | 'RESTOCK'; amount: number; reason: str
   'أفلام أشعة 35×43 سم': [{ kind: 'USE', amount: 35, reason: 'صور صدر' }],
 };
 
-export async function seedInventory(hospitalId: string) {
+/**
+ * A test's share of a list: its first lines, every low one and every one with
+ * a day's work, so the checks still see each case without the whole catalog.
+ */
+export function sampleOf(lines: CatalogLine[]) {
+  return lines.filter(
+    ([name, , quantity, min], index) => index < 5 || quantity <= min || name in DAY,
+  );
+}
+
+/** The stock, once. `sample` seeds only each list's sample (fast, for tests). */
+export async function seedInventory(hospitalId: string, { sample = false } = {}) {
   if ((await prisma.inventoryItem.count({ where: { hospitalId } })) > 0) return false;
   const db = forHospital(hospitalId);
   for (const { category, keeper, lines } of STOCK) {
     const user = await prisma.user.findUniqueOrThrow({
       where: { hospitalId_email: { hospitalId, email: keeper } },
     });
-    for (const [name, unit, quantity, minQuantity] of lines) {
+    for (const [name, unit, quantity, minQuantity] of sample ? sampleOf(lines) : lines) {
       const item = await createItem(db, hospitalId, user.id, category, {
         name,
         unit,
