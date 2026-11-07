@@ -7,9 +7,9 @@ import {
   type LabPriority,
   type RadiologyModality,
 } from '@nabd/shared';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ScanLine, Siren } from 'lucide-react';
+import { ScanLine, Siren, UserX } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { queryKeys } from '@/app/queryKeys';
@@ -29,6 +29,13 @@ function ImagingOrderForm({ patientId, onDone }: { patientId: string; onDone: ()
   const [reason, setReason] = useState('');
   const [priority, setPriority] = useState<LabPriority>('ROUTINE');
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
+  // Types with nobody to do them now are flagged (task 3.7); ordering stays possible.
+  const { data: staffed } = useQuery({
+    queryKey: queryKeys.imagingStaffed,
+    queryFn: async () =>
+      (await api.get<{ modalities: RadiologyModality[] }>('/imaging/staffed')).data.modalities,
+  });
+  const unstaffed = (value: RadiologyModality) => staffed !== undefined && !staffed.includes(value);
 
   const send = useMutation({
     mutationFn: async () =>
@@ -105,11 +112,31 @@ function ImagingOrderForm({ patientId, onDone }: { patientId: string; onDone: ()
                   className={cn('size-4', chosen ? 'text-accent' : 'text-muted')}
                   aria-hidden="true"
                 />
-                {t(`modalities.${value}`)}
+                <span className="min-w-0 flex-1 text-start">{t(`modalities.${value}`)}</span>
+                {unstaffed(value) && (
+                  <UserX
+                    className="size-3.5 shrink-0 text-warning"
+                    aria-label={t('imaging.noStaff')}
+                  />
+                )}
               </motion.button>
             );
           })}
         </div>
+        <AnimatePresence initial={false}>
+          {unstaffed(modality) && (
+            <motion.p
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={calm}
+              role="status"
+              className="overflow-hidden rounded-lg bg-warning/10 px-3 py-2 text-sm text-foreground"
+            >
+              {t('imaging.noStaffHint', { modality: t(`modalities.${modality}`) })}
+            </motion.p>
+          )}
+        </AnimatePresence>
       </fieldset>
 
       <div className="space-y-2">

@@ -15,6 +15,7 @@ import { bedRouter, roomRouter } from './routes/room.routes.js';
 import { assignmentRouter } from './routes/assignment.routes.js';
 import { bookingRouter } from './routes/booking.routes.js';
 import { cleaningRouter } from './routes/cleaning.routes.js';
+import { imagingRouter } from './routes/imaging.routes.js';
 import { inventoryRouter } from './routes/inventory.routes.js';
 import { labRouter } from './routes/lab.routes.js';
 import { devRouter } from './routes/dev.routes.js';
@@ -56,6 +57,7 @@ export function createApp() {
   app.use('/api/cleaning-requests', cleaningRouter);
   app.use('/api/inventory', inventoryRouter);
   app.use('/api/lab-tests', labRouter);
+  app.use('/api/imaging', imagingRouter);
   if (!env.isProduction) app.use('/api/dev', devRouter);
 
   app.use(notFound);

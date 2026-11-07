@@ -13,7 +13,7 @@ import {
   type DepartmentCode,
   type TriageInput,
 } from '@nabd/shared';
-import type { DoctorStatus, Role } from '../src/generated/prisma/enums.js';
+import type { DoctorStatus, RadiologyModality, Role } from '../src/generated/prisma/enums.js';
 import { prisma } from '../src/lib/prisma.js';
 import { forHospital } from '../src/lib/scopedPrisma.js';
 import { createBooking, createEmergencyBooking } from '../src/services/booking.service.js';
@@ -31,6 +31,8 @@ type Person = {
   /** Doctors only. */
   specialty?: string;
   status?: DoctorStatus;
+  /** Radiologists handle one imaging type (task 3.7). */
+  modality?: RadiologyModality;
   /** Cleaners cover several departments. */
   covers?: DepartmentCode[];
 };
@@ -186,6 +188,16 @@ function buildTeam(): Person[] {
       });
     }
   }
+  // One radiologist per imaging type; radiology@nabd.demo already does X-ray.
+  for (const modality of ['CT', 'MRI', 'ECHO', 'ENDOSCOPY', 'PANORAMIC'] as const) {
+    team.push({
+      role: 'RADIOLOGIST',
+      email: `rad.${modality.toLowerCase()}@nabd.demo`,
+      fullName: name(modality === 'ECHO'),
+      department: 'RADIOLOGY',
+      modality,
+    });
+  }
   for (const { code, slug } of [...CLINICAL, ...SUPPORT]) {
     // cleaner@nabd.demo is the first cleaner of the operating rooms and the ER.
     const first = code === 'OPERATIONS' || code === 'EMERGENCY' ? 2 : 1;
@@ -239,6 +251,7 @@ async function seedTeams(hospitalId: string, passwordHash: string) {
             hospitalId,
             // A cleaner's departments are their assignments, not one department.
             departmentId: person.role === 'CLEANER' ? null : dept(person.department),
+            radiologyModality: person.modality ?? null,
           },
         },
         ...(person.role === 'DOCTOR' && {

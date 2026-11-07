@@ -35,3 +35,15 @@ export type ImagingView = {
   startedAt: string | null;
   completedAt: string | null;
 };
+
+/** A study on a radiologist's board (tasks 3.7, 3.8): the study, and whose it is. */
+export type ImagingBoardItem = ImagingView & {
+  patient: {
+    id: string;
+    fullName: string | null;
+    isAnonymous: boolean;
+    gender: 'MALE' | 'FEMALE' | null;
+    dateOfBirth: string | null;
+  };
+  mine: boolean;
+};

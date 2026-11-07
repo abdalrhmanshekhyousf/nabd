@@ -267,6 +267,9 @@ export const en: Translation = {
     modality: 'Type',
     bodyPart: 'Body part',
     bodyPartPlaceholder: 'Pick a suggestion or type',
+    noStaff: 'Nobody for this type now',
+    noStaffHint:
+      'There is no {{modality}} radiologist right now. You can still order; it will wait until the admin assigns one.',
     reason: 'Clinical question (optional)',
     reasonPlaceholder: 'e.g. chest pain with shortness of breath, rule out pneumonia',
     send: 'Send to radiology',

@@ -172,6 +172,8 @@ beforeEach(() => {
       file.labTests.unshift(...tests);
       return { status: 201, data: { tests } };
     }
+    if (config.url === '/imaging/staffed')
+      return { status: 200, data: { modalities: ['XRAY', 'ECHO'] } };
     if (config.method === 'post' && config.url === `/doctors/me/patients/${SARA}/imaging`) {
       const body = JSON.parse(config.data as string);
       const study = {
@@ -413,7 +415,12 @@ describe('writing in the file', () => {
     await user.click(within(dialog).getByRole('button', { name: 'إرسال للأشعة' }));
     expect(await within(dialog).findByText('هالحقل مطلوب')).toBeInTheDocument();
 
-    await user.click(within(dialog).getByRole('radio', { name: 'طبقي محوري' }));
+    expect(within(dialog).queryByRole('status')).toBeNull();
+    await user.click(within(dialog).getByRole('radio', { name: /طبقي محوري/ }));
+    // Nobody does CT right now: said, but ordering is still allowed (task 3.7).
+    expect(await within(dialog).findByRole('status')).toHaveTextContent(
+      'ما في فني طبقي محوري بالمستشفى هلق',
+    );
     // The suggestions follow the type.
     expect(within(dialog).queryByRole('button', { name: 'صدر' })).toBeInTheDocument();
     expect(within(dialog).queryByRole('button', { name: 'ركبة' })).toBeNull();

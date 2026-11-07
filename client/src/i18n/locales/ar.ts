@@ -265,6 +265,9 @@ export const ar = {
     modality: 'النوع',
     bodyPart: 'المنطقة',
     bodyPartPlaceholder: 'اختار من الاقتراحات أو اكتب',
+    noStaff: 'ما في فني لهالنوع هلق',
+    noStaffHint:
+      'ما في فني {{modality}} بالمستشفى هلق. فيك تطلب، والطلب رح يستنى لحتى المدير يعيّن واحد.',
     reason: 'السؤال السريري (اختياري)',
     reasonPlaceholder: 'مثلاً: ألم صدري مع ضيق نفس، نفي ذات رئة',
     send: 'إرسال للأشعة',

@@ -60,6 +60,20 @@ describe('the demo seed (task 2.27)', () => {
       });
     }
 
+    // Every imaging type has its radiologist (task 3.7).
+    const radiologists = await prisma.staffProfile.findMany({
+      where: { hospitalId, user: { role: 'RADIOLOGIST' } },
+      select: { radiologyModality: true },
+    });
+    expect(radiologists.map((r) => r.radiologyModality).sort()).toEqual([
+      'CT',
+      'ECHO',
+      'ENDOSCOPY',
+      'MRI',
+      'PANORAMIC',
+      'XRAY',
+    ]);
+
     // One not assessed yet (on top, to assess first), then every level, the urgent ones late.
     const queue = await getQueue(forHospital(hospitalId));
     expect(queue.map((v) => v.level)).toEqual([null, 1, 2, 3, 4, 5]);
@@ -90,6 +104,8 @@ describe('the demo seed (task 2.27)', () => {
     expect(types.map((t) => t.type).sort()).toEqual([
       'CLEANING_REQUEST',
       'DOCTOR_CALL',
+      // Several radiologists now: items added already short alert the others.
+      'LOW_STOCK',
       'OPERATION_ENDED',
     ]);
 

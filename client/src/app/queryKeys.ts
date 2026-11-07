@@ -32,5 +32,8 @@ export const queryKeys = {
   inventoryLog: (itemId: string) => ['inventory', 'log', itemId] as const,
   /** The lab board (task 3.5); the server refreshes this key. */
   labBoard: ['lab-tests'] as const,
+  /** Radiology (tasks 3.7, 3.8); the server refreshes ['imaging'] for each type's radiologists. */
+  imagingBoard: ['imaging', 'board'] as const,
+  imagingStaffed: ['imaging', 'staffed'] as const,
   publicHospitals: (search: string) => ['public-hospitals', search] as const,
 };

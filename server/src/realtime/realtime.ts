@@ -3,7 +3,7 @@ import { REALTIME_EVENTS, type RefreshPayload } from '@nabd/shared';
 import jwt from 'jsonwebtoken';
 import { Server } from 'socket.io';
 import { env } from '../config/env.js';
-import type { Role } from '../generated/prisma/enums.js';
+import type { Role, RadiologyModality } from '../generated/prisma/enums.js';
 import { prisma } from '../lib/prisma.js';
 import { verifyAccessToken } from '../lib/tokens.js';
 
@@ -18,9 +18,18 @@ export const rooms = {
   user: (userId: string) => `user:${userId}`,
   role: (hospitalId: string, role: Role) => `role:${hospitalId}:${role}`,
   department: (departmentId: string) => `department:${departmentId}`,
+  /** The radiologists of one imaging type (task 3.7). */
+  modality: (hospitalId: string, modality: RadiologyModality) =>
+    `modality:${hospitalId}:${modality}`,
 };
 
-type SocketUser = { id: string; hospitalId: string; role: Role; departmentIds: string[] };
+type SocketUser = {
+  id: string;
+  hospitalId: string;
+  role: Role;
+  departmentIds: string[];
+  modality: RadiologyModality | null;
+};
 
 /** Who is on the other end, read fresh from the database (not just the token). */
 async function loadUser(userId: string): Promise<SocketUser | null> {
@@ -31,7 +40,7 @@ async function loadUser(userId: string): Promise<SocketUser | null> {
       hospitalId: true,
       role: true,
       isActive: true,
-      staffProfile: { select: { departmentId: true } },
+      staffProfile: { select: { departmentId: true, radiologyModality: true } },
       cleanerAssignments: { select: { departmentId: true } },
     },
   });
@@ -43,6 +52,7 @@ async function loadUser(userId: string): Promise<SocketUser | null> {
     hospitalId: user.hospitalId,
     role: user.role,
     departmentIds: [...departmentIds],
+    modality: user.role === 'RADIOLOGIST' ? (user.staffProfile?.radiologyModality ?? null) : null,
   };
 }
 
@@ -52,6 +62,7 @@ function roomsOf(user: SocketUser) {
     rooms.user(user.id),
     rooms.role(user.hospitalId, user.role),
     ...user.departmentIds.map(rooms.department),
+    ...(user.modality ? [rooms.modality(user.hospitalId, user.modality)] : []),
   ];
 }
 
