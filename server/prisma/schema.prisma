@@ -260,6 +260,7 @@ model Hospital {
   labTests           LabTest[]
   radiologyImages    RadiologyImage[]
   reports            Report[]
+  consultations      Consultation[]
 }
 
 model Department {
@@ -380,6 +381,8 @@ model User {
   imagingOrdered         RadiologyImage[]            @relation("ImagingDoctor")
   imagingDone            RadiologyImage[]            @relation("ImagingRadiologist")
   reportsWritten         Report[]                    @relation("ReportAuthor")
+  consultationsAsked     Consultation[]              @relation("ConsultationRequester")
+  consultationsGiven     Consultation[]              @relation("ConsultationConsultant")
 
   @@unique([hospitalId, email])
   @@index([hospitalId, role])
@@ -489,6 +492,7 @@ model MedicalRecord {
   prescriptions Prescription[]
   labTests      LabTest[]
   imaging       RadiologyImage[]
+  consultations Consultation[]
 
   @@index([hospitalId, doctorId])
 }
@@ -847,6 +851,42 @@ model StockMovement {
 
   @@index([itemId, createdAt])
   @@index([hospitalId, createdAt])
+}
+
+// ─── Consultations (tasks 3.12–3.14) ─────────────────────────────────────────
+
+// Matches CONSULTATION_STATUSES in @nabd/shared.
+enum ConsultationStatus {
+  PENDING
+  ANSWERED
+  CANCELLED
+}
+
+// The treating doctor shares a patient's file with another doctor and asks a
+// question. The consultant reads the file only while it is open (3.13) and
+// answers with a report or an order that joins the file (3.14). Names are kept
+// so the history survives removed accounts.
+model Consultation {
+  id             String             @id @default(uuid(7)) @db.Uuid
+  hospitalId     String             @db.Uuid
+  recordId       String             @db.Uuid
+  requesterId    String?            @db.Uuid
+  requesterName  String
+  consultantId   String?            @db.Uuid
+  consultantName String
+  question       String
+  status         ConsultationStatus @default(PENDING)
+  reply          String?
+  answeredAt     DateTime?
+  createdAt      DateTime           @default(now())
+
+  hospital   Hospital      @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  record     MedicalRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  requester  User?         @relation("ConsultationRequester", fields: [requesterId], references: [id], onDelete: SetNull)
+  consultant User?         @relation("ConsultationConsultant", fields: [consultantId], references: [id], onDelete: SetNull)
+
+  @@index([hospitalId, consultantId, status])
+  @@index([recordId])
 }
 
 // ─── Department reports (task 3.11) ───────────────────────────────────────────

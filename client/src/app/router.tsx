@@ -30,6 +30,7 @@ import { NurseCleaningPage } from '@/pages/nurse/NurseCleaningPage';
 import { OrBoardPage } from '@/pages/nurse/OrBoardPage';
 import { CleanerTasksPage } from '@/pages/cleaner/CleanerTasksPage';
 import { PatientFilePage } from '@/pages/doctor/PatientFilePage';
+import { ConsultationsPage } from '@/pages/doctor/ConsultationsPage';
 import { ErQueuePage } from '@/pages/nurse/ErQueuePage';
 import { NewCasePage } from '@/pages/nurse/NewCasePage';
 import { TriagePage } from '@/pages/nurse/TriagePage';
@@ -62,6 +63,7 @@ export const BUILT_PAGES: Partial<Record<`${Role}:${string}`, ReactElement>> = {
   'DOCTOR:calls': <DoctorCallsPage />,
   'DOCTOR:or-bookings': <OrBookingsPage />,
   'DOCTOR:or-live': <OrLivePage />,
+  'DOCTOR:consultations': <ConsultationsPage />,
   'NURSE:emergency': <ErQueuePage />,
   'NURSE:operating-rooms': <OrBoardPage />,
   'NURSE:cleaning': <NurseCleaningPage />,

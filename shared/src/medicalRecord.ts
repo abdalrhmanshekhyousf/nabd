@@ -1,3 +1,4 @@
+import type { ConsultationView } from './consultations.js';
 import type { ImagingView } from './imaging.js';
 import type { LabTestView } from './lab.js';
 /**
@@ -70,4 +71,6 @@ export type PatientFile = {
   labTests: LabTestView[];
   /** Ordered imaging studies and their reports (tasks 3.6–3.9), latest first. */
   imaging: ImagingView[];
+  /** Colleagues asked about this patient (task 3.12), latest first. */
+  consultations: ConsultationView[];
 };

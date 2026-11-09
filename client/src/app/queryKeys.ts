@@ -41,5 +41,8 @@ export const queryKeys = {
   reports: ['reports'] as const,
   reportPreview: (from: string, to: string) => ['reports', 'preview', from, to] as const,
   report: (id: string) => ['reports', 'one', id] as const,
+  /** The doctor's consultations (task 3.12); the server refreshes ['consultations']. */
+  consultations: ['consultations'] as const,
+  colleagues: ['doctors', 'colleagues'] as const,
   publicHospitals: (search: string) => ['public-hospitals', search] as const,
 };

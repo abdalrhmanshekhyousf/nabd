@@ -1,4 +1,5 @@
 import type {
+  ConsultationView,
   ImagingView,
   LabTestStatus,
   LabTestView,
@@ -16,6 +17,7 @@ import {
   FlaskConical,
   Paperclip,
   Images,
+  MessagesSquare,
   Pill,
   ScanLine,
   Siren,
@@ -27,6 +29,8 @@ import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 import { queryKeys } from '@/app/queryKeys';
+import { ConsultationCard } from '@/components/consultations/ConsultationCard';
+import { ConsultationDialog } from '@/components/patients/ConsultationDialog';
 import { ImagingOrderDialog } from '@/components/patients/ImagingOrderDialog';
 import { ImagingViewer } from '@/components/patients/ImagingViewer';
 import { LabOrderDialog } from '@/components/patients/LabOrderDialog';
@@ -54,6 +58,42 @@ const LAB_TONE: Record<LabTestStatus, StatusTone> = {
   DONE: 'success',
   CANCELLED: 'neutral',
 };
+
+/** A question to a colleague about this patient; withdrawable until answered (task 3.12). */
+function ConsultationItem({
+  consultation,
+  patientId,
+}: {
+  consultation: ConsultationView;
+  patientId: string;
+}) {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const withdraw = useMutation({
+    mutationFn: () => api.delete(`/doctors/me/consultations/${consultation.id}`),
+    onSuccess: () => notify.success(t('consultations.withdrawn')),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: queryKeys.patientFile(patientId) }),
+  });
+  return (
+    <ConsultationCard
+      consultation={consultation}
+      action={
+        consultation.status === 'PENDING' && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-muted hover:bg-danger/10 hover:text-danger"
+            icon={<X className="size-4" />}
+            loading={withdraw.isPending}
+            onClick={() => withdraw.mutate()}
+          >
+            {t('consultations.withdraw')}
+          </Button>
+        )
+      }
+    />
+  );
+}
 
 /** One ordered test: what, its state, who ordered it and when; the result once ready. */
 function LabTestRow({ test, patientId }: { test: LabTestView; patientId: string }) {
@@ -330,7 +370,9 @@ function PrescriptionCard({ prescription }: { prescription: PrescriptionView }) 
 export function PatientFilePage() {
   const { t, i18n } = useTranslation();
   const { patientId = '' } = useParams();
-  const [dialog, setDialog] = useState<'report' | 'prescription' | 'lab' | 'imaging' | null>(null);
+  const [dialog, setDialog] = useState<
+    'report' | 'prescription' | 'lab' | 'imaging' | 'consultation' | null
+  >(null);
   const { data, isPending, error } = useQuery({
     queryKey: queryKeys.patientFile(patientId),
     queryFn: async () =>
@@ -374,7 +416,7 @@ export function PatientFilePage() {
     );
   }
 
-  const { patient, record, reports, prescriptions, labTests, imaging } = data;
+  const { patient, record, reports, prescriptions, labTests, imaging, consultations } = data;
   const details = [
     [t('patients.bloodType'), patient.bloodType],
     [t('patients.phone'), patient.phone],
@@ -443,7 +485,7 @@ export function PatientFilePage() {
         )}
       </motion.div>
 
-      <motion.div {...enter(2)} className="flex flex-col gap-2 sm:flex-row">
+      <motion.div {...enter(2)} className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         <Button icon={<FilePlus2 className="size-4" />} onClick={() => setDialog('report')}>
           {t('patients.writeReport')}
         </Button>
@@ -468,6 +510,13 @@ export function PatientFilePage() {
         >
           {t('imaging.order')}
         </Button>
+        <Button
+          variant="outline"
+          icon={<MessagesSquare className="size-4" />}
+          onClick={() => setDialog('consultation')}
+        >
+          {t('consultations.ask')}
+        </Button>
       </motion.div>
 
       <ReportDialog
@@ -485,6 +534,12 @@ export function PatientFilePage() {
       />
       <ImagingOrderDialog
         open={dialog === 'imaging'}
+        onClose={() => setDialog(null)}
+        patientId={patientId}
+        patientName={patientName(patient, t)}
+      />
+      <ConsultationDialog
+        open={dialog === 'consultation'}
         onClose={() => setDialog(null)}
         patientId={patientId}
         patientName={patientName(patient, t)}
@@ -535,6 +590,24 @@ export function PatientFilePage() {
           </ol>
         )}
       </Section>
+
+      {consultations.length > 0 && (
+        <Section icon={<MessagesSquare />} title={t('consultations.title')} index={4}>
+          <Card className="overflow-hidden">
+            <ul className="divide-y divide-border">
+              <AnimatePresence initial={false}>
+                {consultations.map((consultation) => (
+                  <ConsultationItem
+                    key={consultation.id}
+                    consultation={consultation}
+                    patientId={patientId}
+                  />
+                ))}
+              </AnimatePresence>
+            </ul>
+          </Card>
+        </Section>
+      )}
 
       <Section icon={<FlaskConical />} title={t('labTests.title')} index={4}>
         {labTests.length === 0 ? (

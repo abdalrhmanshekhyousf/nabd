@@ -90,6 +90,7 @@ const FILE: PatientFile = {
   ],
   labTests: [],
   imaging: [],
+  consultations: [],
   prescriptions: [
     {
       id: 'p1',
@@ -113,6 +114,8 @@ const FILE: PatientFile = {
     },
   ],
 };
+
+const LINA = '0199a3d2-6c55-7000-8000-00000000000a';
 
 let file: PatientFile;
 
@@ -199,6 +202,57 @@ beforeEach(() => {
       };
       file.imaging.unshift(study);
       return { status: 201, data: { study } };
+    }
+    if (config.url === '/doctors/me/colleagues') {
+      return {
+        status: 200,
+        data: {
+          doctors: [
+            {
+              id: LINA,
+              fullName: 'د. لينا حداد',
+              specialty: 'قلبية',
+              status: 'BUSY',
+              department: { id: 'dc', name: 'Cardio', code: 'CARDIOLOGY' },
+            },
+            {
+              id: 'd3',
+              fullName: 'د. باسل',
+              specialty: 'عظمية',
+              status: 'AVAILABLE',
+              department: null,
+            },
+          ],
+        },
+      };
+    }
+    if (config.method === 'post' && config.url === `/doctors/me/patients/${SARA}/consultations`) {
+      const body = JSON.parse(config.data as string);
+      const consultation = {
+        id: 'c1',
+        status: 'PENDING' as const,
+        question: body.question,
+        reply: null,
+        requesterId: 'u1',
+        requesterName: 'د. ريم العلي',
+        consultantId: body.consultantId,
+        consultantName: 'د. لينا حداد',
+        createdAt: new Date().toISOString(),
+        answeredAt: null,
+        patient: {
+          patientId: SARA,
+          fullName: 'سارة الأحمد',
+          isAnonymous: false,
+          gender: 'FEMALE' as const,
+          dateOfBirth: null,
+        },
+      };
+      file.consultations.unshift(consultation);
+      return { status: 201, data: { consultation } };
+    }
+    if (config.method === 'delete' && config.url === '/doctors/me/consultations/c1') {
+      file.consultations[0].status = 'CANCELLED';
+      return { status: 200, data: { consultation: file.consultations[0] } };
     }
     if (config.method === 'delete' && config.url === '/doctors/me/imaging/img1') {
       file.imaging[0].status = 'CANCELLED';
@@ -453,5 +507,38 @@ describe('writing in the file', () => {
     await user.click(within(row).getByRole('button', { name: 'سحب الطلب' }));
     expect(await screen.findByText('انسحب طلب طبقي محوري · رأس')).toBeInTheDocument();
     expect(await within(section).findByText('منسحب')).toBeInTheDocument();
+  });
+
+  it('asks a colleague about the patient, then withdraws it (task 3.12)', async () => {
+    const user = await openFile();
+    expect(screen.queryByRole('region', { name: 'الاستشارات' })).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'طلب استشارة' }));
+    const dialog = await screen.findByRole('dialog', { name: 'استشارة عن سارة الأحمد' });
+    await user.click(within(dialog).getByRole('button', { name: 'إرسال الاستشارة' }));
+    expect(await within(dialog).findByText('اختار طبيب.')).toBeInTheDocument();
+
+    await user.type(within(dialog).getByLabelText('ابحث بالاسم أو الاختصاص أو القسم'), 'قلب');
+    expect(within(dialog).queryByRole('radio', { name: /باسل/ })).toBeNull();
+    const lina = within(dialog).getByRole('radio', { name: /د. لينا حداد/ });
+    expect(lina).toHaveTextContent('قلبية');
+    expect(lina).toHaveTextContent('مشغول');
+    await user.click(lina);
+    expect(lina).toHaveAttribute('aria-checked', 'true');
+    await user.type(within(dialog).getByLabelText(/سؤالك/), 'تخطيط القلب فيه تغيرات');
+    await user.click(within(dialog).getByRole('button', { name: 'إرسال الاستشارة' }));
+
+    expect(await screen.findByText('وصلت الاستشارة لـ د. لينا حداد')).toBeInTheDocument();
+    expect(posted('/consultations')).toEqual({
+      consultantId: LINA,
+      question: 'تخطيط القلب فيه تغيرات',
+    });
+    const section = await screen.findByRole('region', { name: 'الاستشارات' });
+    const row = within(section).getByLabelText('د. ريم العلي ← د. لينا حداد');
+    expect(row).toHaveTextContent('ناطرة رد');
+    expect(row).toHaveTextContent('تخطيط القلب فيه تغيرات');
+
+    await user.click(within(row).getByRole('button', { name: 'سحب' }));
+    expect(await screen.findByText('انسحبت الاستشارة')).toBeInTheDocument();
+    expect(await within(section).findByText('مسحوبة')).toBeInTheDocument();
   });
 });

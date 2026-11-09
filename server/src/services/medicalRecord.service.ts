@@ -8,6 +8,7 @@ import type {
 } from '@nabd/shared';
 import type { ScopedPrisma } from '../lib/scopedPrisma.js';
 import { HttpError } from '../middleware/errorHandler.js';
+import { consultationInclude, toConsultationView } from './consultation.service.js';
 import { toImagingView } from './imaging.service.js';
 import { toPrescriptionView } from './pharmacy.service.js';
 import { toLabView } from './lab.service.js';
@@ -75,6 +76,7 @@ export async function getPatientFile(
       prescriptions: { orderBy: { createdAt: 'desc' }, include: { items: true } },
       labTests: { orderBy: { createdAt: 'desc' } },
       imaging: { orderBy: { createdAt: 'desc' } },
+      consultations: { orderBy: { createdAt: 'desc' }, include: consultationInclude },
     },
   });
   if (!record) throw new HttpError(404, 'NOT_FOUND', 'Patient not found');
@@ -110,6 +112,7 @@ export async function getPatientFile(
       createdAt: report.createdAt.toISOString(),
     })),
     prescriptions: record.prescriptions.map(toPrescriptionView),
+    consultations: record.consultations.map(toConsultationView),
   };
 }
 

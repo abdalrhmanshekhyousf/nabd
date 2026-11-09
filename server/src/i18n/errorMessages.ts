@@ -88,6 +88,14 @@ const MESSAGES: Record<ErrorCode, Record<Language, string>> = {
     ar: 'في مادة بنفس الاسم بالمخزون',
     en: 'An item with this name is already in stock',
   },
+  INVALID_CONSULTANT: {
+    ar: 'اختار طبيب تاني من المستشفى',
+    en: 'Choose another doctor of this hospital',
+  },
+  ALREADY_PENDING: {
+    ar: 'هالطبيب عندو سؤال مفتوح عن هالمريض',
+    en: 'This doctor already has an open question about this patient',
+  },
   OUT_OF_STOCK: {
     ar: 'الكمية بالمخزون ما بتكفي',
     en: 'Not enough in stock',

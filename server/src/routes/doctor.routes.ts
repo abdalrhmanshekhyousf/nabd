@@ -1,4 +1,5 @@
 import {
+  createConsultationSchema,
   createPrescriptionSchema,
   createReportSchema,
   declineCallSchema,
@@ -11,7 +12,13 @@ import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import { authenticate, requireRole, session } from '../middleware/auth.js';
 import { emitRefresh, rooms } from '../realtime/realtime.js';
+import {
+  cancelConsultation,
+  listConsultations,
+  requestConsultation,
+} from '../services/consultation.service.js';
 import { getMyStatus, setMyStatus } from '../services/doctor.service.js';
+import { listDoctors } from '../services/er.service.js';
 import { answerCall, listMyCalls } from '../services/doctorCall.service.js';
 import { cancelImaging, orderImaging } from '../services/imaging.service.js';
 import { cancelLabTest, orderLabTests } from '../services/lab.service.js';
@@ -123,6 +130,47 @@ doctorRouter.delete('/me/imaging/:id', requireRole('DOCTOR'), async (req, res) =
   const study = await cancelImaging(db, auth.hospitalId, auth.userId, id);
   emitRefresh(rooms.user(auth.userId), [['patient-file']]);
   res.json({ study });
+});
+
+// Consultations (task 3.12): asking a colleague about my patient, withdrawing
+// an open question, and the lists of questions asked and received.
+doctorRouter.get('/me/colleagues', requireRole('DOCTOR'), async (req, res) => {
+  const { auth, db } = session(req);
+  const doctors = await listDoctors(db);
+  res.json({ doctors: doctors.filter((doctor) => doctor.id !== auth.userId) });
+});
+
+doctorRouter.post(
+  '/me/patients/:patientId/consultations',
+  requireRole('DOCTOR'),
+  async (req, res) => {
+    const { auth, db } = session(req);
+    const { patientId } = patientParam.parse(req.params);
+    const input = createConsultationSchema.parse(req.body);
+    const consultation = await requestConsultation(
+      db,
+      auth.hospitalId,
+      auth.userId,
+      patientId,
+      input,
+    );
+    refreshFile(auth.userId, patientId);
+    emitRefresh(rooms.user(auth.userId), [['consultations']]);
+    res.status(201).json({ consultation });
+  },
+);
+
+doctorRouter.delete('/me/consultations/:id', requireRole('DOCTOR'), async (req, res) => {
+  const { auth, db } = session(req);
+  const { id } = z.object({ id: z.uuid() }).parse(req.params);
+  const consultation = await cancelConsultation(db, auth.userId, id);
+  emitRefresh(rooms.user(auth.userId), [['patient-file'], ['consultations']]);
+  res.json({ consultation });
+});
+
+doctorRouter.get('/me/consultations', requireRole('DOCTOR'), async (req, res) => {
+  const { auth, db } = session(req);
+  res.json(await listConsultations(db, auth.userId));
 });
 
 doctorRouter.get('/me/calls', requireRole('DOCTOR'), async (req, res) => {

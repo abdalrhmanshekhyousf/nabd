@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   bedServiceSchema,
+  createConsultationSchema,
   createStaffSchema,
   staffFilterSchema,
   assignCleanerSchema,
@@ -285,6 +286,10 @@ describe('client output is valid server input', () => {
       },
     ],
     [hospitalInfoSchema, { name: 'x', address: 'y', phone: '0991234567', email: 'I@X.co' }],
+    [
+      createConsultationSchema,
+      { consultantId: '0199a3d2-6c55-7000-8000-000000000001', question: ' رأيك بتخطيط القلب؟ ' },
+    ],
   ] as const;
 
   it.each(samples.map(([schema, input], index) => [index, schema, input] as const))(
@@ -819,6 +824,20 @@ describe('reports', () => {
         from: '2026-11-01T00:00:00Z',
         to: '2026-11-08T00:00:00Z',
         notes: null,
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe('consultations', () => {
+  it('needs a colleague and a question', () => {
+    expect(createConsultationSchema.safeParse({ consultantId: '', question: 'x' }).success).toBe(
+      false,
+    );
+    expect(
+      createConsultationSchema.safeParse({
+        consultantId: '0199a3d2-6c55-7000-8000-000000000001',
+        question: '   ',
       }).success,
     ).toBe(false);
   });
