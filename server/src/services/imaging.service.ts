@@ -11,6 +11,7 @@ import type { ScopedPrisma } from '../lib/scopedPrisma.js';
 import { detectReportType, removeFile, storedPath, storedType, storeFile } from '../lib/uploads.js';
 import { HttpError } from '../middleware/errorHandler.js';
 import { consultingOn } from './consultation.service.js';
+import { recordForOrder, refreshForOthers } from './medicalRecord.service.js';
 import { emitRefresh, rooms } from '../realtime/realtime.js';
 import { sendNotification } from './notification.service.js';
 
@@ -54,24 +55,21 @@ export async function orderImaging(
   patientId: string,
   { modality, bodyPart, reason, priority }: ImagingOrderData,
 ) {
-  const [record, doctor] = await Promise.all([
-    db.medicalRecord.findFirst({ where: { patientId, doctorId }, select: { id: true } }),
-    db.user.findUnique({ where: { id: doctorId }, select: { fullName: true } }),
-  ]);
-  if (!record || !doctor) throw new HttpError(404, 'NOT_FOUND', 'Patient not found');
+  const { recordId, treatingDoctorId, doctorName } = await recordForOrder(db, doctorId, patientId);
   const study = await db.radiologyImage.create({
     data: {
       hospitalId,
-      recordId: record.id,
+      recordId,
       modality,
       bodyPart,
       reason,
       priority,
       doctorId,
-      doctorName: doctor.fullName,
+      doctorName,
     },
   });
   announceToRadiology(hospitalId, study.modality);
+  refreshForOthers(doctorId, treatingDoctorId);
   return toImagingView(study);
 }
 

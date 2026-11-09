@@ -127,6 +127,14 @@ beforeEach(() => {
         ? { status: 200, data: { consultation: consultation({}), file: FILE } }
         : { status: 403, data: { error: { code: 'CONSULTATION_CLOSED', message: 'closed' } } };
     }
+    if (config.method === 'post' && config.url === '/doctors/me/consultations/c1/reply') {
+      open = false;
+      const body = JSON.parse(config.data as string);
+      return {
+        status: 200,
+        data: { consultation: consultation({ status: 'ANSWERED', reply: body.reply }) },
+      };
+    }
     if (config.url === '/doctors/me/consultations') {
       return { status: 200, data: { received: [consultation({})], sent } };
     }
@@ -166,7 +174,7 @@ describe('ConsultationsPage (task 3.12)', () => {
 
     const note = await screen.findByRole('note', { name: 'سؤال د. سامي' });
     expect(note).toHaveTextContent('تخطيط القلب فيه تغيرات');
-    expect(note).toHaveTextContent('للقراءة بس');
+    expect(note).toHaveTextContent('مفتوح إلك للقراءة');
     expect(screen.getByRole('heading', { name: 'سارة' })).toBeInTheDocument();
     expect(screen.getByText('البنسلين')).toBeInTheDocument();
     expect(screen.getByText('ألم صدري')).toBeInTheDocument();
@@ -184,5 +192,29 @@ describe('ConsultationsPage (task 3.12)', () => {
       'href',
       '/doctor/consultations?open=c1',
     );
+  });
+
+  it('the consultant replies; the reply is sent and the page goes back to the list (task 3.14)', async () => {
+    renderApp('/doctor/consultations/c1');
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'الرد على الاستشارة' }));
+    // Ordering tests and imaging is offered while consulting.
+    expect(screen.getByRole('button', { name: 'طلب تحليل' })).toBeInTheDocument();
+    const dialog = await screen.findByRole('dialog', { name: 'الرد على سؤال د. سامي' });
+    expect(dialog).toHaveTextContent('تخطيط القلب فيه تغيرات');
+    await user.click(within(dialog).getByRole('button', { name: 'إرسال الرد' }));
+    expect(await within(dialog).findByText('هالحقل مطلوب')).toBeInTheDocument();
+
+    await user.type(within(dialog).getByLabelText('التشخيص'), 'ألم غير نموذجي');
+    await user.type(within(dialog).getByLabelText(/ردّك/), 'إيكو وتروبونين');
+    await user.click(within(dialog).getByRole('button', { name: 'إرسال الرد' }));
+
+    expect(await screen.findByText('وصل ردّك لـ د. سامي')).toBeInTheDocument();
+    const post = fake.calls.find((c) => c.url?.endsWith('/reply'))!;
+    expect(JSON.parse(post.data as string)).toEqual({
+      reply: 'إيكو وتروبونين',
+      diagnosis: 'ألم غير نموذجي',
+    });
+    expect(await screen.findByRole('region', { name: 'وصلتني' })).toBeInTheDocument();
   });
 });

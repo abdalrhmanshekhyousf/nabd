@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   bedServiceSchema,
+  consultationReplySchema,
   createConsultationSchema,
   createStaffSchema,
   staffFilterSchema,
@@ -286,6 +287,7 @@ describe('client output is valid server input', () => {
       },
     ],
     [hospitalInfoSchema, { name: 'x', address: 'y', phone: '0991234567', email: 'I@X.co' }],
+    [consultationReplySchema, { reply: ' ابدأ بيتا بلوكر ', diagnosis: '' }],
     [
       createConsultationSchema,
       { consultantId: '0199a3d2-6c55-7000-8000-000000000001', question: ' رأيك بتخطيط القلب؟ ' },
@@ -840,5 +842,15 @@ describe('consultations', () => {
         question: '   ',
       }).success,
     ).toBe(false);
+  });
+});
+
+describe('consultation replies', () => {
+  it('need the reply; the diagnosis is optional', () => {
+    expect(consultationReplySchema.parse({ reply: ' نعم ', diagnosis: '' })).toEqual({
+      reply: 'نعم',
+      diagnosis: null,
+    });
+    expect(consultationReplySchema.safeParse({ reply: '  ', diagnosis: null }).success).toBe(false);
   });
 });

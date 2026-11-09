@@ -54,6 +54,21 @@ async function clinic() {
       list: () => request(app).get('/api/doctors/me/consultations').set(auth),
       read: (consultationId: string) =>
         request(app).get(`/api/doctors/me/consultations/${consultationId}/file`).set(auth),
+      reply: (consultationId: string, body: object) =>
+        request(app)
+          .post(`/api/doctors/me/consultations/${consultationId}/reply`)
+          .set(auth)
+          .send({ diagnosis: null, ...body }),
+      orderLab: (patientId: string, codes: string[]) =>
+        request(app)
+          .post(`/api/doctors/me/patients/${patientId}/lab-tests`)
+          .set(auth)
+          .send({ codes, priority: 'URGENT', notes: null }),
+      orderImaging: (patientId: string) =>
+        request(app)
+          .post(`/api/doctors/me/patients/${patientId}/imaging`)
+          .set(auth)
+          .send({ modality: 'ECHO', bodyPart: 'قلب', reason: null, priority: 'ROUTINE' }),
       labFile: (testId: string) => request(app).get(`/api/lab-tests/${testId}/file`).set(auth),
       colleagues: () => request(app).get('/api/doctors/me/colleagues').set(auth),
       file: (patientId: string) =>
@@ -187,5 +202,65 @@ describe('consultations (task 3.12)', () => {
     expect(closed.body.error.code).toBe('CONSULTATION_CLOSED');
     expect((await lina.labFile(test.id)).status).toBe(404);
     await removeFile(key);
+  });
+
+  it('the consultant orders while consulting, then replies into the file (task 3.14)', async () => {
+    const h = await clinic();
+    const sami = await h.doctor('د. سامي');
+    const lina = await h.doctor('د. لينا');
+    const { id } = (
+      await sami.ask(sami.patient.id, { consultantId: lina.id, question: 'تخطيط القلب فيه تغيرات' })
+    ).body.consultation;
+
+    // While consulting, Lina orders in Sami's patient's file, under her name.
+    expect((await lina.orderLab(sami.patient.id, ['TROPONIN'])).status).toBe(201);
+    expect((await lina.orderImaging(sami.patient.id)).status).toBe(201);
+    const before = (await sami.file(sami.patient.id)).body;
+    expect(before.labTests[0]).toMatchObject({ code: 'TROPONIN', doctorName: 'د. لينا' });
+    expect(before.imaging[0]).toMatchObject({ modality: 'ECHO', doctorName: 'د. لينا' });
+
+    const res = await lina.reply(id, {
+      reply: 'تغيرات غير نوعية؛ إيكو وتروبونين، وإذا طبيعيين متابعة',
+      diagnosis: 'ألم صدري غير نموذجي',
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.consultation).toMatchObject({
+      status: 'ANSWERED',
+      reply: 'تغيرات غير نوعية؛ إيكو وتروبونين، وإذا طبيعيين متابعة',
+    });
+    expect(res.body.consultation.answeredAt).not.toBeNull();
+
+    const file = (await sami.file(sami.patient.id)).body;
+    expect(file.reports[0]).toMatchObject({
+      doctorName: 'د. لينا',
+      title: 'تخطيط القلب فيه تغيرات',
+      diagnosis: 'ألم صدري غير نموذجي',
+      consultationId: id,
+    });
+    expect(file.consultations[0].status).toBe('ANSWERED');
+    const notice = await prisma.notification.findFirstOrThrow({
+      where: { userId: sami.id, type: 'CONSULTATION_REPLY' },
+    });
+    expect(notice).toMatchObject({
+      data: { patient: 'مريض د. سامي', from: 'د. لينا' },
+      link: `/doctor/patients/${sami.patient.id}`,
+    });
+
+    // Answered: the access and the ordering end, and it cannot be answered twice.
+    expect((await lina.read(id)).status).toBe(403);
+    expect((await lina.orderLab(sami.patient.id, ['CBC'])).status).toBe(404);
+    expect((await lina.reply(id, { reply: 'مرة تانية' })).body.error.code).toBe(
+      'CONSULTATION_CLOSED',
+    );
+    // Only the consultant replies; a withdrawn question cannot be answered.
+    expect((await sami.reply(id, { reply: 'x' })).status).toBe(404);
+    const other = (
+      await sami.ask(sami.patient.id, { consultantId: lina.id, question: 'سؤال تاني' })
+    ).body.consultation;
+    await sami.withdraw(other.id);
+    expect((await lina.reply(other.id, { reply: 'x' })).body.error.code).toBe(
+      'CONSULTATION_CLOSED',
+    );
+    expect((await lina.reply(id, { reply: ' ' })).status).toBe(400);
   });
 });

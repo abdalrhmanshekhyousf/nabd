@@ -397,10 +397,19 @@ export const en: Translation = {
     viewFile: 'View file',
   },
   consultations: {
+    answer: 'Reply to the consultation',
+    reply: 'Your reply',
+    replyHint:
+      'The reply is saved as a report in the patient’s file under your name and reaches the asking doctor.',
+    sendReply: 'Send the reply',
+    replyTo: 'Reply to {{name}}',
+    replied: 'Your reply reached {{name}}',
+    replyBadge: 'Consultation reply',
     openFile: 'Open the file',
     back: 'Back to consultations',
     questionFrom: 'Question from {{name}}',
-    readOnly: 'The file is open to you read-only until you reply or the question is withdrawn.',
+    readOnly:
+      'The file is open to you to read, and you can order tests or imaging, until you reply or the question is withdrawn.',
     closed: 'This consultation has ended',
     closedHint: 'It was answered or withdrawn, so the file is no longer open to you.',
     fromTo: 'From {{from}} to {{to}}',
@@ -1428,6 +1437,7 @@ export const en: Translation = {
       DOCTOR_CALL: '{{patient}} · {{complaint}} · triage level {{level}}',
       CLEANING_REQUEST: 'Place: {{place}}',
       CONSULTATION_REQUEST: '{{from}} asks you about {{patient}}',
+      CONSULTATION_REPLY: '{{from}} answered your question about {{patient}}',
       REPORT_SUBMITTED: '{{reportName}} report from {{author}}',
     },
   },

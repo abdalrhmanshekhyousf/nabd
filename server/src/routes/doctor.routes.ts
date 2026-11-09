@@ -1,4 +1,5 @@
 import {
+  consultationReplySchema,
   createConsultationSchema,
   createPrescriptionSchema,
   createReportSchema,
@@ -15,6 +16,7 @@ import { emitRefresh, rooms } from '../realtime/realtime.js';
 import {
   cancelConsultation,
   consultationFile,
+  replyToConsultation,
   listConsultations,
   requestConsultation,
 } from '../services/consultation.service.js';
@@ -174,6 +176,16 @@ doctorRouter.get('/me/consultations/:id/file', requireRole('DOCTOR'), async (req
   const { auth, db } = session(req);
   const { id } = z.object({ id: z.uuid() }).parse(req.params);
   res.json(await consultationFile(db, auth.userId, id));
+});
+
+// The consultant answers; the reply joins the file as a report (task 3.14).
+doctorRouter.post('/me/consultations/:id/reply', requireRole('DOCTOR'), async (req, res) => {
+  const { auth, db } = session(req);
+  const { id } = z.object({ id: z.uuid() }).parse(req.params);
+  const input = consultationReplySchema.parse(req.body);
+  res.json({
+    consultation: await replyToConsultation(db, auth.hospitalId, auth.userId, id, input),
+  });
 });
 
 doctorRouter.get('/me/consultations', requireRole('DOCTOR'), async (req, res) => {

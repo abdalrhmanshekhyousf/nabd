@@ -8,6 +8,7 @@ import type {
 } from '@nabd/shared';
 import type { ScopedPrisma } from '../lib/scopedPrisma.js';
 import { HttpError } from '../middleware/errorHandler.js';
+import { emitRefresh, rooms } from '../realtime/realtime.js';
 import { consultationInclude, toConsultationView } from './consultation.service.js';
 import { toImagingView } from './imaging.service.js';
 import { toPrescriptionView } from './pharmacy.service.js';
@@ -118,10 +119,44 @@ export async function loadFile(
       diagnosis: report.diagnosis,
       content: report.content,
       createdAt: report.createdAt.toISOString(),
+      consultationId: report.consultationId,
     })),
     prescriptions: record.prescriptions.map(toPrescriptionView),
     consultations: record.consultations.map(toConsultationView),
   };
+}
+
+/**
+ * The file a doctor may order tests or imaging in: their own patient's, or one
+ * they were asked about while the question is open (task 3.14). Anyone else's
+ * is "not found".
+ */
+export async function recordForOrder(db: ScopedPrisma, doctorId: string, patientId: string) {
+  const [record, doctor] = await Promise.all([
+    db.medicalRecord.findFirst({
+      where: {
+        patientId,
+        OR: [
+          { doctorId },
+          { consultations: { some: { consultantId: doctorId, status: 'PENDING' } } },
+        ],
+      },
+      select: { id: true, doctorId: true },
+    }),
+    db.user.findUnique({ where: { id: doctorId }, select: { fullName: true } }),
+  ]);
+  if (!record || !doctor) throw new HttpError(404, 'NOT_FOUND', 'Patient not found');
+  return { recordId: record.id, treatingDoctorId: record.doctorId, doctorName: doctor.fullName };
+}
+
+/**
+ * Refreshes the file for the treating doctor when someone else (a consultant)
+ * changed it, and the consultant's own view of it.
+ */
+export function refreshForOthers(doctorId: string, treatingDoctorId: string | null) {
+  if (!treatingDoctorId || treatingDoctorId === doctorId) return;
+  emitRefresh(rooms.user(treatingDoctorId), [['patient-file'], ['my-patients']]);
+  emitRefresh(rooms.user(doctorId), [['consultations']]);
 }
 
 /** The file of one of my patients, or "not found" (same rule as reading it). */
@@ -158,6 +193,7 @@ export async function addReport(
     diagnosis: report.diagnosis,
     content: report.content,
     createdAt: report.createdAt.toISOString(),
+    consultationId: report.consultationId,
   };
 }
 

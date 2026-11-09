@@ -49,6 +49,8 @@ export type DoctorReportView = {
   diagnosis: string | null;
   content: string;
   createdAt: string;
+  /** Set when this report is a consultant's reply (task 3.14). */
+  consultationId?: string | null;
 };
 
 /** A patient's whole file as the treating doctor reads it (task 2.7). */

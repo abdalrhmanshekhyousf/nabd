@@ -500,20 +500,23 @@ model MedicalRecord {
 // Reports and prescriptions are medical history: removing a doctor's account
 // keeps them, with the author's name saved alongside.
 model DoctorReport {
-  id         String   @id @default(uuid(7)) @db.Uuid
-  hospitalId String   @db.Uuid
-  recordId   String   @db.Uuid
-  doctorId   String?  @db.Uuid
-  doctorName String
-  title      String
-  diagnosis  String?
-  content    String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id             String   @id @default(uuid(7)) @db.Uuid
+  hospitalId     String   @db.Uuid
+  recordId       String   @db.Uuid
+  doctorId       String?  @db.Uuid
+  doctorName     String
+  title          String
+  diagnosis      String?
+  content        String
+  // Set when the report is a consultant's reply (task 3.14).
+  consultationId String?  @unique @db.Uuid
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  hospital Hospital      @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  record   MedicalRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
-  doctor   User?         @relation("ReportAuthor", fields: [doctorId], references: [id], onDelete: SetNull)
+  hospital     Hospital      @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  record       MedicalRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  doctor       User?         @relation("ReportAuthor", fields: [doctorId], references: [id], onDelete: SetNull)
+  consultation Consultation? @relation(fields: [consultationId], references: [id], onDelete: SetNull)
 
   @@index([recordId, createdAt])
   @@index([hospitalId])
@@ -879,6 +882,7 @@ model Consultation {
   reply          String?
   answeredAt     DateTime?
   createdAt      DateTime           @default(now())
+  replyReport    DoctorReport?
 
   hospital   Hospital      @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
   record     MedicalRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)

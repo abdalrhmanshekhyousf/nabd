@@ -11,6 +11,7 @@ import type { ScopedPrisma } from '../lib/scopedPrisma.js';
 import { detectReportType, removeFile, storedPath, storedType, storeFile } from '../lib/uploads.js';
 import { HttpError } from '../middleware/errorHandler.js';
 import { consultingOn } from './consultation.service.js';
+import { recordForOrder, refreshForOthers } from './medicalRecord.service.js';
 import { emitRefresh, rooms } from '../realtime/realtime.js';
 import { sendNotification } from './notification.service.js';
 
@@ -49,23 +50,20 @@ export async function orderLabTests(
   patientId: string,
   { codes, priority, notes }: LabOrderData,
 ) {
-  const [record, doctor] = await Promise.all([
-    db.medicalRecord.findFirst({ where: { patientId, doctorId }, select: { id: true } }),
-    db.user.findUnique({ where: { id: doctorId }, select: { fullName: true } }),
-  ]);
-  if (!record || !doctor) throw new HttpError(404, 'NOT_FOUND', 'Patient not found');
+  const { recordId, treatingDoctorId, doctorName } = await recordForOrder(db, doctorId, patientId);
   const tests = await db.labTest.createManyAndReturn({
     data: codes.map((code) => ({
       hospitalId,
-      recordId: record.id,
+      recordId,
       code,
       priority,
       notes,
       doctorId,
-      doctorName: doctor.fullName,
+      doctorName,
     })),
   });
   announceToLab(hospitalId);
+  refreshForOthers(doctorId, treatingDoctorId);
   return tests.map(toLabView);
 }
 

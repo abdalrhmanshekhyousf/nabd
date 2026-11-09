@@ -1,4 +1,4 @@
-import type { ConsultationView, CreateConsultationData } from '@nabd/shared';
+import type { ConsultationReplyData, ConsultationView, CreateConsultationData } from '@nabd/shared';
 import type { Consultation } from '../generated/prisma/client.js';
 import type { ScopedPrisma } from '../lib/scopedPrisma.js';
 import { HttpError } from '../middleware/errorHandler.js';
@@ -160,6 +160,68 @@ export async function consultationFile(db: ScopedPrisma, doctorId: string, id: s
   const file = await loadFile(db, { id: consultation.recordId });
   // The consultant reads the file, not the other consultations about it.
   return { consultation: toConsultationView(consultation), file: { ...file, consultations: [] } };
+}
+
+/**
+ * The consultant answers (task 3.14): the reply closes the question (and with
+ * it the access to the file), goes into the file as a report signed by the
+ * consultant, and the asking doctor is told. Answering twice, or after it was
+ * withdrawn, is refused.
+ */
+export async function replyToConsultation(
+  db: ScopedPrisma,
+  hospitalId: string,
+  doctorId: string,
+  id: string,
+  { reply, diagnosis }: ConsultationReplyData,
+) {
+  const found = await db.consultation.findFirst({
+    where: { id, consultantId: doctorId },
+    include: consultationInclude,
+  });
+  if (!found) throw new HttpError(404, 'NOT_FOUND', 'Consultation not found');
+  const answeredAt = new Date();
+  const answered = await db.$transaction(async (tx) => {
+    const { count } = await tx.consultation.updateMany({
+      where: { id, status: 'PENDING' },
+      data: { status: 'ANSWERED', reply, answeredAt },
+    });
+    if (count === 0) {
+      throw new HttpError(409, 'CONSULTATION_CLOSED', 'This consultation is closed');
+    }
+    await tx.doctorReport.create({
+      data: {
+        hospitalId,
+        recordId: found.recordId,
+        doctorId,
+        doctorName: found.consultantName,
+        title: found.question.slice(0, 200),
+        diagnosis,
+        content: reply,
+        consultationId: id,
+      },
+    });
+    await tx.medicalRecord.update({
+      where: { id: found.recordId },
+      data: { updatedAt: answeredAt },
+    });
+    return tx.consultation.findUniqueOrThrow({ where: { id }, include: consultationInclude });
+  });
+  if (found.requesterId) {
+    await sendNotification(db, hospitalId, {
+      to: { userIds: [found.requesterId] },
+      type: 'CONSULTATION_REPLY',
+      data: { patient: found.record.patient.fullName, from: found.consultantName },
+      link: `/doctor/patients/${found.record.patient.id}`,
+    });
+    emitRefresh(rooms.user(found.requesterId), [
+      ['patient-file'],
+      ['my-patients'],
+      ['consultations'],
+    ]);
+  }
+  emitRefresh(rooms.user(doctorId), [['consultations']]);
+  return toConsultationView(answered);
 }
 
 /** The questions I was asked (withdrawn ones hidden) and the ones I asked, latest first. */

@@ -608,9 +608,22 @@ export function PatientFileView({
                   aria-hidden="true"
                   className="absolute -start-[1.6rem] top-4 size-3 rounded-full border-2 border-surface bg-accent"
                 />
-                <Card className="space-y-2 p-4">
+                <Card
+                  className={cn(
+                    'space-y-2 p-4',
+                    report.consultationId && 'border-s-4 border-s-info',
+                  )}
+                >
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <p className="font-semibold text-foreground">{report.title}</p>
+                    <p className="font-semibold text-foreground">
+                      {report.consultationId && (
+                        <span className="me-2 inline-flex items-center gap-1 rounded-md bg-info/12 px-1.5 py-0.5 align-middle text-xs font-semibold text-info">
+                          <MessagesSquare className="size-3" aria-hidden="true" />
+                          {t('consultations.replyBadge')}
+                        </span>
+                      )}
+                      {report.title}
+                    </p>
                     <p className="text-xs text-muted">
                       {report.doctorName} · {dateTime.format(new Date(report.createdAt))}
                     </p>
