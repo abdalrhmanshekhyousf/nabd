@@ -269,3 +269,36 @@ html[data-vt='language']::view-transition-new(root) {
     opacity: 0;
   }
 }
+
+/*
+ * Printing a report (task 3.11): while a print sheet is mounted, only it is
+ * printed, in the light colours whatever the screen theme.
+ */
+.print-sheet {
+  display: none;
+}
+@media print {
+  body.printing > :not(.print-sheet) {
+    display: none !important;
+  }
+  body.printing .print-sheet {
+    display: block;
+  }
+  body.printing {
+    background: #ffffff;
+  }
+}
+.dark .print-sheet {
+  color-scheme: light;
+  --background: #ffffff;
+  --surface: #ffffff;
+  --surface-muted: #eef2f6;
+  --foreground: var(--nabd-ink);
+  --muted: var(--nabd-steel);
+  --border: #e2e8ef;
+  --accent: #137a6b;
+  --danger: #c8283e;
+  --success: #137a6b;
+  --warning: #a84d08;
+  --info: #2f6fb3;
+}

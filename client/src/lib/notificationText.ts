@@ -24,5 +24,7 @@ function readable(data: NotificationItem['data']) {
     test: data.code ? i18n.t(`labTests.codes.${data.code}` as never) : '—',
     // An imaging study is sent by its type's code (task 3.8).
     modalityName: data.modality ? i18n.t(`modalities.${data.modality}` as never) : '—',
+    // A department report is sent by its kind (task 3.11).
+    reportName: data.kind ? i18n.t(`reports.kinds.${data.kind}` as never) : '—',
   };
 }

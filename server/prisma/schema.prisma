@@ -194,6 +194,12 @@ enum LabPriority {
   URGENT
 }
 
+// Matches REPORT_KINDS in @nabd/shared (task 3.11); the accountant's monthly
+// report joins in 4.19.
+enum ReportKind {
+  PHARMACY
+}
+
 // Matches NOTIFICATION_TYPES in @nabd/shared (task 2.2).
 enum NotificationType {
   DOCTOR_CALL
@@ -214,6 +220,7 @@ enum NotificationType {
   MEDICATION_REMINDER
   FOLLOW_UP_REMINDER
   APPOINTMENT_CANCELLED
+  REPORT_SUBMITTED
 }
 
 // ─── Structure ────────────────────────────────────────────────────────────────
@@ -252,6 +259,7 @@ model Hospital {
   stockMovements     StockMovement[]
   labTests           LabTest[]
   radiologyImages    RadiologyImage[]
+  reports            Report[]
 }
 
 model Department {
@@ -371,6 +379,7 @@ model User {
   labTestsDone           LabTest[]                   @relation("LabTestTechnician")
   imagingOrdered         RadiologyImage[]            @relation("ImagingDoctor")
   imagingDone            RadiologyImage[]            @relation("ImagingRadiologist")
+  reportsWritten         Report[]                    @relation("ReportAuthor")
 
   @@unique([hospitalId, email])
   @@index([hospitalId, role])
@@ -838,6 +847,30 @@ model StockMovement {
 
   @@index([itemId, createdAt])
   @@index([hospitalId, createdAt])
+}
+
+// ─── Department reports (task 3.11) ───────────────────────────────────────────
+
+// A report a department sends the admin for a period. Its figures are worked
+// out when it is sent and kept as they were (data), whatever happens later.
+model Report {
+  id         String     @id @default(uuid(7)) @db.Uuid
+  hospitalId String     @db.Uuid
+  kind       ReportKind
+  periodFrom DateTime
+  periodTo   DateTime
+  data       Json
+  notes      String?
+  authorId   String?    @db.Uuid
+  authorName String
+  // When the admin first opened it.
+  readAt     DateTime?
+  createdAt  DateTime   @default(now())
+
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  author   User?    @relation("ReportAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([hospitalId, kind, createdAt])
 }
 
 // ─── System ───────────────────────────────────────────────────────────────────

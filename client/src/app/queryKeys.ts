@@ -37,5 +37,9 @@ export const queryKeys = {
   /** Radiology (tasks 3.7, 3.8); the server refreshes ['imaging'] for each type's radiologists. */
   imagingBoard: ['imaging', 'board'] as const,
   imagingStaffed: ['imaging', 'staffed'] as const,
+  /** Department reports (task 3.11); the server refreshes ['reports']. */
+  reports: ['reports'] as const,
+  reportPreview: (from: string, to: string) => ['reports', 'preview', from, to] as const,
+  report: (id: string) => ['reports', 'one', id] as const,
   publicHospitals: (search: string) => ['public-hospitals', search] as const,
 };

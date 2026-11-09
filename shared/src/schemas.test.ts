@@ -21,6 +21,8 @@ import {
   createCleaningRequestSchema,
   createInventoryItemSchema,
   dispenseSchema,
+  reportPeriodSchema,
+  submitReportSchema,
   imagingOrderSchema,
   labOrderSchema,
   stockMovementSchema,
@@ -764,5 +766,60 @@ describe('dispensing', () => {
     expect(dispenseSchema.safeParse({ lines: [{ ...line, quantity: 0 }] }).success).toBe(false);
     expect(dispenseSchema.safeParse({ lines: [{ ...out, quantity: 3 }] }).success).toBe(false);
     expect(dispenseSchema.safeParse({ lines: [] }).success).toBe(false);
+  });
+});
+
+describe('reports', () => {
+  it('a period runs forward, at most a year', () => {
+    expect(
+      reportPeriodSchema.safeParse({ from: '2026-11-01T00:00:00Z', to: '2026-12-01T00:00:00Z' })
+        .success,
+    ).toBe(true);
+    expect(
+      reportPeriodSchema.safeParse({ from: '2026-12-01T00:00:00Z', to: '2026-11-01T00:00:00Z' })
+        .success,
+    ).toBe(false);
+    expect(
+      reportPeriodSchema.safeParse({ from: '2024-01-01T00:00:00Z', to: '2026-01-01T00:00:00Z' })
+        .success,
+    ).toBe(false);
+  });
+  it('a report has a kind and its notes are optional', () => {
+    expect(
+      submitReportSchema.parse({
+        kind: 'PHARMACY',
+        from: '2026-11-01T00:00:00Z',
+        to: '2026-11-08T00:00:00Z',
+        notes: '',
+      }),
+    ).toMatchObject({ kind: 'PHARMACY', notes: null });
+    const period = {
+      kind: 'PHARMACY',
+      from: '2026-11-01T00:00:00Z',
+      to: '2026-11-08T00:00:00Z',
+      notes: null,
+    };
+    expect(
+      submitReportSchema.parse({
+        ...period,
+        unavailable: [{ drugName: ' ريفاروكسابان ', times: 3 }],
+      }).unavailable,
+    ).toEqual([{ drugName: 'ريفاروكسابان', times: 3 }]);
+    expect(
+      submitReportSchema.safeParse({ ...period, unavailable: [{ drugName: '', times: 3 }] })
+        .success,
+    ).toBe(false);
+    expect(
+      submitReportSchema.safeParse({ ...period, unavailable: [{ drugName: 'x', times: 0 }] })
+        .success,
+    ).toBe(false);
+    expect(
+      submitReportSchema.safeParse({
+        kind: 'X',
+        from: '2026-11-01T00:00:00Z',
+        to: '2026-11-08T00:00:00Z',
+        notes: null,
+      }).success,
+    ).toBe(false);
   });
 });

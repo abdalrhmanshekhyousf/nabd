@@ -93,7 +93,7 @@ export const NAV_BY_ROLE: Record<Role, NavGroup[]> = {
     {
       labelKey: 'navGroups.reports',
       items: [
-        { path: 'reports', labelKey: 'nav.reports', icon: FileText, phase: 4 },
+        { path: 'reports', labelKey: 'nav.reports', icon: FileText, phase: 3 },
         { path: 'profit', labelKey: 'nav.profit', icon: TrendingUp, phase: 4 },
         { path: 'activity', labelKey: 'nav.activityLog', icon: History, phase: 4 },
       ],

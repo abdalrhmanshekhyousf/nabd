@@ -22,6 +22,7 @@ export const NOTIFICATION_TYPES = [
   'MEDICATION_REMINDER',
   'FOLLOW_UP_REMINDER',
   'APPOINTMENT_CANCELLED',
+  'REPORT_SUBMITTED',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 

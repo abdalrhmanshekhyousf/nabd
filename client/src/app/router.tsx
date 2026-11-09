@@ -23,6 +23,8 @@ import { OrLivePage } from '@/pages/OrLivePage';
 import { InventoryPage } from '@/pages/InventoryPage';
 import { LabBoardPage } from '@/pages/lab/LabBoardPage';
 import { PharmacyPage } from '@/pages/pharmacy/PharmacyPage';
+import { PharmacyReportsPage } from '@/pages/pharmacy/PharmacyReportsPage';
+import { ReportsPage } from '@/pages/admin/ReportsPage';
 import { RadiologyBoardPage } from '@/pages/radiology/RadiologyBoardPage';
 import { NurseCleaningPage } from '@/pages/nurse/NurseCleaningPage';
 import { OrBoardPage } from '@/pages/nurse/OrBoardPage';
@@ -66,6 +68,8 @@ export const BUILT_PAGES: Partial<Record<`${Role}:${string}`, ReactElement>> = {
   'CLEANER:tasks': <CleanerTasksPage />,
   'PHARMACIST:inventory': <InventoryPage />,
   'PHARMACIST:prescriptions': <PharmacyPage />,
+  'PHARMACIST:reports': <PharmacyReportsPage />,
+  'ADMIN:reports': <ReportsPage />,
   'LAB_TECHNICIAN:inventory': <InventoryPage />,
   'LAB_TECHNICIAN:requests': <LabBoardPage />,
   'RADIOLOGIST:requests': <RadiologyBoardPage />,
