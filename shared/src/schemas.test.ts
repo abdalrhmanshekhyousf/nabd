@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
   bedServiceSchema,
   consultationReplySchema,
+  admitSchema,
   createConsultationSchema,
+  dischargeStaySchema,
+  moveStaySchema,
+  wardBedStatusSchema,
   createStaffSchema,
   staffFilterSchema,
   assignCleanerSchema,
@@ -287,6 +291,17 @@ describe('client output is valid server input', () => {
       },
     ],
     [hospitalInfoSchema, { name: 'x', address: 'y', phone: '0991234567', email: 'I@X.co' }],
+    [
+      admitSchema,
+      {
+        bedId: '0199a3d2-6c55-7000-8000-000000000001',
+        patientId: '0199a3d2-6c55-7000-8000-000000000001',
+        notes: '',
+      },
+    ],
+    [moveStaySchema, { bedId: '0199a3d2-6c55-7000-8000-000000000001' }],
+    [dischargeStaySchema, { notes: ' ' }],
+    [wardBedStatusSchema, { to: 'RESERVED', reason: 'مريض من العمليات' }],
     [consultationReplySchema, { reply: ' ابدأ بيتا بلوكر ', diagnosis: '' }],
     [
       createConsultationSchema,
@@ -852,5 +867,21 @@ describe('consultation replies', () => {
       diagnosis: null,
     });
     expect(consultationReplySchema.safeParse({ reply: '  ', diagnosis: null }).success).toBe(false);
+  });
+});
+
+describe('ward (task 3.16)', () => {
+  const bed = '0199a3d2-6c55-7000-8000-000000000001';
+  it('admits either a transferred ER visit or a found patient, not both or neither', () => {
+    expect(admitSchema.safeParse({ bedId: bed, visitId: bed, notes: null }).success).toBe(true);
+    expect(admitSchema.safeParse({ bedId: bed, patientId: bed, notes: null }).success).toBe(true);
+    expect(admitSchema.safeParse({ bedId: bed, notes: null }).success).toBe(false);
+    expect(
+      admitSchema.safeParse({ bedId: bed, visitId: bed, patientId: bed, notes: null }).success,
+    ).toBe(false);
+  });
+  it('a nurse only reserves or frees a bed by hand', () => {
+    expect(wardBedStatusSchema.safeParse({ to: 'OCCUPIED', reason: null }).success).toBe(false);
+    expect(wardBedStatusSchema.safeParse({ to: 'EMPTY', reason: null }).success).toBe(true);
   });
 });

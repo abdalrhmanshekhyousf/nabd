@@ -48,5 +48,8 @@ export const queryKeys = {
   consultationFile: (id: string) => ['consultations', 'file', id] as const,
   /** A bed's history (task 3.15), under rooms so bed changes refresh it. */
   bedHistory: (bedId: string) => ['rooms', 'bed-history', bedId] as const,
+  /** The ward nurse's beds (task 3.16); the server refreshes ['ward'] for the department. */
+  ward: ['ward'] as const,
+  wardCandidates: (search: string) => ['ward', 'candidates', search] as const,
   publicHospitals: (search: string) => ['public-hospitals', search] as const,
 };

@@ -54,7 +54,13 @@ export function BedHistory({ bedId }: { bedId: string }) {
                 {change.changedByName} · <bdi>{when.format(new Date(change.createdAt))}</bdi>
                 {change.patientName && ` · ${change.patientName}`}
               </p>
-              {change.reason && <p className="text-xs text-foreground">{change.reason}</p>}
+              {change.reason && (
+                <p className="text-xs text-foreground">
+                  {change.reason === 'MOVED' || change.reason === 'DISCHARGED'
+                    ? t(`beds.reasons.${change.reason}`)
+                    : change.reason}
+                </p>
+              )}
             </motion.li>
           ))}
         </ol>

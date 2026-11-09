@@ -377,7 +377,8 @@ describe('the patient leaves the ER (task 2.17)', () => {
     expect((await prisma.doctorCall.findUnique({ where: { id: call.id } }))?.status).toBe(
       'CANCELLED',
     );
-    expect(heard).toContain('ward-incoming');
+    // The ward's bed board (3.16) shows the patient waiting for a bed.
+    expect(heard).toContain('ward');
   });
 
   it('refuses a transfer to the ER itself or to another hospital', async () => {

@@ -20,6 +20,7 @@ import { inventoryRouter } from './routes/inventory.routes.js';
 import { labRouter } from './routes/lab.routes.js';
 import { pharmacyRouter } from './routes/pharmacy.routes.js';
 import { reportRouter } from './routes/report.routes.js';
+import { wardRouter } from './routes/ward.routes.js';
 import { devRouter } from './routes/dev.routes.js';
 import { doctorRouter } from './routes/doctor.routes.js';
 import { erRouter } from './routes/er.routes.js';
@@ -62,6 +63,7 @@ export function createApp() {
   app.use('/api/imaging', imagingRouter);
   app.use('/api/pharmacy', pharmacyRouter);
   app.use('/api/reports', reportRouter);
+  app.use('/api/ward', wardRouter);
   if (!env.isProduction) app.use('/api/dev', devRouter);
 
   app.use(notFound);

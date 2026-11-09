@@ -136,7 +136,7 @@ function announceClosed(
   emitRefresh(rooms.department(erDepartmentId), [['er-queue'], ['er-visit', visit.id]]);
   for (const doctorId of withdrawnDoctorIds) emitRefresh(rooms.user(doctorId), [['doctor-calls']]);
   // The ward's screens (bed admission, 3.16) pick up the new arrival.
-  if (wardId) emitRefresh(rooms.department(wardId), [['ward-incoming']]);
+  if (wardId) emitRefresh(rooms.department(wardId), [['ward']]);
 }
 
 erRouter.post('/visits/:id/transfer', async (req, res) => {

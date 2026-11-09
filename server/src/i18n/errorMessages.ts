@@ -100,6 +100,10 @@ const MESSAGES: Record<ErrorCode, Record<Language, string>> = {
     ar: 'انتهت الاستشارة، وما عاد فيك تفتح الملف',
     en: 'The consultation is closed; the file is no longer open to you',
   },
+  ALREADY_ADMITTED: {
+    ar: 'هالمريض عندو سرير من قبل',
+    en: 'This patient is already in a bed',
+  },
   OUT_OF_STOCK: {
     ar: 'الكمية بالمخزون ما بتكفي',
     en: 'Not enough in stock',
