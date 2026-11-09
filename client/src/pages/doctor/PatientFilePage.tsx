@@ -96,7 +96,15 @@ function ConsultationItem({
 }
 
 /** One ordered test: what, its state, who ordered it and when; the result once ready. */
-function LabTestRow({ test, patientId }: { test: LabTestView; patientId: string }) {
+function LabTestRow({
+  test,
+  patientId,
+  readOnly,
+}: {
+  test: LabTestView;
+  patientId: string;
+  readOnly: boolean;
+}) {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const when = new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium', timeStyle: 'short' });
@@ -153,7 +161,7 @@ function LabTestRow({ test, patientId }: { test: LabTestView; patientId: string 
       </div>
       {test.abnormal && <StatusBadge tone="danger">{t('labTests.abnormal')}</StatusBadge>}
       <StatusBadge tone={LAB_TONE[test.status]}>{t(`labTests.status.${test.status}`)}</StatusBadge>
-      {test.status === 'REQUESTED' && (
+      {!readOnly && test.status === 'REQUESTED' && (
         <Button
           size="icon"
           variant="ghost"
@@ -170,7 +178,15 @@ function LabTestRow({ test, patientId }: { test: LabTestView; patientId: string 
 }
 
 /** One ordered imaging study: type and body part, its state, who ordered it; the report once ready. */
-function ImagingRow({ study, patientId }: { study: ImagingView; patientId: string }) {
+function ImagingRow({
+  study,
+  patientId,
+  readOnly,
+}: {
+  study: ImagingView;
+  patientId: string;
+  readOnly: boolean;
+}) {
   const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const when = new Intl.DateTimeFormat(i18n.language, { dateStyle: 'medium', timeStyle: 'short' });
@@ -243,7 +259,7 @@ function ImagingRow({ study, patientId }: { study: ImagingView; patientId: strin
       </div>
       {study.abnormal && <StatusBadge tone="danger">{t('labTests.abnormal')}</StatusBadge>}
       <StatusBadge tone={LAB_TONE[study.status]}>{t(`imaging.status.${study.status}`)}</StatusBadge>
-      {study.status === 'REQUESTED' && (
+      {!readOnly && study.status === 'REQUESTED' && (
         <Button
           size="icon"
           variant="ghost"
@@ -368,21 +384,14 @@ function PrescriptionCard({ prescription }: { prescription: PrescriptionView }) 
 // Doctor: one patient's whole file, read-only (task 2.7). Writing reports and
 // prescriptions comes in 2.8.
 export function PatientFilePage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { patientId = '' } = useParams();
-  const [dialog, setDialog] = useState<
-    'report' | 'prescription' | 'lab' | 'imaging' | 'consultation' | null
-  >(null);
   const { data, isPending, error } = useQuery({
     queryKey: queryKeys.patientFile(patientId),
     queryFn: async () =>
       (await api.get<PatientFile>(`/doctors/me/patients/${patientId}`, { skipErrorToast: true }))
         .data,
     retry: false,
-  });
-  const dateTime = new Intl.DateTimeFormat(i18n.language, {
-    dateStyle: 'medium',
-    timeStyle: 'short',
   });
 
   const back = (
@@ -416,7 +425,33 @@ export function PatientFilePage() {
     );
   }
 
-  const { patient, record, reports, prescriptions, labTests, imaging, consultations } = data;
+  return <PatientFileView file={data} patientId={patientId} top={back} />;
+}
+
+/**
+ * A patient's file as shown: to the treating doctor with the tools to write in
+ * it, or read-only to a consulted colleague (task 3.13), with `top` above it.
+ */
+export function PatientFileView({
+  file,
+  patientId,
+  top,
+  readOnly = false,
+}: {
+  file: PatientFile;
+  patientId: string;
+  top: ReactNode;
+  readOnly?: boolean;
+}) {
+  const { t, i18n } = useTranslation();
+  const [dialog, setDialog] = useState<
+    'report' | 'prescription' | 'lab' | 'imaging' | 'consultation' | null
+  >(null);
+  const dateTime = new Intl.DateTimeFormat(i18n.language, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
+  const { patient, record, reports, prescriptions, labTests, imaging, consultations } = file;
   const details = [
     [t('patients.bloodType'), patient.bloodType],
     [t('patients.phone'), patient.phone],
@@ -426,7 +461,7 @@ export function PatientFilePage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      {back}
+      {top}
 
       <motion.div {...enter(0)}>
         <Card className="space-y-4 p-5">
@@ -485,71 +520,75 @@ export function PatientFilePage() {
         )}
       </motion.div>
 
-      <motion.div {...enter(2)} className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-        <Button icon={<FilePlus2 className="size-4" />} onClick={() => setDialog('report')}>
-          {t('patients.writeReport')}
-        </Button>
-        <Button
-          variant="outline"
-          icon={<Pill className="size-4" />}
-          onClick={() => setDialog('prescription')}
-        >
-          {t('patients.newPrescription')}
-        </Button>
-        <Button
-          variant="outline"
-          icon={<FlaskConical className="size-4" />}
-          onClick={() => setDialog('lab')}
-        >
-          {t('labTests.order')}
-        </Button>
-        <Button
-          variant="outline"
-          icon={<ScanLine className="size-4" />}
-          onClick={() => setDialog('imaging')}
-        >
-          {t('imaging.order')}
-        </Button>
-        <Button
-          variant="outline"
-          icon={<MessagesSquare className="size-4" />}
-          onClick={() => setDialog('consultation')}
-        >
-          {t('consultations.ask')}
-        </Button>
-      </motion.div>
+      {!readOnly && (
+        <>
+          <motion.div {...enter(2)} className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+            <Button icon={<FilePlus2 className="size-4" />} onClick={() => setDialog('report')}>
+              {t('patients.writeReport')}
+            </Button>
+            <Button
+              variant="outline"
+              icon={<Pill className="size-4" />}
+              onClick={() => setDialog('prescription')}
+            >
+              {t('patients.newPrescription')}
+            </Button>
+            <Button
+              variant="outline"
+              icon={<FlaskConical className="size-4" />}
+              onClick={() => setDialog('lab')}
+            >
+              {t('labTests.order')}
+            </Button>
+            <Button
+              variant="outline"
+              icon={<ScanLine className="size-4" />}
+              onClick={() => setDialog('imaging')}
+            >
+              {t('imaging.order')}
+            </Button>
+            <Button
+              variant="outline"
+              icon={<MessagesSquare className="size-4" />}
+              onClick={() => setDialog('consultation')}
+            >
+              {t('consultations.ask')}
+            </Button>
+          </motion.div>
 
-      <ReportDialog
-        open={dialog === 'report'}
-        onClose={() => setDialog(null)}
-        patientId={patientId}
-        patientName={patientName(patient, t)}
-      />
-      <PrescriptionDialog
-        open={dialog === 'prescription'}
-        onClose={() => setDialog(null)}
-        patientId={patientId}
-        patientName={patientName(patient, t)}
-        allergies={record.allergies}
-      />
-      <ImagingOrderDialog
-        open={dialog === 'imaging'}
-        onClose={() => setDialog(null)}
-        patientId={patientId}
-        patientName={patientName(patient, t)}
-      />
-      <ConsultationDialog
-        open={dialog === 'consultation'}
-        onClose={() => setDialog(null)}
-        patientId={patientId}
-        patientName={patientName(patient, t)}
-      />
-      <LabOrderDialog
-        open={dialog === 'lab'}
-        onClose={() => setDialog(null)}
-        patientId={patientId}
-        patientName={patientName(patient, t)}
-      />
+          <ReportDialog
+            open={dialog === 'report'}
+            onClose={() => setDialog(null)}
+            patientId={patientId}
+            patientName={patientName(patient, t)}
+          />
+          <PrescriptionDialog
+            open={dialog === 'prescription'}
+            onClose={() => setDialog(null)}
+            patientId={patientId}
+            patientName={patientName(patient, t)}
+            allergies={record.allergies}
+          />
+          <ImagingOrderDialog
+            open={dialog === 'imaging'}
+            onClose={() => setDialog(null)}
+            patientId={patientId}
+            patientName={patientName(patient, t)}
+          />
+          <ConsultationDialog
+            open={dialog === 'consultation'}
+            onClose={() => setDialog(null)}
+            patientId={patientId}
+            patientName={patientName(patient, t)}
+          />
+          <LabOrderDialog
+            open={dialog === 'lab'}
+            onClose={() => setDialog(null)}
+            patientId={patientId}
+            patientName={patientName(patient, t)}
+          />
+        </>
+      )}
 
       <Section icon={<FileText />} title={t('patients.reportsTitle')} index={3}>
         {reports.length === 0 ? (
@@ -591,7 +630,7 @@ export function PatientFilePage() {
         )}
       </Section>
 
-      {consultations.length > 0 && (
+      {!readOnly && consultations.length > 0 && (
         <Section icon={<MessagesSquare />} title={t('consultations.title')} index={4}>
           <Card className="overflow-hidden">
             <ul className="divide-y divide-border">
@@ -616,7 +655,7 @@ export function PatientFilePage() {
           <Card className="overflow-hidden">
             <ul className="divide-y divide-border">
               {labTests.map((test) => (
-                <LabTestRow key={test.id} test={test} patientId={patientId} />
+                <LabTestRow key={test.id} test={test} patientId={patientId} readOnly={readOnly} />
               ))}
             </ul>
           </Card>
@@ -630,7 +669,12 @@ export function PatientFilePage() {
           <Card className="overflow-hidden">
             <ul className="divide-y divide-border">
               {imaging.map((study) => (
-                <ImagingRow key={study.id} study={study} patientId={patientId} />
+                <ImagingRow
+                  key={study.id}
+                  study={study}
+                  patientId={patientId}
+                  readOnly={readOnly}
+                />
               ))}
             </ul>
           </Card>

@@ -1,10 +1,10 @@
 import type { ConsultationView } from '@nabd/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Inbox, Send, X } from 'lucide-react';
+import { FolderOpen, Inbox, Send, X } from 'lucide-react';
 import { useEffect, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { queryKeys } from '@/app/queryKeys';
 import { ConsultationCard } from '@/components/consultations/ConsultationCard';
 import { Button, Card, Spinner } from '@/components/ui';
@@ -126,6 +126,17 @@ export function ConsultationsPage() {
             items={data.received}
             openId={openId}
             index={1}
+            action={(c) =>
+              c.status === 'PENDING' && (
+                <Link
+                  to={c.id}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground shadow-soft transition-colors hover:bg-primary/88"
+                >
+                  <FolderOpen className="size-4" aria-hidden="true" />
+                  {t('consultations.openFile')}
+                </Link>
+              )
+            }
           />
           <List
             title={t('consultations.sentTitle')}

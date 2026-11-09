@@ -10,6 +10,7 @@ import type { RadiologyImage } from '../generated/prisma/client.js';
 import type { ScopedPrisma } from '../lib/scopedPrisma.js';
 import { detectReportType, removeFile, storedPath, storedType, storeFile } from '../lib/uploads.js';
 import { HttpError } from '../middleware/errorHandler.js';
+import { consultingOn } from './consultation.service.js';
 import { emitRefresh, rooms } from '../realtime/realtime.js';
 import { sendNotification } from './notification.service.js';
 
@@ -327,6 +328,7 @@ export async function imagingFile(
     select: {
       imageFiles: true,
       doctorId: true,
+      recordId: true,
       record: { select: { doctorId: true, patient: { select: { userId: true } } } },
     },
   });
@@ -334,7 +336,9 @@ export async function imagingFile(
     study &&
     (viewer.role === 'RADIOLOGIST' ||
       (viewer.role === 'DOCTOR' &&
-        (study.doctorId === viewer.userId || study.record.doctorId === viewer.userId)) ||
+        (study.doctorId === viewer.userId ||
+          study.record.doctorId === viewer.userId ||
+          (await consultingOn(db, viewer.userId, study.recordId)))) ||
       (viewer.role === 'PATIENT' && study.record.patient.userId === viewer.userId));
   const key = allowed ? study.imageFiles[index] : undefined;
   const type = key ? storedType(key) : undefined;

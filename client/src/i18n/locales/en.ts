@@ -397,6 +397,12 @@ export const en: Translation = {
     viewFile: 'View file',
   },
   consultations: {
+    openFile: 'Open the file',
+    back: 'Back to consultations',
+    questionFrom: 'Question from {{name}}',
+    readOnly: 'The file is open to you read-only until you reply or the question is withdrawn.',
+    closed: 'This consultation has ended',
+    closedHint: 'It was answered or withdrawn, so the file is no longer open to you.',
     fromTo: 'From {{from}} to {{to}}',
     title: 'Consultations',
     ask: 'Ask a colleague',

@@ -14,6 +14,7 @@ import { authenticate, requireRole, session } from '../middleware/auth.js';
 import { emitRefresh, rooms } from '../realtime/realtime.js';
 import {
   cancelConsultation,
+  consultationFile,
   listConsultations,
   requestConsultation,
 } from '../services/consultation.service.js';
@@ -166,6 +167,13 @@ doctorRouter.delete('/me/consultations/:id', requireRole('DOCTOR'), async (req, 
   const consultation = await cancelConsultation(db, auth.userId, id);
   emitRefresh(rooms.user(auth.userId), [['patient-file'], ['consultations']]);
   res.json({ consultation });
+});
+
+// The consulted doctor reads the file while the question is open (task 3.13).
+doctorRouter.get('/me/consultations/:id/file', requireRole('DOCTOR'), async (req, res) => {
+  const { auth, db } = session(req);
+  const { id } = z.object({ id: z.uuid() }).parse(req.params);
+  res.json(await consultationFile(db, auth.userId, id));
 });
 
 doctorRouter.get('/me/consultations', requireRole('DOCTOR'), async (req, res) => {

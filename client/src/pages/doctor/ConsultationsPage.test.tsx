@@ -1,4 +1,4 @@
-import type { ConsultationView } from '@nabd/shared';
+import type { ConsultationView, PatientFile } from '@nabd/shared';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MotionGlobalConfig } from 'framer-motion';
@@ -45,6 +45,58 @@ const consultation = (more: Partial<ConsultationView>): ConsultationView => ({
 });
 
 let sent: ConsultationView[];
+let open = true;
+
+const FILE: PatientFile = {
+  patient: {
+    patientId: 'p1',
+    fullName: 'سارة',
+    isAnonymous: false,
+    gender: 'FEMALE',
+    dateOfBirth: null,
+    phone: null,
+    bloodType: 'O+',
+    nationalId: null,
+    address: null,
+  },
+  record: {
+    id: 'r1',
+    doctorName: 'د. سامي',
+    allergies: 'البنسلين',
+    chronicConditions: null,
+    notes: null,
+  },
+  reports: [
+    {
+      id: 'rep1',
+      doctorName: 'د. سامي',
+      title: 'زيارة أولى',
+      diagnosis: null,
+      content: 'ألم صدري',
+      createdAt: new Date().toISOString(),
+    },
+  ],
+  prescriptions: [],
+  labTests: [
+    {
+      id: 'l1',
+      code: 'CBC',
+      priority: 'ROUTINE',
+      status: 'REQUESTED',
+      notes: null,
+      doctorName: 'د. سامي',
+      technicianName: null,
+      result: null,
+      abnormal: false,
+      hasResultFile: false,
+      createdAt: new Date().toISOString(),
+      startedAt: null,
+      completedAt: null,
+    },
+  ] as PatientFile['labTests'],
+  imaging: [],
+  consultations: [],
+};
 
 beforeAll(() => {
   MotionGlobalConfig.skipAnimations = true;
@@ -57,6 +109,7 @@ beforeEach(() => {
   queryClient.clear();
   fake.calls.length = 0;
   useSessionStore.setState({ status: 'authenticated', user: LINA });
+  open = true;
   sent = [
     consultation({
       id: 'c2',
@@ -69,6 +122,11 @@ beforeEach(() => {
     }),
   ];
   fake.respond((config) => {
+    if (config.url === '/doctors/me/consultations/c1/file') {
+      return open
+        ? { status: 200, data: { consultation: consultation({}), file: FILE } }
+        : { status: 403, data: { error: { code: 'CONSULTATION_CLOSED', message: 'closed' } } };
+    }
     if (config.url === '/doctors/me/consultations') {
       return { status: 200, data: { received: [consultation({})], sent } };
     }
@@ -99,5 +157,32 @@ describe('ConsultationsPage (task 3.12)', () => {
     const asked = within(mine).getByLabelText('عمر');
     await userEvent.setup().click(within(asked).getByRole('button', { name: 'سحب' }));
     expect(await within(mine).findByText('مسحوبة')).toBeInTheDocument();
+  });
+
+  it('the consulted doctor opens the file read-only from the question (task 3.13)', async () => {
+    renderApp('/doctor/consultations');
+    const received = await screen.findByRole('region', { name: 'وصلتني' });
+    await userEvent.setup().click(within(received).getByRole('link', { name: 'فتح الملف' }));
+
+    const note = await screen.findByRole('note', { name: 'سؤال د. سامي' });
+    expect(note).toHaveTextContent('تخطيط القلب فيه تغيرات');
+    expect(note).toHaveTextContent('للقراءة بس');
+    expect(screen.getByRole('heading', { name: 'سارة' })).toBeInTheDocument();
+    expect(screen.getByText('البنسلين')).toBeInTheDocument();
+    expect(screen.getByText('ألم صدري')).toBeInTheDocument();
+    // No writing tools, no withdrawing the treating doctor's orders.
+    expect(screen.queryByRole('button', { name: 'كتابة تقرير' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'طلب استشارة' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'سحب الطلب' })).toBeNull();
+  });
+
+  it('once the question is closed the file says so (task 3.13)', async () => {
+    open = false;
+    renderApp('/doctor/consultations/c1');
+    expect(await screen.findByText('انتهت هالاستشارة')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'رجوع للاستشارات' })).toHaveAttribute(
+      'href',
+      '/doctor/consultations?open=c1',
+    );
   });
 });

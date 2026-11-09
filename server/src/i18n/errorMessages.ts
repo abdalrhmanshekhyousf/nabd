@@ -96,6 +96,10 @@ const MESSAGES: Record<ErrorCode, Record<Language, string>> = {
     ar: 'هالطبيب عندو سؤال مفتوح عن هالمريض',
     en: 'This doctor already has an open question about this patient',
   },
+  CONSULTATION_CLOSED: {
+    ar: 'انتهت الاستشارة، وما عاد فيك تفتح الملف',
+    en: 'The consultation is closed; the file is no longer open to you',
+  },
   OUT_OF_STOCK: {
     ar: 'الكمية بالمخزون ما بتكفي',
     en: 'Not enough in stock',

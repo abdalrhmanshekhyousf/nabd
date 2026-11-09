@@ -10,6 +10,7 @@ import type { LabTest } from '../generated/prisma/client.js';
 import type { ScopedPrisma } from '../lib/scopedPrisma.js';
 import { detectReportType, removeFile, storedPath, storedType, storeFile } from '../lib/uploads.js';
 import { HttpError } from '../middleware/errorHandler.js';
+import { consultingOn } from './consultation.service.js';
 import { emitRefresh, rooms } from '../realtime/realtime.js';
 import { sendNotification } from './notification.service.js';
 
@@ -286,6 +287,7 @@ export async function labResultFile(
     select: {
       resultFile: true,
       doctorId: true,
+      recordId: true,
       record: { select: { doctorId: true, patient: { select: { userId: true } } } },
     },
   });
@@ -293,7 +295,9 @@ export async function labResultFile(
     test &&
     (viewer.role === 'LAB_TECHNICIAN' ||
       (viewer.role === 'DOCTOR' &&
-        (test.doctorId === viewer.userId || test.record.doctorId === viewer.userId)) ||
+        (test.doctorId === viewer.userId ||
+          test.record.doctorId === viewer.userId ||
+          (await consultingOn(db, viewer.userId, test.recordId)))) ||
       (viewer.role === 'PATIENT' && test.record.patient.userId === viewer.userId));
   if (!allowed || !test.resultFile) throw new HttpError(404, 'NOT_FOUND', 'File not found');
   const type = storedType(test.resultFile);

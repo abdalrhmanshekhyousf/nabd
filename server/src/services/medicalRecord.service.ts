@@ -62,13 +62,21 @@ export async function listMyPatients(
  * One patient's whole file, read-only, for their treating doctor. Anyone
  * else's patient is "not found", so the list of patients doesn't leak.
  */
-export async function getPatientFile(
+export function getPatientFile(
   db: ScopedPrisma,
   doctorId: string,
   patientId: string,
 ): Promise<PatientFile> {
+  return loadFile(db, { patientId, doctorId });
+}
+
+/** The whole file of the record that matches, or "not found". */
+export async function loadFile(
+  db: ScopedPrisma,
+  where: { patientId: string; doctorId: string } | { id: string },
+): Promise<PatientFile> {
   const record = await db.medicalRecord.findFirst({
-    where: { patientId, doctorId },
+    where,
     include: {
       patient: { select: { ...patientFields, bloodType: true, nationalId: true, address: true } },
       doctor: { select: { fullName: true } },

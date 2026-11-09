@@ -31,6 +31,7 @@ import { OrBoardPage } from '@/pages/nurse/OrBoardPage';
 import { CleanerTasksPage } from '@/pages/cleaner/CleanerTasksPage';
 import { PatientFilePage } from '@/pages/doctor/PatientFilePage';
 import { ConsultationsPage } from '@/pages/doctor/ConsultationsPage';
+import { ConsultationFilePage } from '@/pages/doctor/ConsultationFilePage';
 import { ErQueuePage } from '@/pages/nurse/ErQueuePage';
 import { NewCasePage } from '@/pages/nurse/NewCasePage';
 import { TriagePage } from '@/pages/nurse/TriagePage';
@@ -93,6 +94,11 @@ const DETAIL_ROUTES: Partial<Record<Role, RouteObject[]>> = {
       path: 'patients/:patientId',
       element: <PatientFilePage />,
       handle: { titleKey: 'nav.patientFile', phase: 2 } satisfies RouteHandle,
+    },
+    {
+      path: 'consultations/:consultationId',
+      element: <ConsultationFilePage />,
+      handle: { titleKey: 'nav.patientFile', phase: 3 } satisfies RouteHandle,
     },
   ],
 };

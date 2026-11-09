@@ -3,6 +3,7 @@ import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app.js';
 import { prisma } from '../src/lib/prisma.js';
 import { signAccessToken } from '../src/lib/tokens.js';
+import { removeFile, storeFile } from '../src/lib/uploads.js';
 import { createHospital, createUser } from './helpers.js';
 
 const app = createApp();
@@ -51,6 +52,9 @@ async function clinic() {
       withdraw: (consultationId: string) =>
         request(app).delete(`/api/doctors/me/consultations/${consultationId}`).set(auth),
       list: () => request(app).get('/api/doctors/me/consultations').set(auth),
+      read: (consultationId: string) =>
+        request(app).get(`/api/doctors/me/consultations/${consultationId}/file`).set(auth),
+      labFile: (testId: string) => request(app).get(`/api/lab-tests/${testId}/file`).set(auth),
       colleagues: () => request(app).get('/api/doctors/me/colleagues').set(auth),
       file: (patientId: string) =>
         request(app).get(`/api/doctors/me/patients/${patientId}`).set(auth),
@@ -132,5 +136,56 @@ describe('consultations (task 3.12)', () => {
     expect(
       (await sami.ask(sami.patient.id, { consultantId: lina.id, question: 'سؤال تاني' })).status,
     ).toBe(201);
+  });
+
+  it('the consulted doctor reads the file only while the question is open (task 3.13)', async () => {
+    const h = await clinic();
+    const sami = await h.doctor('د. سامي');
+    const lina = await h.doctor('د. لينا');
+    const basel = await h.doctor('د. باسل');
+    const record = await prisma.medicalRecord.findUniqueOrThrow({
+      where: { patientId: sami.patient.id },
+    });
+    await prisma.medicalRecord.update({
+      where: { id: record.id },
+      data: { allergies: 'البنسلين' },
+    });
+    const key = await storeFile('lab-results', Buffer.from('%PDF-1.4 test'), 'application/pdf');
+    const test = await prisma.labTest.create({
+      data: {
+        hospitalId: h.id,
+        recordId: record.id,
+        code: 'CBC',
+        doctorName: 'د. سامي',
+        status: 'DONE',
+        result: 'طبيعي',
+        resultFile: key,
+      },
+    });
+    const { id } = (await sami.ask(sami.patient.id, { consultantId: lina.id, question: 'رأيك؟' }))
+      .body.consultation;
+
+    // Lina is not the treating doctor: she reads the file through the consultation only.
+    expect((await lina.file(sami.patient.id)).status).toBe(404);
+    const read = await lina.read(id);
+    expect(read.status).toBe(200);
+    expect(read.body.consultation).toMatchObject({ id, question: 'رأيك؟', status: 'PENDING' });
+    expect(read.body.file.record.allergies).toBe('البنسلين');
+    expect(read.body.file.labTests.map((t: { id: string }) => t.id)).toEqual([test.id]);
+    expect(read.body.file.consultations).toEqual([]);
+    expect((await lina.labFile(test.id)).status).toBe(200);
+
+    // Nobody else: not another doctor, not the asker through this route.
+    expect((await basel.read(id)).status).toBe(404);
+    expect((await basel.labFile(test.id)).status).toBe(404);
+    expect((await sami.read(id)).status).toBe(404);
+
+    // Once withdrawn (or answered, 3.14) the access ends.
+    await sami.withdraw(id);
+    const closed = await lina.read(id);
+    expect(closed.status).toBe(403);
+    expect(closed.body.error.code).toBe('CONSULTATION_CLOSED');
+    expect((await lina.labFile(test.id)).status).toBe(404);
+    await removeFile(key);
   });
 });

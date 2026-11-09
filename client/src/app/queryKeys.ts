@@ -44,5 +44,7 @@ export const queryKeys = {
   /** The doctor's consultations (task 3.12); the server refreshes ['consultations']. */
   consultations: ['consultations'] as const,
   colleagues: ['doctors', 'colleagues'] as const,
+  /** Under consultations, so a withdrawn or answered question closes it live (task 3.13). */
+  consultationFile: (id: string) => ['consultations', 'file', id] as const,
   publicHospitals: (search: string) => ['public-hospitals', search] as const,
 };

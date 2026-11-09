@@ -395,6 +395,12 @@ export const ar = {
     viewFile: 'عرض الملف',
   },
   consultations: {
+    openFile: 'فتح الملف',
+    back: 'رجوع للاستشارات',
+    questionFrom: 'سؤال {{name}}',
+    readOnly: 'الملف مفتوح إلك للقراءة بس، لحتى ترد على السؤال أو ينسحب.',
+    closed: 'انتهت هالاستشارة',
+    closedHint: 'انرد عليها أو انسحبت، فما عاد الملف مفتوح إلك.',
     fromTo: 'من {{from}} لـ {{to}}',
     title: 'الاستشارات',
     ask: 'طلب استشارة',
