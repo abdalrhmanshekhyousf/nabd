@@ -2,6 +2,7 @@ import { BED_STATUSES_IN_USE, MAX_BEDS_PER_ROOM, type BedStatus } from '@nabd/sh
 import { Prisma } from '../generated/prisma/client.js';
 import type { ScopedPrisma } from '../lib/scopedPrisma.js';
 import { HttpError } from '../middleware/errorHandler.js';
+import { changeBedStatus } from './bedStatus.service.js';
 
 const roomSelect = {
   id: true,
@@ -146,16 +147,25 @@ export async function deleteBed(db: ScopedPrisma, id: string) {
 }
 
 /**
- * The admin takes a bed out of service (maintenance) or brings it back empty.
- * Everyday changes (reserved, occupied, cleaning) are the nurses' (phase 3).
+ * The admin takes a bed out of service (maintenance) or brings it back empty,
+ * through the bed's state machine so it is logged (task 3.15). Everyday changes
+ * (reserved, occupied, cleaning) are the nurses' (3.16).
  */
-export async function setBedOutOfService(db: ScopedPrisma, id: string, outOfService: boolean) {
+export async function setBedOutOfService(
+  db: ScopedPrisma,
+  hospitalId: string,
+  actorId: string,
+  id: string,
+  outOfService: boolean,
+) {
   const bed = await requireBed(db, id);
   if (inUse(bed.status)) throw new HttpError(409, 'BED_IN_USE', 'Bed in use');
 
   const status: BedStatus = outOfService ? 'OUT_OF_SERVICE' : 'EMPTY';
   if (bed.status !== status) {
-    await db.bed.update({ where: { id }, data: { status, statusChangedAt: new Date() } });
+    await db.$transaction((tx) =>
+      changeBedStatus(tx, { hospitalId, bedId: id, to: status, actorId }),
+    );
   }
   return sortRoom((await db.room.findUnique({ where: { id: bed.roomId }, select: roomSelect }))!);
 }

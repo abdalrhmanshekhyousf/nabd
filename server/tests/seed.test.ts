@@ -81,6 +81,16 @@ describe('the demo seed (task 2.27)', () => {
     expect(late).toEqual(expect.arrayContaining([2, 3]));
     expect(queue[1]).toMatchObject({ status: 'IN_TREATMENT', patient: { isAnonymous: true } });
 
+    // Wards with empty beds for admissions (3.15–3.18).
+    expect(first.wards).toBe(true);
+    const wardBeds = await prisma.bed.findMany({
+      where: { hospitalId },
+      select: { status: true, room: { select: { department: { select: { code: true } } } } },
+    });
+    expect(wardBeds.length).toBeGreaterThan(40);
+    expect(new Set(wardBeds.map((b) => b.status))).toEqual(new Set(['EMPTY']));
+    expect(new Set(wardBeds.map((b) => b.room.department.code))).toContain('INTERNAL_MEDICINE');
+
     const rooms = await prisma.operatingRoom.findMany({
       where: { hospitalId },
       orderBy: { name: 'asc' },
@@ -118,10 +128,16 @@ describe('the demo seed (task 2.27)', () => {
         prisma.cleanerAssignment.count({ where: { hospitalId } }),
         prisma.inventoryItem.count({ where: { hospitalId } }),
         prisma.stockMovement.count({ where: { hospitalId } }),
+        prisma.bed.count({ where: { hospitalId } }),
       ]);
     const before = await count();
     const again = await seedDemo(details, { sampleStock: true });
-    expect(again).toMatchObject({ activity: false, stock: false, hospital: { id: hospitalId } });
+    expect(again).toMatchObject({
+      activity: false,
+      wards: false,
+      stock: false,
+      hospital: { id: hospitalId },
+    });
     expect(await count()).toEqual(before);
     // The whole team and the activity go through the services.
   }, 60_000);

@@ -214,6 +214,7 @@ export const en: Translation = {
     removeBed: 'Remove bed',
     bedRemoved: 'Bed removed',
     bedUpdated: 'Bed status saved',
+    cleaningHint: 'The bed is being cleaned; it comes back empty when cleaning is done.',
     inUseHint: 'A patient is in or booked into this bed, so it cannot be changed here.',
     noDepartmentsTitle: 'No departments yet',
     noDepartmentsBody:
@@ -395,6 +396,10 @@ export const en: Translation = {
     needOne: 'Write the values or attach the result file',
     save: 'Save result',
     viewFile: 'View file',
+  },
+  beds: {
+    history: 'Bed history',
+    noHistory: 'Its state has not changed yet.',
   },
   consultations: {
     answer: 'Reply to the consultation',

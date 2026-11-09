@@ -213,6 +213,7 @@ export const ar = {
     removeBed: 'حذف السرير',
     bedRemoved: 'انحذف السرير',
     bedUpdated: 'انحفظت حالة السرير',
+    cleaningHint: 'السرير عم ينضّف، وبيرجع فاضي لما يخلص التنظيف.',
     inUseHint: 'على هالسرير مريض أو محجوز، فما فيك تغيّره من هون.',
     noDepartmentsTitle: 'لسا ما في أقسام',
     noDepartmentsBody: 'الغرف بتنضاف جوّا الأقسام، فابدأ بإضافة أقسام المستشفى.',
@@ -393,6 +394,10 @@ export const ar = {
     needOne: 'اكتب القيم أو ارفع ملف النتيجة',
     save: 'حفظ النتيجة',
     viewFile: 'عرض الملف',
+  },
+  beds: {
+    history: 'سجل السرير',
+    noHistory: 'ما تغيّرت حالته لسا.',
   },
   consultations: {
     answer: 'الرد على الاستشارة',

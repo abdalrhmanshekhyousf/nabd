@@ -90,6 +90,33 @@ beforeEach(() => {
       sync();
       return { status: 204 };
     }
+    if (resource === 'beds' && sub === 'history') {
+      return {
+        status: 200,
+        data: {
+          history: [
+            {
+              id: 'h1',
+              fromStatus: 'CLEANING',
+              toStatus: 'EMPTY',
+              reason: null,
+              changedByName: 'سعاد',
+              createdAt: new Date().toISOString(),
+              patientName: null,
+            },
+            {
+              id: 'h2',
+              fromStatus: 'OCCUPIED',
+              toStatus: 'CLEANING',
+              reason: 'خروج',
+              changedByName: 'ريم',
+              createdAt: new Date().toISOString(),
+              patientName: 'سارة',
+            },
+          ],
+        },
+      };
+    }
     const target = rooms.flatMap((r) => r.beds).find((b) => b.id === id);
     if (resource === 'beds' && target && config.method === 'patch') {
       target.status = body.outOfService ? 'OUT_OF_SERVICE' : 'EMPTY';
@@ -191,6 +218,26 @@ describe('RoomsPage', () => {
 
     expect(within(dialog).getByText(/على هالسرير مريض أو محجوز/)).toBeInTheDocument();
     expect(within(dialog).queryByRole('button', { name: 'حذف السرير' })).toBeNull();
+  });
+
+  it('shows the bed history; a bed being cleaned cannot leave service (task 3.15)', async () => {
+    rooms = [
+      { id: 'r1', number: '5', floor: null, departmentId: 'd1', beds: [bed('1', 'CLEANING')] },
+    ];
+    renderApp('/admin/rooms');
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'سرير 1، قيد التنظيف' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(/عم ينضّف/)).toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: 'إخراج من الخدمة' })).toBeNull();
+
+    const history = await within(dialog).findByRole('region', { name: 'سجل السرير' });
+    const lines = within(history).getAllByRole('listitem');
+    expect(lines[0]).toHaveTextContent('سعاد');
+    expect(lines[1]).toHaveTextContent('مشغول');
+    expect(lines[1]).toHaveTextContent('ريم');
+    expect(lines[1]).toHaveTextContent('سارة');
+    expect(lines[1]).toHaveTextContent('خروج');
   });
 
   it('deletes a room after confirming', async () => {

@@ -12,6 +12,7 @@ export * from './imaging.js';
 export * from './pharmacy.js';
 export * from './reports.js';
 export * from './consultations.js';
+export * from './beds.js';
 export * from './roles.js';
 export * from './schemas/auth.js';
 export * from './schemas/common.js';

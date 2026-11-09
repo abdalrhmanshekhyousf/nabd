@@ -260,6 +260,8 @@ model Hospital {
   labTests           LabTest[]
   radiologyImages    RadiologyImage[]
   reports            Report[]
+  bedAssignments     BedAssignment[]
+  bedStatusChanges   BedStatusChange[]
   consultations      Consultation[]
 }
 
@@ -313,6 +315,8 @@ model Bed {
   hospital         Hospital          @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
   room             Room              @relation(fields: [roomId], references: [id], onDelete: Cascade)
   cleaningRequests CleaningRequest[]
+  assignments      BedAssignment[]
+  statusChanges    BedStatusChange[]
 
   @@unique([roomId, label])
   @@index([hospitalId, status])
@@ -382,6 +386,9 @@ model User {
   imagingDone            RadiologyImage[]            @relation("ImagingRadiologist")
   reportsWritten         Report[]                    @relation("ReportAuthor")
   consultationsAsked     Consultation[]              @relation("ConsultationRequester")
+  bedAdmissions          BedAssignment[]             @relation("BedAdmittedBy")
+  bedDischarges          BedAssignment[]             @relation("BedDischargedBy")
+  bedStatusChanges       BedStatusChange[]           @relation("BedStatusChanger")
   consultationsGiven     Consultation[]              @relation("ConsultationConsultant")
 
   @@unique([hospitalId, email])
@@ -462,6 +469,7 @@ model Patient {
   hospital          Hospital           @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
   user              User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
   medicalRecord     MedicalRecord?
+  bedAssignments    BedAssignment[]
   erVisits          TriageAssessment[]
   operationBookings OperationBooking[]
 
@@ -609,12 +617,13 @@ model TriageAssessment {
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
 
-  hospital   Hospital           @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  patient    Patient            @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  nurse      User?              @relation("TriageNurse", fields: [nurseId], references: [id], onDelete: SetNull)
-  department Department?        @relation(fields: [departmentId], references: [id], onDelete: SetNull)
-  calls      DoctorCall[]
-  bookings   OperationBooking[]
+  hospital       Hospital           @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  bedAssignments BedAssignment[]
+  patient        Patient            @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  nurse          User?              @relation("TriageNurse", fields: [nurseId], references: [id], onDelete: SetNull)
+  department     Department?        @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  calls          DoctorCall[]
+  bookings       OperationBooking[]
 
   // The waiting list: by status, then level, then arrival (2.15).
   @@index([hospitalId, status, level, arrivedAt])
@@ -854,6 +863,60 @@ model StockMovement {
 
   @@index([itemId, createdAt])
   @@index([hospitalId, createdAt])
+}
+
+// ─── Beds (tasks 3.15–3.18) ──────────────────────────────────────────────────
+
+// A patient in a bed: from admission to discharge (dischargedAt). A bed has at
+// most one open stay and a patient at most one (partial unique indexes in the
+// migration). Names are kept so the history survives removed accounts.
+model BedAssignment {
+  id               String    @id @default(uuid(7)) @db.Uuid
+  hospitalId       String    @db.Uuid
+  bedId            String    @db.Uuid
+  patientId        String    @db.Uuid
+  // The ER visit it came from, when it did (2.17 transfers).
+  visitId          String?   @db.Uuid
+  notes            String?
+  admittedById     String?   @db.Uuid
+  admittedByName   String
+  admittedAt       DateTime  @default(now())
+  dischargedAt     DateTime?
+  dischargedById   String?   @db.Uuid
+  dischargedByName String?
+
+  hospital     Hospital          @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  bed          Bed               @relation(fields: [bedId], references: [id], onDelete: Cascade)
+  patient      Patient           @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  visit        TriageAssessment? @relation(fields: [visitId], references: [id], onDelete: SetNull)
+  admittedBy   User?             @relation("BedAdmittedBy", fields: [admittedById], references: [id], onDelete: SetNull)
+  dischargedBy User?             @relation("BedDischargedBy", fields: [dischargedById], references: [id], onDelete: SetNull)
+  changes      BedStatusChange[]
+
+  @@index([bedId, admittedAt])
+  @@index([hospitalId, patientId])
+}
+
+// Every change of a bed's state, with who made it and, when it belongs to one,
+// the stay. Written only by changeBedStatus (bedStatus.service.ts).
+model BedStatusChange {
+  id            String    @id @default(uuid(7)) @db.Uuid
+  hospitalId    String    @db.Uuid
+  bedId         String    @db.Uuid
+  assignmentId  String?   @db.Uuid
+  fromStatus    BedStatus
+  toStatus      BedStatus
+  reason        String?
+  changedById   String?   @db.Uuid
+  changedByName String
+  createdAt     DateTime  @default(now())
+
+  hospital   Hospital       @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  bed        Bed            @relation(fields: [bedId], references: [id], onDelete: Cascade)
+  assignment BedAssignment? @relation(fields: [assignmentId], references: [id], onDelete: SetNull)
+  changedBy  User?          @relation("BedStatusChanger", fields: [changedById], references: [id], onDelete: SetNull)
+
+  @@index([bedId, createdAt])
 }
 
 // ─── Consultations (tasks 3.12–3.14) ─────────────────────────────────────────

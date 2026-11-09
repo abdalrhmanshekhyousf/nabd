@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import {
   addBed,
+  bedStatusHistory,
   create,
   list,
   remove,
@@ -25,4 +26,5 @@ export const bedRouter = Router();
 
 bedRouter.use(authenticate);
 bedRouter.patch('/:id', requireRole('ADMIN'), setBedService);
+bedRouter.get('/:id/history', requireRole('ADMIN', 'NURSE'), bedStatusHistory);
 bedRouter.delete('/:id', requireRole('ADMIN'), removeBed);

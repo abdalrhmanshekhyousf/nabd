@@ -8,6 +8,7 @@ import type { Request, Response } from 'express';
 import { z } from 'zod';
 import { session } from '../middleware/auth.js';
 import * as roomService from '../services/room.service.js';
+import { bedHistory } from '../services/bedStatus.service.js';
 
 const idParam = z.object({ id: z.uuid() });
 const listQuery = z.object({ departmentId: z.uuid().optional() });
@@ -45,10 +46,12 @@ export async function addBed(req: Request, res: Response) {
 }
 
 export async function setBedService(req: Request, res: Response) {
-  const { db } = session(req);
+  const { auth, db } = session(req);
   const { id } = idParam.parse(req.params);
   const { outOfService } = bedServiceSchema.parse(req.body);
-  res.json({ room: await roomService.setBedOutOfService(db, id, outOfService) });
+  res.json({
+    room: await roomService.setBedOutOfService(db, auth.hospitalId, auth.userId, id, outOfService),
+  });
 }
 
 export async function removeBed(req: Request, res: Response) {
@@ -56,4 +59,11 @@ export async function removeBed(req: Request, res: Response) {
   const { id } = idParam.parse(req.params);
   await roomService.deleteBed(db, id);
   res.status(204).end();
+}
+
+/** A bed's history of states (task 3.15). */
+export async function bedStatusHistory(req: Request, res: Response) {
+  const { db } = session(req);
+  const { id } = idParam.parse(req.params);
+  res.json({ history: await bedHistory(db, id) });
 }

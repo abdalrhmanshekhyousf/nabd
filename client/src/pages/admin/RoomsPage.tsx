@@ -18,6 +18,7 @@ import { queryKeys } from '@/app/queryKeys';
 import { DepartmentIcon } from '@/components/departments/DepartmentIcon';
 import { departmentLabel, type Department } from '@/components/departments/departmentDisplay';
 import { BED_TILE_CLASSES, BED_TONE, type Bed, type Room } from '@/components/rooms/bedStyles';
+import { BedHistory } from '@/components/rooms/BedHistory';
 import { Button, Card, Input, Modal, StatusBadge } from '@/components/ui';
 import { api, describeApiError } from '@/lib/api';
 import { cn } from '@/lib/cn';
@@ -193,6 +194,7 @@ function BedDialog({
   const bed = target?.bed;
   const inUse = bed ? BED_STATUSES_IN_USE.includes(bed.status) : false;
   const outOfService = bed?.status === 'OUT_OF_SERVICE';
+  const cleaning = bed?.status === 'CLEANING';
 
   return (
     <Modal
@@ -206,8 +208,10 @@ function BedDialog({
       {bed && (
         <div className="space-y-4">
           <StatusBadge tone={BED_TONE[bed.status]}>{t(`bedStatus.${bed.status}`)}</StatusBadge>
-          {inUse ? (
-            <p className="text-sm text-muted">{t('rooms.inUseHint')}</p>
+          {inUse || cleaning ? (
+            <p className="text-sm text-muted">
+              {cleaning ? t('rooms.cleaningHint') : t('rooms.inUseHint')}
+            </p>
           ) : (
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button
@@ -229,6 +233,7 @@ function BedDialog({
               </Button>
             </div>
           )}
+          <BedHistory bedId={bed.id} />
         </div>
       )}
     </Modal>
