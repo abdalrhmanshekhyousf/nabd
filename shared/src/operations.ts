@@ -92,6 +92,8 @@ export type CleaningRequestView = {
   /** The room, bed or place to clean, as written when requested. */
   place: string | null;
   operatingRoom: { id: string; name: string } | null;
+  /** The bed to clean after a patient left it (task 3.17). */
+  bed: { id: string; label: string; room: string } | null;
   note: string | null;
   requestedBy: string | null;
   assignedTo: { id: string; fullName: string } | null;

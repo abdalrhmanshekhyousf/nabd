@@ -51,6 +51,41 @@ export async function changeBedStatus(
   return tx.bed.update({ where: { id: bedId }, data: { status: to, statusChangedAt: new Date() } });
 }
 
+/**
+ * A patient left the bed (task 3.17): the department's cleaners get a job for
+ * it, unless one is already open. Inside the caller's transaction; returns the
+ * notice to send once it is committed, or null.
+ */
+export async function requestBedCleaning(
+  tx: Tx,
+  {
+    hospitalId,
+    bedId,
+    requestedById,
+    reason,
+  }: { hospitalId: string; bedId: string; requestedById: string; reason: 'DISCHARGED' | 'MOVED' },
+) {
+  const bed = await tx.bed.findUniqueOrThrow({
+    where: { id: bedId },
+    select: { label: true, room: { select: { number: true, departmentId: true } } },
+  });
+  const open = await tx.cleaningRequest.findFirst({
+    where: { bedId, status: { in: ['PENDING', 'IN_PROGRESS'] } },
+    select: { id: true },
+  });
+  if (open) return null;
+  await tx.cleaningRequest.create({
+    data: {
+      hospitalId,
+      departmentId: bed.room.departmentId,
+      bedId,
+      note: reason,
+      requestedById,
+    },
+  });
+  return { departmentId: bed.room.departmentId, room: bed.room.number, bed: bed.label };
+}
+
 /** A bed's history, newest first, with the patient of each stay. */
 export async function bedHistory(
   db: ScopedPrisma,

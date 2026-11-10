@@ -3,6 +3,7 @@ import type { Prisma } from '../generated/prisma/client.js';
 import type { ScopedPrisma } from '../lib/scopedPrisma.js';
 import { HttpError } from '../middleware/errorHandler.js';
 import { emitRefresh, rooms } from '../realtime/realtime.js';
+import { changeBedStatus } from './bedStatus.service.js';
 import { announceCleaning } from './cleaning.service.js';
 import { sendNotification } from './notification.service.js';
 import { announceStep, orActorsOf, stepRoom, type StepEffects } from './orTransition.service.js';
@@ -12,6 +13,7 @@ type Tx = Parameters<Parameters<ScopedPrisma['$transaction']>[0]>[0];
 const requestInclude = {
   department: { select: { id: true, name: true, code: true } },
   operatingRoom: { select: { id: true, name: true } },
+  bed: { select: { id: true, label: true, room: { select: { number: true } } } },
   requestedBy: { select: { fullName: true } },
   assignedTo: { select: { id: true, fullName: true } },
 } as const satisfies Prisma.CleaningRequestInclude;
@@ -26,6 +28,7 @@ function toView(row: RequestRow, viewerId: string): CleaningRequestView {
     department: row.department,
     place: row.place,
     operatingRoom: row.operatingRoom,
+    bed: row.bed ? { id: row.bed.id, label: row.bed.label, room: row.bed.room.number } : null,
     note: row.note,
     requestedBy: row.requestedBy?.fullName ?? null,
     assignedTo: row.assignedTo,
@@ -87,6 +90,7 @@ async function lockedRequest(tx: Tx, id: string, departmentIds: string[]) {
       status: true,
       departmentId: true,
       operatingRoomId: true,
+      bedId: true,
       assignedToId: true,
       assignedTo: { select: { fullName: true } },
     },
@@ -113,7 +117,7 @@ export async function moveRequest(
     coveredDepartments(db, cleanerId),
     orActorsOf(db, cleanerId),
   ]);
-  const { effects, roomMoved } = await db.$transaction(async (tx) => {
+  const { effects, roomMoved, bedFreed } = await db.$transaction(async (tx) => {
     const job = await lockedRequest(tx, id, departmentIds);
     if (move === 'start' && job.status === 'IN_PROGRESS') {
       throw new HttpError(409, 'ALREADY_TAKEN', 'Someone else already took this request', {
@@ -135,7 +139,7 @@ export async function moveRequest(
         roomId: job.roomId,
         to: move === 'start' ? 'STERILIZING' : 'AVAILABLE',
       });
-      return { effects: stepped, roomMoved: true };
+      return { effects: stepped, roomMoved: true, bedFreed: false };
     }
     await tx.cleaningRequest.update({
       where: { id },
@@ -144,14 +148,36 @@ export async function moveRequest(
           ? { status: 'IN_PROGRESS', assignedToId: cleanerId, startedAt: new Date() }
           : { status: 'DONE', finishedAt: new Date() },
     });
+    // A bed after its patient left (task 3.17): clean, so empty again, unless a
+    // nurse already freed it by hand.
+    let bedFreed = false;
+    if (move === 'finish' && job.bedId) {
+      const bed = await tx.bed.findUnique({ where: { id: job.bedId }, select: { status: true } });
+      if (bed?.status === 'CLEANING') {
+        await changeBedStatus(tx, {
+          hospitalId,
+          bedId: job.bedId,
+          to: 'EMPTY',
+          actorId: cleanerId,
+          reason: 'CLEANED',
+        });
+        bedFreed = true;
+      }
+    }
     return {
       effects: { sterilize: null, cleaningDepartmentId: job.departmentId },
       roomMoved: false,
+      bedFreed,
     };
   });
   await announceStep(db, hospitalId, effects);
   // A sterilization also moved a room, and maybe held it again for a booking.
   if (roomMoved) emitRefresh(rooms.hospital(hospitalId), [['operating-rooms'], ['bookings']]);
+  // The ward's board and every bed map see the bed free again.
+  if (bedFreed && effects.cleaningDepartmentId) {
+    emitRefresh(rooms.department(effects.cleaningDepartmentId), [['ward']]);
+    emitRefresh(rooms.hospital(hospitalId), [['rooms']]);
+  }
   const row = await db.cleaningRequest.findUniqueOrThrow({
     where: { id },
     include: requestInclude,

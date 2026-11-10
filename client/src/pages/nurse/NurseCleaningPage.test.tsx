@@ -31,6 +31,7 @@ function request(id: string, overrides: Partial<CleaningRequestView> = {}): Clea
     department: { id: 'w', name: 'القلبية', code: 'CARDIOLOGY' },
     place: 'غرفة 12',
     operatingRoom: null,
+    bed: null,
     note: null,
     requestedBy: 'سلمى',
     assignedTo: null,

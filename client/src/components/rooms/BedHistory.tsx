@@ -56,7 +56,9 @@ export function BedHistory({ bedId }: { bedId: string }) {
               </p>
               {change.reason && (
                 <p className="text-xs text-foreground">
-                  {change.reason === 'MOVED' || change.reason === 'DISCHARGED'
+                  {change.reason === 'MOVED' ||
+                  change.reason === 'DISCHARGED' ||
+                  change.reason === 'CLEANED'
                     ? t(`beds.reasons.${change.reason}`)
                     : change.reason}
                 </p>

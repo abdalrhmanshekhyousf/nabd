@@ -8,6 +8,7 @@ import { queryKeys } from '@/app/queryKeys';
 import { Button, Card, Input, Modal, Spinner, StatusBadge, Textarea } from '@/components/ui';
 import type { StatusTone } from '@/components/ui';
 import { api, describeApiError } from '@/lib/api';
+import { cleaningNote, cleaningPlace } from '@/lib/cleaningText';
 import { cn } from '@/lib/cn';
 import { fieldError } from '@/lib/fieldError';
 import { calm, enter } from '@/lib/motion';
@@ -197,7 +198,7 @@ export function NurseCleaningPage() {
                         initial={{ opacity: 0, y: -6 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={calm}
-                        aria-label={r.place ?? ''}
+                        aria-label={cleaningPlace(r, t) ?? ''}
                         className={cn(
                           'flex flex-wrap items-center gap-3 border-b border-border p-3 last:border-b-0 sm:px-4',
                           r.status === 'CANCELLED' && 'opacity-60',
@@ -205,8 +206,10 @@ export function NurseCleaningPage() {
                       >
                         <SprayCan className="size-4 shrink-0 text-accent" aria-hidden="true" />
                         <div className="min-w-0 flex-1">
-                          <p className="font-medium text-foreground">{r.place}</p>
-                          {r.note && <p className="text-sm text-foreground/80">{r.note}</p>}
+                          <p className="font-medium text-foreground">{cleaningPlace(r, t)}</p>
+                          {r.note && (
+                            <p className="text-sm text-foreground/80">{cleaningNote(r, t)}</p>
+                          )}
                           <p className="text-xs text-muted">
                             {r.mine
                               ? t('nurseCleaning.mine')
@@ -243,7 +246,9 @@ export function NurseCleaningPage() {
       <Modal
         open={cancelling !== null}
         onClose={() => setCancelling(null)}
-        title={t('nurseCleaning.cancelTitle', { place: cancelling?.place ?? '' })}
+        title={t('nurseCleaning.cancelTitle', {
+          place: (cancelling && cleaningPlace(cancelling, t)) ?? '',
+        })}
         size="sm"
         footer={
           <>

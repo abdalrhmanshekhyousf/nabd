@@ -9,6 +9,7 @@ import { departmentLabel } from '@/components/departments/departmentDisplay';
 import { Button, Card, Spinner, StatusBadge } from '@/components/ui';
 import { useNow } from '@/hooks/useNow';
 import { api, describeApiError } from '@/lib/api';
+import { cleaningNote, cleaningPlace } from '@/lib/cleaningText';
 import { cn } from '@/lib/cn';
 import { calm, enter } from '@/lib/motion';
 import { notify } from '@/lib/notify';
@@ -34,7 +35,7 @@ function JobCard({ job, action }: { job: CleaningRequestView; action?: ReactNode
       transition={calm}
     >
       <Card
-        aria-label={job.place ?? t(`cleaning.kind.${job.kind}`)}
+        aria-label={cleaningPlace(job, t) ?? t(`cleaning.kind.${job.kind}`)}
         className={cn(
           'flex h-full flex-col gap-3 border-s-4 p-4',
           sterile ? 'border-s-danger' : 'border-s-accent',
@@ -49,7 +50,7 @@ function JobCard({ job, action }: { job: CleaningRequestView; action?: ReactNode
               ) : (
                 <SprayCan className="size-4 shrink-0 text-accent" aria-hidden="true" />
               )}
-              <span className="truncate">{job.place ?? '—'}</span>
+              <span className="truncate">{cleaningPlace(job, t) ?? '—'}</span>
             </p>
             <p className="text-xs text-muted">{departmentLabel(job.department, t)}</p>
           </div>
@@ -57,7 +58,9 @@ function JobCard({ job, action }: { job: CleaningRequestView; action?: ReactNode
             {t(`cleaning.kind.${job.kind}`)}
           </StatusBadge>
         </div>
-        {job.note && <p className="text-sm whitespace-pre-line text-foreground">{job.note}</p>}
+        {job.note && (
+          <p className="text-sm whitespace-pre-line text-foreground">{cleaningNote(job, t)}</p>
+        )}
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted">
           <span className="inline-flex items-center gap-1">
             <Clock className="size-3.5" aria-hidden="true" />
@@ -142,7 +145,7 @@ export function CleanerTasksPage() {
     onSuccess: (done, { step }) =>
       notify.success(
         t(step === 'start' ? 'cleaning.started' : 'cleaning.finished', {
-          place: done.place ?? '',
+          place: cleaningPlace(done, t) ?? '',
         }),
       ),
     onError: (error) => notify.error(describeApiError(error).message),

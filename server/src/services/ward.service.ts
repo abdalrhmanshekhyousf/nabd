@@ -11,7 +11,9 @@ import type {
 import { Prisma } from '../generated/prisma/client.js';
 import type { ScopedPrisma } from '../lib/scopedPrisma.js';
 import { HttpError } from '../middleware/errorHandler.js';
-import { changeBedStatus } from './bedStatus.service.js';
+import { changeBedStatus, requestBedCleaning } from './bedStatus.service.js';
+import { announceCleaning } from './cleaning.service.js';
+import { sendNotification } from './notification.service.js';
 
 type Tx = Parameters<Parameters<ScopedPrisma['$transaction']>[0]>[0];
 
@@ -49,6 +51,23 @@ export async function requireWardNurse(db: ScopedPrisma, userId: string) {
     throw new HttpError(403, 'FORBIDDEN', 'Only nurses of a department manage its beds');
   }
   return profile.department;
+}
+
+/** Tells the department's cleaners a bed waits for them (task 3.17), once committed. */
+async function callCleaners(
+  db: ScopedPrisma,
+  hospitalId: string,
+  cleaning: { departmentId: string; room: string; bed: string } | null,
+  reason: 'DISCHARGED' | 'MOVED',
+) {
+  if (!cleaning) return;
+  await sendNotification(db, hospitalId, {
+    to: { role: 'CLEANER', departmentId: cleaning.departmentId },
+    type: 'BED_DISCHARGED',
+    data: { room: cleaning.room, bed: cleaning.bed, reason },
+    link: '/cleaning/tasks',
+  });
+  announceCleaning(cleaning.departmentId);
 }
 
 /** Locks beds in a fixed order (two moves crossing never wait on each other). */
@@ -266,7 +285,7 @@ export async function moveStay(
   bedId: string,
 ) {
   const ward = await requireWardNurse(db, nurseId);
-  return db.$transaction(async (tx) => {
+  const result = await db.$transaction(async (tx) => {
     const stay = await requireOpenStay(tx, ward.id, id);
     if (stay.bedId === bedId) {
       throw new HttpError(409, 'INVALID_TRANSITION', 'The patient is already in this bed');
@@ -288,8 +307,16 @@ export async function moveStay(
       reason: 'MOVED',
     });
     await tx.bedAssignment.update({ where: { id }, data: { bedId } });
-    return { departmentId: ward.id, freedBedId: stay.bedId };
+    const cleaning = await requestBedCleaning(tx, {
+      hospitalId,
+      bedId: stay.bedId,
+      requestedById: nurseId,
+      reason: 'MOVED',
+    });
+    return { departmentId: ward.id, freedBedId: stay.bedId, cleaning };
   });
+  await callCleaners(db, hospitalId, result.cleaning, 'MOVED');
+  return result;
 }
 
 /** The patient leaves: the stay ends and the bed goes to cleaning (3.17 calls the cleaners). */
@@ -302,7 +329,7 @@ export async function dischargeStay(
 ) {
   const ward = await requireWardNurse(db, nurseId);
   const nurse = await db.user.findUnique({ where: { id: nurseId }, select: { fullName: true } });
-  return db.$transaction(async (tx) => {
+  const result = await db.$transaction(async (tx) => {
     const stay = await requireOpenStay(tx, ward.id, id);
     await lockBeds(tx, hospitalId, ward.id, [stay.bedId]);
     await tx.bedAssignment.update({
@@ -322,8 +349,16 @@ export async function dischargeStay(
       assignmentId: id,
       reason: 'DISCHARGED',
     });
-    return { departmentId: ward.id, freedBedId: stay.bedId };
+    const cleaning = await requestBedCleaning(tx, {
+      hospitalId,
+      bedId: stay.bedId,
+      requestedById: nurseId,
+      reason: 'DISCHARGED',
+    });
+    return { departmentId: ward.id, freedBedId: stay.bedId, cleaning };
   });
+  await callCleaners(db, hospitalId, result.cleaning, 'DISCHARGED');
+  return result;
 }
 
 /** By hand: hold an empty bed for someone coming, or free a reserved or cleaned one. */
@@ -335,9 +370,17 @@ export async function setWardBedStatus(
   { to, reason }: WardBedStatusData,
 ) {
   const ward = await requireWardNurse(db, nurseId);
-  await db.$transaction(async (tx) => {
+  const withdrawn = await db.$transaction(async (tx) => {
     await lockBeds(tx, hospitalId, ward.id, [bedId]);
-    await changeBedStatus(tx, { hospitalId, bedId, to, actorId: nurseId, reason });
+    const bed = await changeBedStatus(tx, { hospitalId, bedId, to, actorId: nurseId, reason });
+    // Cleaned by hand: a job nobody started yet is withdrawn.
+    if (to !== 'EMPTY') return 0;
+    const { count } = await tx.cleaningRequest.updateMany({
+      where: { bedId: bed.id, status: 'PENDING' },
+      data: { status: 'CANCELLED' },
+    });
+    return count;
   });
+  if (withdrawn) announceCleaning(ward.id);
   return { departmentId: ward.id };
 }

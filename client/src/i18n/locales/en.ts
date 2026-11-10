@@ -464,6 +464,7 @@ export const en: Translation = {
     reasons: {
       MOVED: 'The patient moved to another bed',
       DISCHARGED: 'The patient was discharged',
+      CLEANED: 'Cleaning finished',
     },
     history: 'Bed history',
     noHistory: 'Its state has not changed yet.',
@@ -763,6 +764,7 @@ export const en: Translation = {
     noDepartmentHint: 'The admin sets your department; then you can request cleaning.',
   },
   cleaning: {
+    bedPlace: 'Room {{room}} · bed {{bed}}',
     title: 'Cleaning and sterilization',
     description: 'Jobs from the departments you cover. Sterilizations first, oldest first.',
     kind: { CLEANING: 'Cleaning', STERILIZATION: 'Sterilization' },
@@ -1508,6 +1510,7 @@ export const en: Translation = {
       OPERATION_POSTPONED: '{{procedure}} · {{room}}: an emergency came in, choose a new time',
       DOCTOR_CALL: '{{patient}} · {{complaint}} · triage level {{level}}',
       CLEANING_REQUEST: 'Place: {{place}}',
+      BED_DISCHARGED: 'Room {{room}} · bed {{bed}}',
       CONSULTATION_REQUEST: '{{from}} asks you about {{patient}}',
       CONSULTATION_REPLY: '{{from}} answered your question about {{patient}}',
       REPORT_SUBMITTED: '{{reportName}} report from {{author}}',

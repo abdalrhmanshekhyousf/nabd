@@ -34,6 +34,7 @@ function job(id: string, overrides: Partial<CleaningRequestView> = {}): Cleaning
     department: { id: 'er', name: 'الإسعاف', code: 'EMERGENCY' },
     place: 'ممر الإسعاف',
     operatingRoom: null,
+    bed: null,
     note: null,
     requestedBy: 'لينا',
     assignedTo: null,
@@ -167,5 +168,21 @@ describe('CleanerTasksPage', () => {
     act(() => lastSocket().fromServer('refresh', { queryKeys: [['cleaning-requests']] }));
     expect(await section('بالانتظار')).toHaveTextContent('غرفة 1');
     expect(screen.queryByText('ما في طلبات هلق')).toBeNull();
+  });
+
+  it('a bed a patient left shows its room and bed, and why (task 3.17)', async () => {
+    jobs = [
+      job('bed1', {
+        place: null,
+        bed: { id: 'b2', label: '2', room: '101' },
+        note: 'DISCHARGED',
+        department: { id: 'in', name: 'Internal', code: 'INTERNAL_MEDICINE' },
+      }),
+    ];
+    renderApp('/cleaning/tasks');
+    const card = await screen.findByLabelText('غرفة 101 · سرير 2');
+    expect(card).toHaveTextContent('طلع المريض');
+    await userEvent.setup().click(within(card).getByRole('button', { name: 'بلّشت' }));
+    expect(await screen.findByText('بلّشت بـ غرفة 101 · سرير 2')).toBeInTheDocument();
   });
 });

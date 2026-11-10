@@ -458,7 +458,7 @@ export const ar = {
     days_other: 'من {{count}} يوم',
   },
   beds: {
-    reasons: { MOVED: 'انتقل المريض لسرير تاني', DISCHARGED: 'طلع المريض' },
+    reasons: { MOVED: 'انتقل المريض لسرير تاني', DISCHARGED: 'طلع المريض', CLEANED: 'خلص التنظيف' },
     history: 'سجل السرير',
     noHistory: 'ما تغيّرت حالته لسا.',
   },
@@ -752,6 +752,7 @@ export const ar = {
     noDepartmentHint: 'المدير بيحددلك قسمك، وبعدها بتقدر تطلب تنظيف.',
   },
   cleaning: {
+    bedPlace: 'غرفة {{room}} · سرير {{bed}}',
     title: 'مهام التنظيف والتعقيم',
     description: 'طلبات الأقسام اللي إنت مكلّف فيها. التعقيم أول، والأقدم قبل.',
     kind: { CLEANING: 'تنظيف', STERILIZATION: 'تعقيم' },
@@ -1491,6 +1492,7 @@ export const ar = {
       OPERATION_POSTPONED: '{{procedure}} · {{room}}: إجت عملية طارئة، اختار وقت جديد',
       DOCTOR_CALL: '{{patient}} · {{complaint}} · مستوى الخطورة {{level}}',
       CLEANING_REQUEST: 'المكان: {{place}}',
+      BED_DISCHARGED: 'غرفة {{room}} · سرير {{bed}}',
       CONSULTATION_REQUEST: '{{from}} عم يسألك عن {{patient}}',
       CONSULTATION_REPLY: '{{from}} رد على سؤالك عن {{patient}}',
       REPORT_SUBMITTED: 'تقرير {{reportName}} من {{author}}',

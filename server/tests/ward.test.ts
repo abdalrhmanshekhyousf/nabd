@@ -71,7 +71,29 @@ async function hospital() {
     });
   const bedOf = async (bedId: string) =>
     (await prisma.bed.findUniqueOrThrow({ where: { id: bedId } })).status;
-  return { id, internal, cardio, r101, r201, nurse, patient, bedOf };
+  async function cleaner(fullName: string, departmentId: string) {
+    const user = await createUser(id, {
+      email: `c-${crypto.randomUUID()}@nabd.test`,
+      password: 'x',
+      role: 'CLEANER',
+    });
+    await prisma.user.update({ where: { id: user.id }, data: { fullName } });
+    await prisma.cleanerAssignment.create({
+      data: { hospitalId: id, userId: user.id, departmentId },
+    });
+    const auth = {
+      Authorization: `Bearer ${signAccessToken({ sub: user.id, hospitalId: id, role: 'CLEANER' })}`,
+    };
+    return {
+      ...user,
+      jobs: () => request(app).get('/api/cleaning-requests').set(auth),
+      start: (jobId: string) =>
+        request(app).post(`/api/cleaning-requests/${jobId}/start`).set(auth),
+      finish: (jobId: string) =>
+        request(app).post(`/api/cleaning-requests/${jobId}/finish`).set(auth),
+    };
+  }
+  return { id, internal, cardio, r101, r201, nurse, cleaner, patient, bedOf };
 }
 
 describe('ward board (task 3.16)', () => {
@@ -209,5 +231,78 @@ describe('ward board (task 3.16)', () => {
     ]);
     expect(results.map((r) => r.status).sort()).toEqual([201, 409]);
     expect(await prisma.bedAssignment.count({ where: { bedId: bed.id } })).toBe(1);
+  });
+
+  it('a discharge calls the ward cleaners; finishing brings the bed back empty (task 3.17)', async () => {
+    const h = await hospital();
+    const reem = await h.nurse('ريم', h.internal.id);
+    const suad = await h.cleaner('سعاد', h.internal.id);
+    const other = await h.cleaner('سمير', h.cardio.id);
+    const sara = await h.patient('سارة');
+    const bed = h.r101.beds[1]!;
+    const { stayId } = (await reem.admit({ bedId: bed.id, patientId: sara.id })).body;
+    await reem.discharge(stayId);
+
+    const jobs = (await suad.jobs()).body.requests;
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0]).toMatchObject({
+      kind: 'CLEANING',
+      status: 'PENDING',
+      bed: { id: bed.id, label: '2', room: '101' },
+      note: 'DISCHARGED',
+      requestedBy: 'ريم',
+    });
+    expect((await other.jobs()).body.requests).toEqual([]);
+    const notice = await prisma.notification.findFirstOrThrow({ where: { userId: suad.id } });
+    expect(notice).toMatchObject({
+      type: 'BED_DISCHARGED',
+      data: { room: '101', bed: '2', reason: 'DISCHARGED' },
+      link: '/cleaning/tasks',
+    });
+    expect(await prisma.notification.count({ where: { userId: other.id } })).toBe(0);
+
+    await suad.start(jobs[0].id);
+    expect(await h.bedOf(bed.id)).toBe('CLEANING');
+    expect((await suad.finish(jobs[0].id)).status).toBe(200);
+    expect(await h.bedOf(bed.id)).toBe('EMPTY');
+    const last = await prisma.bedStatusChange.findFirstOrThrow({
+      where: { bedId: bed.id },
+      orderBy: { createdAt: 'desc' },
+    });
+    expect(last).toMatchObject({
+      fromStatus: 'CLEANING',
+      toStatus: 'EMPTY',
+      reason: 'CLEANED',
+      changedByName: 'سعاد',
+    });
+  });
+
+  it('a move cleans the old bed; one open job per bed; cleaning by hand withdraws a waiting job', async () => {
+    const h = await hospital();
+    const reem = await h.nurse('ريم', h.internal.id);
+    const suad = await h.cleaner('سعاد', h.internal.id);
+    const [b1, b2] = h.r101.beds;
+    const sara = await h.patient('سارة');
+    const { stayId } = (await reem.admit({ bedId: b1!.id, patientId: sara.id })).body;
+    await reem.move(stayId, b2!.id);
+    let jobs = (await suad.jobs()).body.requests;
+    expect(jobs.map((j: { bed: { id: string }; note: string }) => [j.bed.id, j.note])).toEqual([
+      [b1!.id, 'MOVED'],
+    ]);
+
+    // The nurse marks it clean before anyone started: the job is withdrawn.
+    await reem.setBed(b1!.id, 'EMPTY');
+    jobs = (await suad.jobs()).body.requests;
+    expect(jobs).toEqual([]);
+
+    // A started job is kept; finishing it leaves a bed a nurse already freed as it is.
+    await reem.discharge(stayId);
+    const [job] = (await suad.jobs()).body.requests;
+    await suad.start(job.id);
+    await reem.setBed(b2!.id, 'EMPTY');
+    const omar = await h.patient('عمر');
+    await reem.admit({ bedId: b2!.id, patientId: omar.id });
+    expect((await suad.finish(job.id)).status).toBe(200);
+    expect(await h.bedOf(b2!.id)).toBe('OCCUPIED');
   });
 });
