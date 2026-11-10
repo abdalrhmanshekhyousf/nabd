@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { VISIT_LENGTHS } from '../appointments.js';
+import { optionalText } from './common.js';
 
 const minute = z
   .number('validation.invalid')
@@ -42,3 +43,24 @@ export const visitLengthSchema = z.object({
 
 export type ScheduleInput = z.input<typeof scheduleSchema>;
 export type ScheduleData = z.output<typeof scheduleSchema>;
+
+/**
+ * POST /appointments (task 3.20): a slot with a doctor. A patient books for
+ * themselves (patientId left out); reception names the patient (4.2).
+ */
+export const bookAppointmentSchema = z.object({
+  doctorId: z.uuid('validation.required'),
+  patientId: z.uuid('validation.invalid').nullable().default(null),
+  startsAt: z.iso.datetime({ offset: true, message: 'validation.required' }),
+  reason: optionalText(300),
+});
+
+/** GET /appointments/slots: a doctor's free slots from a local day. */
+export const slotsQuerySchema = z.object({
+  doctorId: z.uuid(),
+  from: z.iso.date().optional(),
+  days: z.coerce.number().int().min(1).max(31).default(14),
+});
+
+export type BookAppointmentInput = z.input<typeof bookAppointmentSchema>;
+export type BookAppointmentData = z.output<typeof bookAppointmentSchema>;

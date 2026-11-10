@@ -5,6 +5,7 @@ import {
   admitSchema,
   scheduleSchema,
   visitLengthSchema,
+  bookAppointmentSchema,
   createConsultationSchema,
   dischargeStaySchema,
   moveStaySchema,

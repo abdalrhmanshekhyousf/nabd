@@ -104,6 +104,18 @@ const MESSAGES: Record<ErrorCode, Record<Language, string>> = {
     ar: 'هالمريض عندو سرير من قبل',
     en: 'This patient is already in a bed',
   },
+  SLOT_TAKEN: {
+    ar: 'حدا حجز هالموعد هلق، اختار موعد تاني',
+    en: 'Someone just booked this time, choose another',
+  },
+  SLOT_UNAVAILABLE: {
+    ar: 'هالوقت مو من مواعيد الطبيب المتاحة',
+    en: 'This time is not one of the doctor’s free slots',
+  },
+  PATIENT_BUSY: {
+    ar: 'عند المريض موعد تاني بنفس الوقت',
+    en: 'The patient has another visit at that time',
+  },
   OUT_OF_STOCK: {
     ar: 'الكمية بالمخزون ما بتكفي',
     en: 'Not enough in stock',
