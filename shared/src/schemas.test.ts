@@ -3,6 +3,7 @@ import {
   bedServiceSchema,
   consultationReplySchema,
   admitSchema,
+  scheduleSchema,
   createConsultationSchema,
   dischargeStaySchema,
   moveStaySchema,
@@ -883,5 +884,21 @@ describe('ward (task 3.16)', () => {
   it('a nurse only reserves or frees a bed by hand', () => {
     expect(wardBedStatusSchema.safeParse({ to: 'OCCUPIED', reason: null }).success).toBe(false);
     expect(wardBedStatusSchema.safeParse({ to: 'EMPTY', reason: null }).success).toBe(true);
+  });
+});
+
+describe('doctor schedule (task 3.19)', () => {
+  const day = { weekday: 0, startMinute: 480, endMinute: 720, slotMinutes: 30 };
+  const ok = (days: object[]) => scheduleSchema.safeParse({ days }).success;
+  it('takes working days with hours that fit at least one visit', () => {
+    expect(ok([day, { ...day, weekday: 1 }])).toBe(true);
+    expect(ok([])).toBe(true);
+  });
+  it('refuses an end before the start, a visit longer than the day, or a day twice', () => {
+    expect(ok([{ ...day, endMinute: 420 }])).toBe(false);
+    expect(ok([{ ...day, endMinute: 500 }])).toBe(false);
+    expect(ok([day, day])).toBe(false);
+    expect(ok([{ ...day, startMinute: 481 }])).toBe(false);
+    expect(ok([{ ...day, weekday: 7 }])).toBe(false);
   });
 });

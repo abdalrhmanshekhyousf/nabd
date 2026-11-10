@@ -262,6 +262,8 @@ model Hospital {
   reports            Report[]
   bedAssignments     BedAssignment[]
   bedStatusChanges   BedStatusChange[]
+  doctorSchedules    DoctorSchedule[]
+  appointments       Appointment[]
   consultations      Consultation[]
 }
 
@@ -389,6 +391,9 @@ model User {
   bedAdmissions          BedAssignment[]             @relation("BedAdmittedBy")
   bedDischarges          BedAssignment[]             @relation("BedDischargedBy")
   bedStatusChanges       BedStatusChange[]           @relation("BedStatusChanger")
+  scheduleDays           DoctorSchedule[]
+  appointmentsAsDoctor   Appointment[]               @relation("AppointmentDoctor")
+  appointmentsBooked     Appointment[]               @relation("AppointmentBooker")
   consultationsGiven     Consultation[]              @relation("ConsultationConsultant")
 
   @@unique([hospitalId, email])
@@ -470,6 +475,7 @@ model Patient {
   user              User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
   medicalRecord     MedicalRecord?
   bedAssignments    BedAssignment[]
+  appointments      Appointment[]
   erVisits          TriageAssessment[]
   operationBookings OperationBooking[]
 
@@ -863,6 +869,64 @@ model StockMovement {
 
   @@index([itemId, createdAt])
   @@index([hospitalId, createdAt])
+}
+
+// ─── Appointments (tasks 3.19–3.22) ──────────────────────────────────────────
+
+// Matches APPOINTMENT_STATUSES in @nabd/shared.
+enum AppointmentStatus {
+  BOOKED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+// A doctor's working hours on one weekday (0 = Sunday … 6 = Saturday), in
+// minutes from midnight hospital time, and how long each visit takes. The
+// bookable slots (3.20) are cut from these.
+model DoctorSchedule {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  hospitalId  String   @db.Uuid
+  doctorId    String   @db.Uuid
+  weekday     Int
+  startMinute Int
+  endMinute   Int
+  slotMinutes Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  doctor   User     @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@unique([doctorId, weekday])
+  @@index([hospitalId])
+}
+
+// A patient's visit to a doctor at a time. One booked visit per doctor and
+// start (partial unique index in the migration, task 3.20).
+model Appointment {
+  id           String            @id @default(uuid(7)) @db.Uuid
+  hospitalId   String            @db.Uuid
+  doctorId     String?           @db.Uuid
+  doctorName   String
+  patientId    String            @db.Uuid
+  startsAt     DateTime
+  endsAt       DateTime
+  status       AppointmentStatus @default(BOOKED)
+  reason       String?
+  bookedById   String?           @db.Uuid
+  cancelledAt  DateTime?
+  cancelReason String?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  doctor   User?    @relation("AppointmentDoctor", fields: [doctorId], references: [id], onDelete: SetNull)
+  patient  Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  bookedBy User?    @relation("AppointmentBooker", fields: [bookedById], references: [id], onDelete: SetNull)
+
+  @@index([hospitalId, doctorId, startsAt])
+  @@index([patientId, startsAt])
 }
 
 // ─── Beds (tasks 3.15–3.18) ──────────────────────────────────────────────────

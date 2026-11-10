@@ -53,5 +53,7 @@ export const queryKeys = {
   wardCandidates: (search: string) => ['ward', 'candidates', search] as const,
   /** The live bed map (task 3.18), under rooms: every bed change refreshes it. */
   bedMap: ['rooms', 'map'] as const,
+  /** The doctor's working week (task 3.19). */
+  mySchedule: ['schedule', 'mine'] as const,
   publicHospitals: (search: string) => ['public-hospitals', search] as const,
 };
