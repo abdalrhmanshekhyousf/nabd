@@ -32,6 +32,7 @@ import { WardPage } from '@/pages/nurse/WardPage';
 import { OrBoardPage } from '@/pages/nurse/OrBoardPage';
 import { CleanerTasksPage } from '@/pages/cleaner/CleanerTasksPage';
 import { PatientFilePage } from '@/pages/doctor/PatientFilePage';
+import { AppointmentsPage } from '@/pages/patient/AppointmentsPage';
 import { ConsultationsPage } from '@/pages/doctor/ConsultationsPage';
 import { SchedulePage } from '@/pages/doctor/SchedulePage';
 import { ConsultationFilePage } from '@/pages/doctor/ConsultationFilePage';
@@ -86,6 +87,7 @@ export const BUILT_PAGES: Partial<Record<`${Role}:${string}`, ReactElement>> = {
   'RADIOLOGIST:requests': <RadiologyBoardPage />,
   'RADIOLOGIST:inventory': <InventoryPage />,
   'NURSE:new-case': <NewCasePage />,
+  'PATIENT:appointments': <AppointmentsPage />,
 };
 
 // Pages opened from inside a section (not sidebar links), by role.

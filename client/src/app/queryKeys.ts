@@ -56,5 +56,10 @@ export const queryKeys = {
   /** The doctor's working week (task 3.19). */
   mySchedule: ['schedule', 'mine'] as const,
   doctorSchedule: (doctorId: string) => ['schedule', 'doctor', doctorId] as const,
+  /** Booking (tasks 3.20–3.22); the server refreshes ['slots', doctorId] and ['appointments']. */
+  bookingDepartments: ['booking', 'departments'] as const,
+  bookingDoctors: (departmentId: string) => ['booking', 'doctors', departmentId] as const,
+  slots: (doctorId: string) => ['slots', doctorId] as const,
+  myAppointments: ['appointments', 'mine'] as const,
   publicHospitals: (search: string) => ['public-hospitals', search] as const,
 };

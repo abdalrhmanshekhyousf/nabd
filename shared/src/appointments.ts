@@ -1,3 +1,5 @@
+import type { DepartmentCode } from './schemas/department.js';
+
 /** Matches the AppointmentStatus enum (tasks 3.19–3.22). */
 export const APPOINTMENT_STATUSES = ['BOOKED', 'CANCELLED', 'COMPLETED', 'NO_SHOW'] as const;
 export type AppointmentStatus = (typeof APPOINTMENT_STATUSES)[number];
@@ -148,3 +150,35 @@ export function cutSlots(
 /** Whether a local date falls in one of the vacations. */
 export const onVacation = (date: string, vacations: Pick<VacationView, 'from' | 'to'>[]) =>
   vacations.some((v) => v.from <= date && date <= v.to);
+
+/** A visit as the patient (and later reception) sees it (tasks 3.20–3.22). */
+export type AppointmentView = {
+  id: string;
+  doctorId: string | null;
+  doctorName: string;
+  patientId: string;
+  startsAt: string;
+  endsAt: string;
+  status: AppointmentStatus;
+  reason: string | null;
+  /** DOCTOR_LEAVE (3.21), PATIENT (3.22) or set by reception. */
+  cancelReason: string | null;
+  department: { id: string; name: string; code: DepartmentCode | null } | null;
+};
+
+/** A department a patient can book in: it has doctors with working hours (task 3.22). */
+export type BookableDepartment = {
+  id: string;
+  name: string;
+  code: DepartmentCode | null;
+  doctorCount: number;
+};
+
+/** A doctor to book with, and their first free slot in the booking window. */
+export type BookableDoctor = {
+  id: string;
+  fullName: string;
+  specialty: string;
+  visitMinutes: number;
+  nextSlot: string | null;
+};

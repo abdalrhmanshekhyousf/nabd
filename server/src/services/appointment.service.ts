@@ -4,7 +4,9 @@ import {
   cutSlots,
   onVacation,
   zonedDate,
-  type AppointmentStatus,
+  type AppointmentView,
+  type BookableDepartment,
+  type BookableDoctor,
   type BookAppointmentData,
   type DaySlots,
   type Role,
@@ -141,6 +143,7 @@ export async function bookAppointment(
         reason,
         bookedById: booker.userId,
       },
+      include: appointmentInclude,
     });
     return toAppointmentView(appointment);
   } catch (error) {
@@ -151,16 +154,18 @@ export async function bookAppointment(
   }
 }
 
-export function toAppointmentView(row: {
-  id: string;
-  doctorId: string | null;
-  doctorName: string;
-  patientId: string;
-  startsAt: Date;
-  endsAt: Date;
-  status: AppointmentStatus;
-  reason: string | null;
-}) {
+/** What a visit row needs to be shown: its doctor's department. */
+export const appointmentInclude = {
+  doctor: {
+    select: {
+      staffProfile: { select: { department: { select: { id: true, name: true, code: true } } } },
+    },
+  },
+} as const;
+
+type AppointmentRow = Prisma.AppointmentGetPayload<{ include: typeof appointmentInclude }>;
+
+export function toAppointmentView(row: AppointmentRow): AppointmentView {
   return {
     id: row.id,
     doctorId: row.doctorId,
@@ -170,5 +175,97 @@ export function toAppointmentView(row: {
     endsAt: row.endsAt.toISOString(),
     status: row.status,
     reason: row.reason,
+    cancelReason: row.cancelReason,
+    department: row.doctor?.staffProfile?.department ?? null,
   };
+}
+
+/** Doctors who take bookings: active, with working hours (task 3.22). */
+const bookable = { role: 'DOCTOR', isActive: true, scheduleDays: { some: {} } } as const;
+
+/** The departments a patient can book in, with how many doctors take bookings there. */
+export async function bookableDepartments(db: ScopedPrisma): Promise<BookableDepartment[]> {
+  const doctors = await db.user.findMany({
+    where: bookable,
+    select: {
+      staffProfile: { select: { department: { select: { id: true, name: true, code: true } } } },
+    },
+  });
+  const byId = new Map<string, BookableDepartment>();
+  for (const { staffProfile } of doctors) {
+    const department = staffProfile?.department;
+    if (!department) continue;
+    const entry = byId.get(department.id) ?? { ...department, doctorCount: 0 };
+    entry.doctorCount += 1;
+    byId.set(department.id, entry);
+  }
+  return [...byId.values()];
+}
+
+/** A department's doctors who take bookings, each with their first free slot. */
+export async function bookableDoctors(
+  db: ScopedPrisma,
+  departmentId: string,
+): Promise<BookableDoctor[]> {
+  const doctors = await db.user.findMany({
+    where: { ...bookable, staffProfile: { departmentId } },
+    select: {
+      id: true,
+      fullName: true,
+      doctorProfile: { select: { specialty: true, visitMinutes: true } },
+    },
+    orderBy: { fullName: 'asc' },
+  });
+  return Promise.all(
+    doctors.map(async (doctor) => {
+      const days = await freeSlots(db, doctor.id, { days: BOOKING_DAYS_AHEAD });
+      return {
+        id: doctor.id,
+        fullName: doctor.fullName,
+        specialty: doctor.doctorProfile?.specialty ?? '',
+        visitMinutes: doctor.doctorProfile?.visitMinutes ?? 20,
+        nextSlot: days[0]?.slots[0]?.startsAt ?? null,
+      };
+    }),
+  );
+}
+
+/** The patient's own visits: what is coming, then the last ones. */
+export async function myAppointments(db: ScopedPrisma, userId: string) {
+  const patientId = await patientOfUser(db, userId);
+  const now = new Date();
+  const [upcoming, past] = await Promise.all([
+    db.appointment.findMany({
+      where: { patientId, status: 'BOOKED', startsAt: { gt: now } },
+      include: appointmentInclude,
+      orderBy: { startsAt: 'asc' },
+    }),
+    db.appointment.findMany({
+      where: { patientId, NOT: { status: 'BOOKED', startsAt: { gt: now } } },
+      include: appointmentInclude,
+      orderBy: { startsAt: 'desc' },
+      take: 20,
+    }),
+  ]);
+  return { upcoming: upcoming.map(toAppointmentView), past: past.map(toAppointmentView) };
+}
+
+/** The patient cancels a visit of theirs that has not happened yet; the slot frees up. */
+export async function cancelMyAppointment(db: ScopedPrisma, userId: string, id: string) {
+  const patientId = await patientOfUser(db, userId);
+  const { count } = await db.appointment.updateMany({
+    where: { id, patientId, status: 'BOOKED', startsAt: { gt: new Date() } },
+    data: { status: 'CANCELLED', cancelledAt: new Date(), cancelReason: 'PATIENT' },
+  });
+  if (count === 0) {
+    const exists = await db.appointment.findFirst({
+      where: { id, patientId },
+      select: { id: true },
+    });
+    if (!exists) throw new HttpError(404, 'NOT_FOUND', 'Appointment not found');
+    throw new HttpError(409, 'INVALID_TRANSITION', 'This visit can no longer be cancelled');
+  }
+  return toAppointmentView(
+    await db.appointment.findUniqueOrThrow({ where: { id }, include: appointmentInclude }),
+  );
 }

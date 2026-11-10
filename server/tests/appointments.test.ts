@@ -64,6 +64,12 @@ async function clinic() {
           .get('/api/appointments/slots')
           .query({ doctorId: doctor.id, ...query })
           .set(auth),
+      departments: () => request(app).get('/api/appointments/departments').set(auth),
+      doctors: (departmentId: string) =>
+        request(app).get('/api/appointments/doctors').query({ departmentId }).set(auth),
+      mine: () => request(app).get('/api/appointments/mine').set(auth),
+      cancel: (appointmentId: string) =>
+        request(app).delete(`/api/appointments/${appointmentId}`).set(auth),
       book: (startsAt: string, more: object = {}) =>
         request(app)
           .post('/api/appointments')
@@ -255,5 +261,77 @@ describe('doctor vacations (task 3.21)', () => {
     expect((await h.vacation({ from: past, to: addLocalDays(past, 1) })).status).toBe(400);
     expect((await h.vacation({ from: addLocalDays(tomorrow, 2), to: tomorrow })).status).toBe(400);
     expect((await h.dropVacation(crypto.randomUUID())).status).toBe(404);
+  });
+});
+
+describe('patient booking (task 3.22)', () => {
+  it('lists departments with bookable doctors, and each doctor’s first free slot', async () => {
+    const h = await clinic();
+    const cardio = await prisma.department.create({
+      data: { hospitalId: h.id, name: 'القلبية', code: 'CARDIOLOGY' },
+    });
+    await prisma.staffProfile.create({
+      data: { hospitalId: h.id, userId: h.doctor.id, departmentId: cardio.id },
+    });
+    // A doctor without hours is not offered.
+    const idle = await createUser(h.id, {
+      email: `idle-${crypto.randomUUID()}@nabd.test`,
+      password: 'x',
+      role: 'DOCTOR',
+    });
+    await prisma.staffProfile.create({
+      data: { hospitalId: h.id, userId: idle.id, departmentId: cardio.id },
+    });
+    const sara = await h.patient('سارة');
+    expect((await sara.departments()).body.departments).toEqual([
+      { id: cardio.id, name: 'القلبية', code: 'CARDIOLOGY', doctorCount: 1 },
+    ]);
+    const [doctor] = (await sara.doctors(cardio.id)).body.doctors;
+    expect(doctor).toMatchObject({
+      id: h.doctor.id,
+      fullName: 'د. سامي',
+      specialty: 'قلبية',
+      visitMinutes: 30,
+    });
+    expect(Date.parse(doctor.nextSlot)).toBeGreaterThan(Date.now());
+    expect((await sara.doctors(cardio.id)).body.doctors).toHaveLength(1);
+  });
+
+  it('shows my visits, coming and past, and lets me cancel one before it happens', async () => {
+    const h = await clinic();
+    const sara = await h.patient('سارة');
+    const omar = await h.patient('عمر');
+    const a = (await sara.book(at(tomorrow, '08:00'))).body.appointment;
+    const b = (await sara.book(at(addLocalDays(tomorrow, 1), '09:00'))).body.appointment;
+    await prisma.appointment.create({
+      data: {
+        hospitalId: h.id,
+        doctorId: h.doctor.id,
+        doctorName: 'د. سامي',
+        patientId: sara.id,
+        startsAt: new Date(Date.now() - 86_400_000),
+        endsAt: new Date(Date.now() - 86_400_000 + 1_800_000),
+        status: 'COMPLETED',
+      },
+    });
+
+    const mine = (await sara.mine()).body;
+    expect(mine.upcoming.map((v: { id: string }) => v.id)).toEqual([a.id, b.id]);
+    expect(mine.past.map((v: { status: string }) => v.status)).toEqual(['COMPLETED']);
+    expect((await omar.mine()).body.upcoming).toEqual([]);
+
+    // Not someone else's; then mine, once.
+    expect((await omar.cancel(a.id)).status).toBe(404);
+    const cancelled = await sara.cancel(a.id);
+    expect(cancelled.body.appointment).toMatchObject({
+      status: 'CANCELLED',
+      cancelReason: 'PATIENT',
+    });
+    expect((await sara.cancel(a.id)).body.error.code).toBe('INVALID_TRANSITION');
+    // The slot is free again.
+    expect((await omar.book(at(tomorrow, '08:00'))).status).toBe(201);
+    const after = (await sara.mine()).body;
+    expect(after.upcoming.map((v: { id: string }) => v.id)).toEqual([b.id]);
+    expect(after.past[0]).toMatchObject({ id: a.id, status: 'CANCELLED' });
   });
 });
