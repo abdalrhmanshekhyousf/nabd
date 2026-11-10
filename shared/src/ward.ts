@@ -1,3 +1,4 @@
+import type { DepartmentCode } from './schemas/department.js';
 import type { BedStatus } from './schemas/room.js';
 
 type WardPatient = {
@@ -41,7 +42,7 @@ export type IncomingPatient = {
 
 /** The ward nurse's board: the department's rooms and beds, and who waits for a bed. */
 export type WardBoard = {
-  department: { id: string; name: string; code: string | null };
+  department: { id: string; name: string; code: DepartmentCode | null };
   rooms: WardRoom[];
   incoming: IncomingPatient[];
 };
