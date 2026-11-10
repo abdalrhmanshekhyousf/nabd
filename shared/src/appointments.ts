@@ -18,9 +18,14 @@ export type ScheduleDay = {
   endMinute: number;
 };
 
+/** Days a doctor is away (task 3.21), local dates inclusive. */
+export type VacationView = { id: string; from: string; to: string; reason: string | null };
+
 /** A doctor's week as the doctor and the admin see it (task 3.19). */
 export type DoctorScheduleView = {
   days: ScheduleDay[];
+  /** Vacations from today on (task 3.21). */
+  vacations: VacationView[];
   /** The doctor's own visit length, in minutes. */
   visitMinutes: number;
 };
@@ -139,3 +144,7 @@ export function cutSlots(
   }
   return result;
 }
+
+/** Whether a local date falls in one of the vacations. */
+export const onVacation = (date: string, vacations: Pick<VacationView, 'from' | 'to'>[]) =>
+  vacations.some((v) => v.from <= date && date <= v.to);

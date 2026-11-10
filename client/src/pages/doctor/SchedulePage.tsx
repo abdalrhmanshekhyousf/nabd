@@ -11,6 +11,7 @@ import { CalendarCheck, Lock, Timer } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { queryKeys } from '@/app/queryKeys';
 import { useDayName } from '@/components/schedule/dayName';
+import { Vacations } from '@/components/schedule/Vacations';
 import { Card, Spinner } from '@/components/ui';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/cn';
@@ -138,6 +139,12 @@ export function SchedulePage() {
             : t('schedule.noHours')}
         </p>
       </motion.section>
+
+      <motion.div {...enter(3)}>
+        <Card className="p-4">
+          <Vacations vacations={data.vacations} />
+        </Card>
+      </motion.div>
     </div>
   );
 }

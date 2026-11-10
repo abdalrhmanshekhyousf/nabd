@@ -263,6 +263,7 @@ model Hospital {
   bedAssignments     BedAssignment[]
   bedStatusChanges   BedStatusChange[]
   doctorSchedules    DoctorSchedule[]
+  doctorVacations    DoctorVacation[]
   appointments       Appointment[]
   consultations      Consultation[]
 }
@@ -392,6 +393,8 @@ model User {
   bedDischarges          BedAssignment[]             @relation("BedDischargedBy")
   bedStatusChanges       BedStatusChange[]           @relation("BedStatusChanger")
   scheduleDays           DoctorSchedule[]
+  vacations              DoctorVacation[]            @relation("VacationDoctor")
+  vacationsSet           DoctorVacation[]            @relation("VacationSetter")
   appointmentsAsDoctor   Appointment[]               @relation("AppointmentDoctor")
   appointmentsBooked     Appointment[]               @relation("AppointmentBooker")
   consultationsGiven     Consultation[]              @relation("ConsultationConsultant")
@@ -901,6 +904,25 @@ model DoctorSchedule {
 
   @@unique([doctorId, weekday])
   @@index([hospitalId])
+}
+
+// Days a doctor is away (task 3.21), local dates inclusive, set by the admin.
+// No slots are offered on them and the visits booked then are cancelled.
+model DoctorVacation {
+  id          String   @id @default(uuid(7)) @db.Uuid
+  hospitalId  String   @db.Uuid
+  doctorId    String   @db.Uuid
+  startDate   DateTime @db.Date
+  endDate     DateTime @db.Date
+  reason      String?
+  createdById String?  @db.Uuid
+  createdAt   DateTime @default(now())
+
+  hospital  Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  doctor    User     @relation("VacationDoctor", fields: [doctorId], references: [id], onDelete: Cascade)
+  createdBy User?    @relation("VacationSetter", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([doctorId, endDate])
 }
 
 // A patient's visit to a doctor at a time. One booked visit per doctor and

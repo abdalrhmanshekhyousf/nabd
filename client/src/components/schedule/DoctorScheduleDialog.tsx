@@ -5,6 +5,7 @@ import { queryKeys } from '@/app/queryKeys';
 import { Modal, Spinner } from '@/components/ui';
 import { api } from '@/lib/api';
 import { notify } from '@/lib/notify';
+import { Vacations } from './Vacations';
 import { WeekEditor } from './WeekEditor';
 
 function Loaded({
@@ -39,8 +40,9 @@ function Loaded({
     );
   }
   return (
-    <div className="space-y-3">
-      <p className="text-sm text-muted">
+    <div className="space-y-5">
+      <Vacations vacations={data.vacations} doctorId={doctorId} />
+      <p className="border-t border-border pt-4 text-sm text-muted">
         {t('schedule.adminHint', { minutes: t('schedule.minutes', { count: data.visitMinutes }) })}
       </p>
       <WeekEditor

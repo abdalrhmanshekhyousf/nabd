@@ -1,4 +1,4 @@
-import { act, screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MotionGlobalConfig } from 'framer-motion';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -35,6 +35,7 @@ const CARDIOLOGY: Department = {
 
 let staff: StaffMember[];
 let schedule: { weekday: number; startMinute: number; endMinute: number }[];
+let vacations: { id: string; from: string; to: string; reason: string | null }[];
 
 beforeAll(() => {
   MotionGlobalConfig.skipAnimations = true;
@@ -48,6 +49,7 @@ beforeEach(() => {
   fake.calls.length = 0;
   staff = [];
   schedule = [{ weekday: 6, startMinute: 480, endMinute: 720 }];
+  vacations = [];
   useSessionStore.setState({ status: 'authenticated', user: ADMIN });
   fake.respond((config) => {
     if (config.url === '/departments') return { status: 200, data: { departments: [CARDIOLOGY] } };
@@ -68,7 +70,15 @@ beforeEach(() => {
     }
     if (config.url === '/staff/d1/schedule') {
       if (config.method === 'put') schedule = JSON.parse(config.data as string).days;
-      return { status: 200, data: { days: schedule, visitMinutes: 30 } };
+      return { status: 200, data: { days: schedule, visitMinutes: 30, vacations } };
+    }
+    if (config.url === '/staff/d1/vacations') {
+      const body = JSON.parse(config.data as string);
+      vacations = [{ id: 'v1', from: body.from, to: body.to, reason: body.reason || null }];
+      return {
+        status: 201,
+        data: { schedule: { days: schedule, visitMinutes: 30, vacations }, cancelled: 2 },
+      };
     }
     const id = config.url?.match(/^\/staff\/(.+)$/)?.[1];
     if (id && config.method === 'patch') {
@@ -377,6 +387,33 @@ describe('StaffPage', () => {
       { weekday: 6, startMinute: 480, endMinute: 720 },
       { weekday: 0, startMinute: 480, endMinute: 720 },
     ]);
+  });
+
+  it('puts a doctor on vacation and says how many visits were cancelled (task 3.21)', async () => {
+    staff = [member({ id: 'd1', fullName: 'د. ريم', role: 'DOCTOR', specialty: 'قلبية' })];
+    renderApp('/admin/staff');
+    const user = userEvent.setup();
+    await user.click((await screen.findAllByRole('button', { name: 'دوام د. ريم' }))[0]!);
+    const dialog = await screen.findByRole('dialog', { name: 'دوام د. ريم' });
+    const section = await within(dialog).findByRole('region', { name: 'الإجازات' });
+    expect(section).toHaveTextContent('ما في إجازات جاية.');
+    await user.click(within(section).getByRole('button', { name: 'إضافة إجازة' }));
+    expect(within(section).getByRole('alert')).toHaveTextContent('اختار أول يوم');
+    fireEvent.change(within(section).getByLabelText('من يوم'), { target: { value: '2026-12-01' } });
+    fireEvent.change(within(section).getByLabelText(/لـ يوم/), { target: { value: '2026-12-03' } });
+    await user.type(within(section).getByLabelText(/السبب/), 'مؤتمر');
+    await user.click(within(section).getByRole('button', { name: 'إضافة إجازة' }));
+    expect(
+      await screen.findByText('انحطت الإجازة، وانلغى موعدين وانبعت لأصحابهم إشعار'),
+    ).toBeInTheDocument();
+    expect(await within(section).findByText('مؤتمر')).toBeInTheDocument();
+    expect(
+      JSON.parse(fake.calls.find((c) => c.url === '/staff/d1/vacations')!.data as string),
+    ).toEqual({
+      from: '2026-12-01',
+      to: '2026-12-03',
+      reason: 'مؤتمر',
+    });
   });
 
   it('offers hours only for doctors', async () => {

@@ -81,7 +81,20 @@ async function clinic() {
       .post('/api/appointments')
       .set(token(reception.id, 'RECEPTIONIST'))
       .send({ doctorId: doctor.id, reason: null, ...body });
-  return { id, doctor, patient, receptionBook };
+  const admin = await createUser(id, {
+    email: `a-${crypto.randomUUID()}@nabd.test`,
+    password: 'x',
+    role: 'ADMIN',
+  });
+  const adminAuth = token(admin.id, 'ADMIN');
+  const vacation = (body: object) =>
+    request(app)
+      .post(`/api/staff/${doctor.id}/vacations`)
+      .set(adminAuth)
+      .send({ reason: null, ...body });
+  const dropVacation = (vacationId: string) =>
+    request(app).delete(`/api/staff/${doctor.id}/vacations/${vacationId}`).set(adminAuth);
+  return { id, doctor, patient, receptionBook, vacation, dropVacation };
 }
 
 describe('appointments: slots and booking (task 3.20)', () => {
@@ -179,5 +192,68 @@ describe('appointments: slots and booking (task 3.20)', () => {
     expect(byReception.body.appointment.patientId).toBe(omar.id);
     // Reception must say who the patient is.
     expect((await h.receptionBook({ startsAt: at(tomorrow, '09:00') })).status).toBe(400);
+  });
+});
+
+describe('doctor vacations (task 3.21)', () => {
+  it('closes the slots of those days, cancels their visits and tells the patients', async () => {
+    const h = await clinic();
+    const sara = await h.patient('سارة');
+    const omar = await h.patient('عمر');
+    const later = addLocalDays(tomorrow, 3);
+    await sara.book(at(tomorrow, '08:00'));
+    await omar.book(at(later, '09:00'));
+
+    const res = await h.vacation({
+      from: tomorrow,
+      to: addLocalDays(tomorrow, 1),
+      reason: 'مؤتمر',
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.cancelled).toBe(1);
+    expect(res.body.schedule.vacations).toEqual([
+      expect.objectContaining({ from: tomorrow, to: addLocalDays(tomorrow, 1), reason: 'مؤتمر' }),
+    ]);
+
+    // Sara's visit is cancelled and she is told; Omar's, after the vacation, stays.
+    const visits = await prisma.appointment.findMany({
+      orderBy: { startsAt: 'asc' },
+      where: { doctorId: h.doctor.id },
+    });
+    expect(visits.map((v) => [v.patientId, v.status, v.cancelReason])).toEqual([
+      [sara.id, 'CANCELLED', 'DOCTOR_LEAVE'],
+      [omar.id, 'BOOKED', null],
+    ]);
+    const saraUser = await prisma.patient.findUniqueOrThrow({ where: { id: sara.id } });
+    const notice = await prisma.notification.findFirstOrThrow({
+      where: { userId: saraUser.userId! },
+    });
+    expect(notice).toMatchObject({
+      type: 'APPOINTMENT_CANCELLED',
+      data: { doctor: 'د. سامي', startsAt: at(tomorrow, '08:00'), reason: 'DOCTOR_LEAVE' },
+      link: '/patient/appointments',
+    });
+
+    // No slots on those days, and booking them is refused.
+    const days = (await sara.slots({ from: tomorrow, days: 4 })).body.days.map(
+      (d: { date: string }) => d.date,
+    );
+    expect(days).not.toContain(tomorrow);
+    expect(days).not.toContain(addLocalDays(tomorrow, 1));
+    expect(days).toContain(addLocalDays(tomorrow, 2));
+    expect((await sara.book(at(tomorrow, '09:00'))).body.error.code).toBe('SLOT_UNAVAILABLE');
+
+    // Removing the vacation opens the days again.
+    const id = res.body.schedule.vacations[0].id;
+    expect((await h.dropVacation(id)).status).toBe(200);
+    expect((await sara.book(at(tomorrow, '09:00'))).status).toBe(201);
+  });
+
+  it('refuses a vacation already over, or the wrong way round', async () => {
+    const h = await clinic();
+    const past = addLocalDays(tomorrow, -5);
+    expect((await h.vacation({ from: past, to: addLocalDays(past, 1) })).status).toBe(400);
+    expect((await h.vacation({ from: addLocalDays(tomorrow, 2), to: tomorrow })).status).toBe(400);
+    expect((await h.dropVacation(crypto.randomUUID())).status).toBe(404);
   });
 });

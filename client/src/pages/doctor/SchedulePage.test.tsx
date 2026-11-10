@@ -36,7 +36,11 @@ beforeEach(() => {
   sessionStorage.setItem(INTRO_SEEN_KEY, '1');
   queryClient.clear();
   fake.calls.length = 0;
-  current = { days: [{ weekday: 6, startMinute: 480, endMinute: 840 }], visitMinutes: 20 };
+  current = {
+    days: [{ weekday: 6, startMinute: 480, endMinute: 840 }],
+    visitMinutes: 20,
+    vacations: [{ id: 'v1', from: '2026-12-01', to: '2026-12-03', reason: 'مؤتمر' }],
+  };
   useSessionStore.setState({ status: 'authenticated', user: DOCTOR });
   fake.respond((config) => {
     if (config.url === '/doctors/me/visit-length') {
@@ -57,15 +61,20 @@ describe('SchedulePage (task 3.19)', () => {
   it('shows the week the admin set, from Saturday, read-only', async () => {
     renderApp('/doctor/schedule');
     await screen.findByText('الأيام والساعات بيحددها المدير.');
-    const days = [...document.querySelectorAll('li[aria-label]')].map((li) =>
-      li.getAttribute('aria-label'),
-    );
+    const days = [
+      ...document.querySelectorAll('section[aria-label="أيام الأسبوع"] li[aria-label]'),
+    ].map((li) => li.getAttribute('aria-label'));
     expect(days[0]).toBe('السبت');
     expect(days).toHaveLength(7);
     expect(day('السبت')).toHaveTextContent('08:00 – 14:00');
     expect(day('السبت')).toHaveTextContent('18 موعد');
     expect(day('الأحد')).toHaveTextContent('عطلة');
     expect(screen.queryByRole('switch')).toBeNull();
+    // Vacations are shown, without a way to change them.
+    const vacations = screen.getByRole('region', { name: 'الإجازات' });
+    expect(vacations).toHaveTextContent('مؤتمر');
+    expect(vacations).toHaveTextContent('من');
+    expect(screen.queryByRole('button', { name: 'إضافة إجازة' })).toBeNull();
   });
 
   it('the doctor changes the visit length, and the counts follow', async () => {

@@ -1,4 +1,4 @@
-import type { NotificationItem } from '@nabd/shared';
+import { HOSPITAL_TIME_ZONE, type NotificationItem } from '@nabd/shared';
 import i18n from '@/i18n';
 
 /**
@@ -26,5 +26,13 @@ function readable(data: NotificationItem['data']) {
     modalityName: data.modality ? i18n.t(`modalities.${data.modality}` as never) : '—',
     // A department report is sent by its kind (task 3.11).
     reportName: data.kind ? i18n.t(`reports.kinds.${data.kind}` as never) : '—',
+    // A cancelled visit names its day and time (task 3.21).
+    when: data.startsAt
+      ? new Intl.DateTimeFormat(i18n.language, {
+          dateStyle: 'full',
+          timeStyle: 'short',
+          timeZone: HOSPITAL_TIME_ZONE,
+        }).format(new Date(String(data.startsAt)))
+      : '—',
   };
 }

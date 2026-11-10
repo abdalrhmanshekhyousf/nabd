@@ -64,3 +64,19 @@ export const slotsQuerySchema = z.object({
 
 export type BookAppointmentInput = z.input<typeof bookAppointmentSchema>;
 export type BookAppointmentData = z.output<typeof bookAppointmentSchema>;
+
+/** POST /staff/:id/vacations (task 3.21): local dates, the last one included. */
+export const vacationSchema = z
+  .object({
+    from: z.iso.date('validation.required'),
+    to: z.iso.date('validation.required'),
+    reason: optionalText(200),
+  })
+  .refine(({ from, to }) => from <= to, { message: 'validation.invalid', path: ['to'] })
+  .refine(({ from, to }) => Date.parse(to) - Date.parse(from) <= 366 * 86_400_000, {
+    message: 'validation.invalid',
+    path: ['to'],
+  });
+
+export type VacationInput = z.input<typeof vacationSchema>;
+export type VacationData = z.output<typeof vacationSchema>;

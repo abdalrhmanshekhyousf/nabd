@@ -53,7 +53,7 @@ describe('doctor schedule (task 3.19)', () => {
     const h = await hospital();
     const admin = await h.person('ADMIN');
     const sami = await h.person('DOCTOR');
-    expect((await sami.mine()).body).toEqual({ days: [], visitMinutes: 20 });
+    expect((await sami.mine()).body).toEqual({ days: [], visitMinutes: 20, vacations: [] });
 
     const saved = await admin.set(sami.id, [sat, mon]);
     expect(saved.status).toBe(200);
@@ -73,7 +73,7 @@ describe('doctor schedule (task 3.19)', () => {
     const admin = await h.person('ADMIN');
     const sami = await h.person('DOCTOR');
     await admin.set(sami.id, [sat]);
-    expect((await sami.visit(30)).body).toEqual({ days: [sat], visitMinutes: 30 });
+    expect((await sami.visit(30)).body).toEqual({ days: [sat], visitMinutes: 30, vacations: [] });
     expect((await sami.visit(25)).status).toBe(400);
     // The doctor cannot set their own hours.
     expect((await sami.set(sami.id, [mon])).status).toBe(403);

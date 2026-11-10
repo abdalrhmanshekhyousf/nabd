@@ -5,6 +5,7 @@ import {
   admitSchema,
   scheduleSchema,
   visitLengthSchema,
+  vacationSchema,
   bookAppointmentSchema,
   createConsultationSchema,
   dischargeStaySchema,
@@ -304,6 +305,7 @@ describe('client output is valid server input', () => {
         reason: '',
       },
     ],
+    [vacationSchema, { from: '2026-12-01', to: '2026-12-07', reason: ' مؤتمر ' }],
     [
       admitSchema,
       {
@@ -912,5 +914,15 @@ describe('doctor schedule (task 3.19)', () => {
     expect(ok([day, day])).toBe(false);
     expect(ok([{ ...day, startMinute: 481 }])).toBe(false);
     expect(ok([{ ...day, weekday: 7 }])).toBe(false);
+  });
+});
+
+describe('doctor vacations (task 3.21)', () => {
+  it('need a first and last day, in order, at most a year', () => {
+    const ok = (body: object) => vacationSchema.safeParse({ reason: null, ...body }).success;
+    expect(ok({ from: '2026-12-01', to: '2026-12-01' })).toBe(true);
+    expect(ok({ from: '2026-12-07', to: '2026-12-01' })).toBe(false);
+    expect(ok({ from: '2026-01-01', to: '2027-06-01' })).toBe(false);
+    expect(ok({ from: '', to: '2026-12-01' })).toBe(false);
   });
 });

@@ -2,6 +2,7 @@ import {
   addLocalDays,
   BOOKING_DAYS_AHEAD,
   cutSlots,
+  onVacation,
   zonedDate,
   type AppointmentStatus,
   type BookAppointmentData,
@@ -11,6 +12,7 @@ import {
 import { Prisma } from '../generated/prisma/client.js';
 import type { ScopedPrisma } from '../lib/scopedPrisma.js';
 import { HttpError } from '../middleware/errorHandler.js';
+import { upcomingVacations } from './schedule.service.js';
 
 /** The patient record behind a PATIENT account, or 403. */
 export async function patientOfUser(db: ScopedPrisma, userId: string) {
@@ -47,7 +49,11 @@ export async function freeSlots(
   const start = from && from > today ? from : today;
   const last = addLocalDays(today, BOOKING_DAYS_AHEAD);
   const span = Math.max(0, Math.min(days, daysBetween(start, last) + 1));
-  const all = cutSlots(doctor.scheduleDays, doctor.visitMinutes, start, span);
+  const vacations = await upcomingVacations(db, doctorId);
+  // No slots on a vacation day (task 3.21).
+  const all = cutSlots(doctor.scheduleDays, doctor.visitMinutes, start, span).filter(
+    (day) => !onVacation(day.date, vacations),
+  );
   if (all.length === 0) return [];
   const booked = await db.appointment.findMany({
     where: {
@@ -107,7 +113,8 @@ export async function bookAppointment(
     (s) => s.startsAt === at.toISOString(),
   );
   const tooFar = date > addLocalDays(zonedDate(now), BOOKING_DAYS_AHEAD);
-  if (!slot || at.getTime() <= now.getTime() || tooFar) {
+  const away = onVacation(date, await upcomingVacations(db, doctorId));
+  if (!slot || at.getTime() <= now.getTime() || tooFar || away) {
     throw new HttpError(409, 'SLOT_UNAVAILABLE', 'This time is not one of the doctor’s slots');
   }
   const endsAt = new Date(slot.endsAt);
