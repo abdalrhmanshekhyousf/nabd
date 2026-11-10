@@ -15,69 +15,96 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
-async function doctor(role: 'DOCTOR' | 'NURSE' = 'DOCTOR') {
+async function hospital() {
   const { id } = await createHospital();
   hospitalIds.push(id);
-  const user = await createUser(id, {
-    email: `d-${crypto.randomUUID()}@nabd.test`,
-    password: 'x',
-    role,
-  });
-  const auth = {
-    Authorization: `Bearer ${signAccessToken({ sub: user.id, hospitalId: id, role })}`,
-  };
-  return {
-    ...user,
-    get: () => request(app).get('/api/doctors/me/schedule').set(auth),
-    put: (days: object[]) => request(app).put('/api/doctors/me/schedule').set(auth).send({ days }),
-  };
+  async function person(role: 'DOCTOR' | 'ADMIN' | 'NURSE') {
+    const user = await createUser(id, {
+      email: `${role}-${crypto.randomUUID()}@nabd.test`,
+      password: 'x',
+      role,
+    });
+    if (role === 'DOCTOR') {
+      await prisma.doctorProfile.create({
+        data: { hospitalId: id, userId: user.id, specialty: 'قلبية' },
+      });
+    }
+    const auth = {
+      Authorization: `Bearer ${signAccessToken({ sub: user.id, hospitalId: id, role })}`,
+    };
+    return {
+      ...user,
+      mine: () => request(app).get('/api/doctors/me/schedule').set(auth),
+      visit: (visitMinutes: number) =>
+        request(app).put('/api/doctors/me/visit-length').set(auth).send({ visitMinutes }),
+      of: (doctorId: string) => request(app).get(`/api/staff/${doctorId}/schedule`).set(auth),
+      set: (doctorId: string, days: object[]) =>
+        request(app).put(`/api/staff/${doctorId}/schedule`).set(auth).send({ days }),
+    };
+  }
+  return { id, person };
 }
 
-const sat = { weekday: 6, startMinute: 8 * 60, endMinute: 14 * 60, slotMinutes: 20 };
-const mon = { weekday: 1, startMinute: 16 * 60, endMinute: 20 * 60, slotMinutes: 30 };
+const sat = { weekday: 6, startMinute: 8 * 60, endMinute: 14 * 60 };
+const mon = { weekday: 1, startMinute: 16 * 60, endMinute: 20 * 60 };
 
 describe('doctor schedule (task 3.19)', () => {
-  it('starts empty, saves the week, and changes or drops days', async () => {
-    const sami = await doctor();
-    expect((await sami.get()).body.days).toEqual([]);
+  it('the admin sets the days and hours; the doctor sees them', async () => {
+    const h = await hospital();
+    const admin = await h.person('ADMIN');
+    const sami = await h.person('DOCTOR');
+    expect((await sami.mine()).body).toEqual({ days: [], visitMinutes: 20 });
 
-    const saved = await sami.put([sat, mon]);
+    const saved = await admin.set(sami.id, [sat, mon]);
     expect(saved.status).toBe(200);
     expect(saved.body.days).toEqual([mon, sat]);
+    expect((await sami.mine()).body.days).toEqual([mon, sat]);
 
     // Monday moves to the morning, Saturday is dropped, Wednesday added.
-    const wed = { weekday: 3, startMinute: 9 * 60, endMinute: 13 * 60, slotMinutes: 15 };
-    const next = await sami.put([{ ...mon, startMinute: 8 * 60, endMinute: 12 * 60 }, wed]);
+    const wed = { weekday: 3, startMinute: 9 * 60, endMinute: 13 * 60 };
+    const next = await admin.set(sami.id, [{ ...mon, startMinute: 480, endMinute: 720 }, wed]);
     expect(next.body.days).toEqual([{ ...mon, startMinute: 480, endMinute: 720 }, wed]);
-    expect(await prisma.doctorSchedule.count({ where: { doctorId: sami.id } })).toBe(2);
-
-    expect((await sami.put([])).body.days).toEqual([]);
+    expect((await admin.of(sami.id)).body.days).toHaveLength(2);
+    expect((await admin.set(sami.id, [])).body.days).toEqual([]);
   });
 
-  it('refuses impossible hours, and is the doctor’s own', async () => {
-    const sami = await doctor();
-    expect((await sami.put([{ ...sat, endMinute: 7 * 60 }])).status).toBe(400);
-    expect((await sami.put([{ ...sat, slotMinutes: 600 }])).status).toBe(400);
-    expect((await sami.put([sat, sat])).status).toBe(400);
-    expect((await sami.get()).body.days).toEqual([]);
+  it('the doctor chooses the visit length, and only that', async () => {
+    const h = await hospital();
+    const admin = await h.person('ADMIN');
+    const sami = await h.person('DOCTOR');
+    await admin.set(sami.id, [sat]);
+    expect((await sami.visit(30)).body).toEqual({ days: [sat], visitMinutes: 30 });
+    expect((await sami.visit(25)).status).toBe(400);
+    // The doctor cannot set their own hours.
+    expect((await sami.set(sami.id, [mon])).status).toBe(403);
+    expect((await admin.of(sami.id)).body.visitMinutes).toBe(30);
+  });
 
-    const nurse = await doctor('NURSE');
-    expect((await nurse.put([sat])).status).toBe(403);
+  it('refuses impossible hours, and only for doctors of this hospital', async () => {
+    const h = await hospital();
+    const admin = await h.person('ADMIN');
+    const sami = await h.person('DOCTOR');
+    const nurse = await h.person('NURSE');
+    expect((await admin.set(sami.id, [{ ...sat, endMinute: 7 * 60 }])).status).toBe(400);
+    expect((await admin.set(sami.id, [sat, sat])).status).toBe(400);
+    expect((await admin.set(sami.id, [{ ...sat, startMinute: 481 }])).status).toBe(400);
+    expect((await admin.set(nurse.id, [sat])).status).toBe(404);
+    const other = await hospital();
+    const otherAdmin = await other.person('ADMIN');
+    expect((await otherAdmin.set(sami.id, [sat])).status).toBe(404);
+    expect((await sami.mine()).body.days).toEqual([]);
   });
 
   it('the database itself refuses a schedule that makes no sense', async () => {
-    const sami = await doctor();
+    const h = await hospital();
+    const sami = await h.person('DOCTOR');
     await expect(
       prisma.doctorSchedule.create({
-        data: {
-          hospitalId: sami.hospitalId,
-          doctorId: sami.id,
-          weekday: 9,
-          startMinute: 0,
-          endMinute: 60,
-          slotMinutes: 30,
-        },
+        data: { hospitalId: h.id, doctorId: sami.id, weekday: 9, startMinute: 0, endMinute: 60 },
       }),
+    ).rejects.toThrow();
+    await expect(
+      prisma.doctorProfile.update({ where: { userId: sami.id }, data: { visitMinutes: 1000 } }),
     ).rejects.toThrow();
   });
 });

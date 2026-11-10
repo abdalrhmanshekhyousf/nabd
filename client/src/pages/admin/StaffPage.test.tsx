@@ -34,6 +34,7 @@ const CARDIOLOGY: Department = {
 };
 
 let staff: StaffMember[];
+let schedule: { weekday: number; startMinute: number; endMinute: number }[];
 
 beforeAll(() => {
   MotionGlobalConfig.skipAnimations = true;
@@ -46,6 +47,7 @@ beforeEach(() => {
   queryClient.clear();
   fake.calls.length = 0;
   staff = [];
+  schedule = [{ weekday: 6, startMinute: 480, endMinute: 720 }];
   useSessionStore.setState({ status: 'authenticated', user: ADMIN });
   fake.respond((config) => {
     if (config.url === '/departments') return { status: 200, data: { departments: [CARDIOLOGY] } };
@@ -63,6 +65,10 @@ beforeEach(() => {
         ...body,
       });
       return { status: 201, data: { member: staff[0] } };
+    }
+    if (config.url === '/staff/d1/schedule') {
+      if (config.method === 'put') schedule = JSON.parse(config.data as string).days;
+      return { status: 200, data: { days: schedule, visitMinutes: 30 } };
     }
     const id = config.url?.match(/^\/staff\/(.+)$/)?.[1];
     if (id && config.method === 'patch') {
@@ -351,5 +357,32 @@ describe('StaffPage', () => {
     act(() => lastSocket().fromServer('refresh', { queryKeys: [['staff']] }));
 
     expect(await within(table).findByText('مشغول')).toBeInTheDocument();
+  });
+
+  it('sets a doctor’s working days and hours (task 3.19)', async () => {
+    staff = [member({ id: 'd1', fullName: 'د. ريم', role: 'DOCTOR', specialty: 'قلبية' })];
+    renderApp('/admin/staff');
+    const user = userEvent.setup();
+    await user.click((await screen.findAllByRole('button', { name: 'دوام د. ريم' }))[0]!);
+    const dialog = await screen.findByRole('dialog', { name: 'دوام د. ريم' });
+    expect(await within(dialog).findByText(/مدة الزيارة عند هالطبيب 30 دقيقة/)).toBeInTheDocument();
+    const saturday = dialog.querySelector<HTMLElement>('section[aria-label="السبت"]')!;
+    expect(saturday).toHaveTextContent('8 مواعيد');
+    const sunday = dialog.querySelector<HTMLElement>('section[aria-label="الأحد"]')!;
+    await user.click(within(sunday).getByRole('switch'));
+    await user.click(within(saturday).getByRole('button', { name: 'نفس الساعات لكل الأيام' }));
+    await user.click(within(dialog).getByRole('button', { name: 'حفظ الدوام' }));
+    expect(await screen.findByText('انحفظ دوام د. ريم')).toBeInTheDocument();
+    expect(schedule).toEqual([
+      { weekday: 6, startMinute: 480, endMinute: 720 },
+      { weekday: 0, startMinute: 480, endMinute: 720 },
+    ]);
+  });
+
+  it('offers hours only for doctors', async () => {
+    staff = [member({})];
+    renderApp('/admin/staff');
+    await screen.findByRole('table', { name: 'قائمة الموظفين' });
+    expect(screen.queryByRole('button', { name: 'دوام لينا' })).toBeNull();
   });
 });

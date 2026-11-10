@@ -8,7 +8,7 @@ import {
   labOrderSchema,
   doctorStatusSchema,
   patientSearchSchema,
-  scheduleSchema,
+  visitLengthSchema,
 } from '@nabd/shared';
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
@@ -22,7 +22,7 @@ import {
   requestConsultation,
 } from '../services/consultation.service.js';
 import { getMyStatus, setMyStatus } from '../services/doctor.service.js';
-import { mySchedule, saveSchedule } from '../services/schedule.service.js';
+import { doctorSchedule, setVisitLength } from '../services/schedule.service.js';
 import { listDoctors } from '../services/er.service.js';
 import { answerCall, listMyCalls } from '../services/doctorCall.service.js';
 import { cancelImaging, orderImaging } from '../services/imaging.service.js';
@@ -58,16 +58,16 @@ doctorRouter.patch('/me/status', requireRole('DOCTOR'), async (req, res) => {
 const patientParam = z.object({ patientId: z.uuid() });
 
 // My patients and their files (task 2.7).
-// Working days, hours and visit length (task 3.19); appointments are cut from them.
+// The doctor's week as the admin set it, and their own visit length (task 3.19).
 doctorRouter.get('/me/schedule', requireRole('DOCTOR'), async (req, res) => {
   const { auth, db } = session(req);
-  res.json({ days: await mySchedule(db, auth.userId) });
+  res.json(await doctorSchedule(db, auth.userId));
 });
 
-doctorRouter.put('/me/schedule', requireRole('DOCTOR'), async (req, res) => {
+doctorRouter.put('/me/visit-length', requireRole('DOCTOR'), async (req, res) => {
   const { auth, db } = session(req);
-  const input = scheduleSchema.parse(req.body);
-  res.json({ days: await saveSchedule(db, auth.hospitalId, auth.userId, input) });
+  const { visitMinutes } = visitLengthSchema.parse(req.body);
+  res.json(await setVisitLength(db, auth.userId, visitMinutes));
 });
 
 doctorRouter.get('/me/patients', requireRole('DOCTOR'), async (req, res) => {

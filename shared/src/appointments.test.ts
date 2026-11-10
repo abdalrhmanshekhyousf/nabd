@@ -11,7 +11,7 @@ describe('schedule helpers (task 3.19)', () => {
     expect(timeToMinute('nope')).toBeNaN();
   });
   it('counts the whole visits in a day', () => {
-    expect(visitsInDay({ weekday: 0, startMinute: 480, endMinute: 720, slotMinutes: 30 })).toBe(8);
-    expect(visitsInDay({ weekday: 0, startMinute: 480, endMinute: 730, slotMinutes: 30 })).toBe(8);
+    expect(visitsInDay({ weekday: 0, startMinute: 480, endMinute: 720 }, 30)).toBe(8);
+    expect(visitsInDay({ weekday: 0, startMinute: 480, endMinute: 730 }, 30)).toBe(8);
   });
 });

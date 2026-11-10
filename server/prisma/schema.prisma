@@ -445,6 +445,8 @@ model DoctorProfile {
   specialty       String
   status          DoctorStatus @default(AVAILABLE)
   statusChangedAt DateTime     @default(now())
+  // How long one visit takes, chosen by the doctor (task 3.19).
+  visitMinutes    Int          @default(20)
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
@@ -882,8 +884,8 @@ enum AppointmentStatus {
 }
 
 // A doctor's working hours on one weekday (0 = Sunday … 6 = Saturday), in
-// minutes from midnight hospital time, and how long each visit takes. The
-// bookable slots (3.20) are cut from these.
+// minutes from midnight hospital time, set by the admin. The bookable slots
+// (3.20) are cut from these by the doctor's own visit length.
 model DoctorSchedule {
   id          String   @id @default(uuid(7)) @db.Uuid
   hospitalId  String   @db.Uuid
@@ -891,7 +893,6 @@ model DoctorSchedule {
   weekday     Int
   startMinute Int
   endMinute   Int
-  slotMinutes Int
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

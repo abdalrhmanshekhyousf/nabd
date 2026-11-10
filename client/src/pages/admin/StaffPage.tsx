@@ -26,6 +26,7 @@ import {
   Lock,
   Mail,
   Network,
+  CalendarClock,
   Pencil,
   Phone,
   Search,
@@ -43,6 +44,7 @@ import { Link, useSearchParams } from 'react-router';
 import { queryKeys } from '@/app/queryKeys';
 import { departmentLabel, type Department } from '@/components/departments/departmentDisplay';
 import { DOCTOR_STATUS_TONE } from '@/components/doctor/doctorStatusStyles';
+import { DoctorScheduleDialog } from '@/components/schedule/DoctorScheduleDialog';
 import {
   Button,
   Card,
@@ -561,6 +563,7 @@ export function StaffPage() {
   const [params, setParams] = useSearchParams();
   const [target, setTarget] = useState<DialogTarget>(null);
   const [deleting, setDeleting] = useState<StaffMember | null>(null);
+  const [scheduling, setScheduling] = useState<StaffMember | null>(null);
   const [credentials, setCredentials] = useState<Credentials | null>(null);
 
   const filter = {
@@ -680,6 +683,17 @@ export function StaffPage() {
       cell: (member) =>
         member.role === 'ADMIN' ? null : (
           <div className="flex justify-end gap-1 md:justify-start">
+            {member.role === 'DOCTOR' && (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="size-9 text-muted hover:text-accent"
+                aria-label={t('schedule.forDoctor', { name: member.fullName })}
+                onClick={() => setScheduling(member)}
+              >
+                <CalendarClock className="size-4" />
+              </Button>
+            )}
             <Button
               size="icon"
               variant="ghost"
@@ -789,6 +803,8 @@ export function StaffPage() {
       </Modal>
 
       <CredentialsDialog credentials={credentials} onClose={() => setCredentials(null)} />
+
+      <DoctorScheduleDialog doctor={scheduling} onClose={() => setScheduling(null)} />
 
       <Modal
         open={deleting !== null}

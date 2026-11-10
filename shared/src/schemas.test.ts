@@ -4,6 +4,7 @@ import {
   consultationReplySchema,
   admitSchema,
   scheduleSchema,
+  visitLengthSchema,
   createConsultationSchema,
   dischargeStaySchema,
   moveStaySchema,
@@ -888,15 +889,15 @@ describe('ward (task 3.16)', () => {
 });
 
 describe('doctor schedule (task 3.19)', () => {
-  const day = { weekday: 0, startMinute: 480, endMinute: 720, slotMinutes: 30 };
+  const day = { weekday: 0, startMinute: 480, endMinute: 720 };
   const ok = (days: object[]) => scheduleSchema.safeParse({ days }).success;
-  it('takes working days with hours that fit at least one visit', () => {
+  it('takes working days with their hours', () => {
     expect(ok([day, { ...day, weekday: 1 }])).toBe(true);
     expect(ok([])).toBe(true);
   });
-  it('refuses an end before the start, a visit longer than the day, or a day twice', () => {
+  it('refuses an end before the start, odd minutes, or a day twice', () => {
     expect(ok([{ ...day, endMinute: 420 }])).toBe(false);
-    expect(ok([{ ...day, endMinute: 500 }])).toBe(false);
+    expect(visitLengthSchema.safeParse({ visitMinutes: 25 }).success).toBe(false);
     expect(ok([day, day])).toBe(false);
     expect(ok([{ ...day, startMinute: 481 }])).toBe(false);
     expect(ok([{ ...day, weekday: 7 }])).toBe(false);

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { VISIT_LENGTHS } from '../appointments.js';
 
 const minute = z
   .number('validation.invalid')
@@ -12,25 +13,15 @@ const day = z
     weekday: z.number().int().min(0).max(6),
     startMinute: minute,
     endMinute: minute,
-    slotMinutes: z
-      .number()
-      .int()
-      .min(5)
-      .max(240)
-      .refine((m) => m % 5 === 0),
   })
   .refine(({ startMinute, endMinute }) => startMinute < endMinute, {
-    message: 'validation.invalid',
-    path: ['endMinute'],
-  })
-  .refine(({ startMinute, endMinute, slotMinutes }) => endMinute - startMinute >= slotMinutes, {
     message: 'validation.invalid',
     path: ['endMinute'],
   });
 
 /**
- * PUT /doctors/me/schedule (task 3.19): the doctor's working days, each with
- * its hours and visit length. Days left out are days off.
+ * PUT /staff/:id/schedule (task 3.19): the admin sets a doctor's working days
+ * and their hours. Days left out are days off.
  */
 export const scheduleSchema = z.object({
   days: z
@@ -39,6 +30,14 @@ export const scheduleSchema = z.object({
     .refine((days) => new Set(days.map((d) => d.weekday)).size === days.length, {
       message: 'validation.invalid',
     }),
+});
+
+/** PUT /doctors/me/visit-length: the doctor's own choice. */
+export const visitLengthSchema = z.object({
+  visitMinutes: z.union(
+    VISIT_LENGTHS.map((m) => z.literal(m)),
+    'validation.invalid',
+  ),
 });
 
 export type ScheduleInput = z.input<typeof scheduleSchema>;

@@ -55,5 +55,6 @@ export const queryKeys = {
   bedMap: ['rooms', 'map'] as const,
   /** The doctor's working week (task 3.19). */
   mySchedule: ['schedule', 'mine'] as const,
+  doctorSchedule: (doctorId: string) => ['schedule', 'doctor', doctorId] as const,
   publicHospitals: (search: string) => ['public-hospitals', search] as const,
 };

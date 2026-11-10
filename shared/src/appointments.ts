@@ -11,17 +11,23 @@ export const WEEK_ORDER = [6, 0, 1, 2, 3, 4, 5] as const;
 /** Visit lengths a doctor picks from, in minutes. */
 export const VISIT_LENGTHS = [10, 15, 20, 30, 45, 60] as const;
 
-/** A doctor's hours on one weekday, in minutes from midnight. */
+/** A doctor's hours on one weekday, in minutes from midnight, set by the admin. */
 export type ScheduleDay = {
   weekday: number;
   startMinute: number;
   endMinute: number;
-  slotMinutes: number;
+};
+
+/** A doctor's week as the doctor and the admin see it (task 3.19). */
+export type DoctorScheduleView = {
+  days: ScheduleDay[];
+  /** The doctor's own visit length, in minutes. */
+  visitMinutes: number;
 };
 
 /** How many whole visits fit in a day's hours. */
-export const visitsInDay = ({ startMinute, endMinute, slotMinutes }: ScheduleDay) =>
-  Math.max(0, Math.floor((endMinute - startMinute) / slotMinutes));
+export const visitsInDay = ({ startMinute, endMinute }: ScheduleDay, visitMinutes: number) =>
+  Math.max(0, Math.floor((endMinute - startMinute) / visitMinutes));
 
 /** "08:30" for 510 minutes. */
 export const minuteToTime = (minute: number) =>
