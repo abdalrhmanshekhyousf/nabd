@@ -294,6 +294,16 @@ describe('client output is valid server input', () => {
       },
     ],
     [hospitalInfoSchema, { name: 'x', address: 'y', phone: '0991234567', email: 'I@X.co' }],
+    [scheduleSchema, { days: [{ weekday: 6, startMinute: 480, endMinute: 840 }] }],
+    [visitLengthSchema, { visitMinutes: 15 }],
+    [
+      bookAppointmentSchema,
+      {
+        doctorId: '0199a3d2-6c55-7000-8000-000000000001',
+        startsAt: '2026-11-14T05:30:00.000Z',
+        reason: '',
+      },
+    ],
     [
       admitSchema,
       {
