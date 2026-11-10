@@ -14,6 +14,7 @@ import {
   HeartPulse,
   History,
   LayoutDashboard,
+  LayoutGrid,
   MessageSquareWarning,
   MessagesSquare,
   Network,
@@ -59,6 +60,7 @@ const inventory: NavItem = {
   icon: Package,
   phase: 3,
 };
+const bedMap: NavItem = { path: 'bed-map', labelKey: 'nav.bedMap', icon: LayoutGrid, phase: 3 };
 const purchases: NavItem = {
   path: 'purchases',
   labelKey: 'nav.purchaseRequests',
@@ -77,6 +79,7 @@ export const NAV_BY_ROLE: Record<Role, NavGroup[]> = {
         { path: 'rooms', labelKey: 'nav.roomsAndBeds', icon: BedDouble, phase: 1 },
         { path: 'operating-rooms', labelKey: 'nav.operatingRooms', icon: HeartPulse, phase: 1 },
         { path: 'or-live', labelKey: 'nav.orLive', icon: Activity, phase: 2 },
+        bedMap,
         { path: 'staff', labelKey: 'nav.staff', icon: Users, phase: 1 },
         { path: 'assignments', labelKey: 'nav.assignments', icon: Network, phase: 1 },
         { path: 'settings', labelKey: 'nav.hospitalSettings', icon: Settings, phase: 1 },
@@ -108,6 +111,7 @@ export const NAV_BY_ROLE: Record<Role, NavGroup[]> = {
         { path: 'calls', labelKey: 'nav.emergencyCalls', icon: Siren, phase: 2 },
         { path: 'or-bookings', labelKey: 'nav.orBookings', icon: CalendarPlus, phase: 2 },
         { path: 'or-live', labelKey: 'nav.orLive', icon: Activity, phase: 2 },
+        bedMap,
         { path: 'schedule', labelKey: 'nav.schedule', icon: CalendarDays, phase: 3 },
         { path: 'consultations', labelKey: 'nav.consultations', icon: MessagesSquare, phase: 3 },
       ],
@@ -123,6 +127,7 @@ export const NAV_BY_ROLE: Record<Role, NavGroup[]> = {
         { path: 'new-case', labelKey: 'nav.newCase', icon: UserPlus, phase: 2 },
         { path: 'operating-rooms', labelKey: 'nav.operatingRooms', icon: HeartPulse, phase: 2 },
         { path: 'beds', labelKey: 'nav.wardBeds', icon: BedDouble, phase: 3 },
+        bedMap,
         { path: 'cleaning', labelKey: 'nav.cleaningRequests', icon: SprayCan, phase: 2 },
       ],
     },

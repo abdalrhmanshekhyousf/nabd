@@ -51,5 +51,7 @@ export const queryKeys = {
   /** The ward nurse's beds (task 3.16); the server refreshes ['ward'] for the department. */
   ward: ['ward'] as const,
   wardCandidates: (search: string) => ['ward', 'candidates', search] as const,
+  /** The live bed map (task 3.18), under rooms: every bed change refreshes it. */
+  bedMap: ['rooms', 'map'] as const,
   publicHospitals: (search: string) => ['public-hospitals', search] as const,
 };

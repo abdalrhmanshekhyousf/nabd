@@ -49,3 +49,19 @@ export type WardBoard = {
 
 /** A patient found to admit (not in a bed already). */
 export type AdmissionCandidate = WardPatient & { phone: string | null };
+
+/** One bed on the live map (task 3.18): its state and, when taken, who is in it. */
+export type BedMapBed = {
+  id: string;
+  label: string;
+  status: BedStatus;
+  statusChangedAt: string;
+  patient: WardPatient | null;
+  admittedAt: string | null;
+};
+
+/** The hospital's beds by department, for the live map (task 3.18). */
+export type BedMapDepartment = {
+  department: { id: string; name: string; code: DepartmentCode | null };
+  rooms: { id: string; number: string; floor: number | null; beds: BedMapBed[] }[];
+};

@@ -395,6 +395,18 @@ export const ar = {
     save: 'حفظ النتيجة',
     viewFile: 'عرض الملف',
   },
+  bedMap: {
+    title: 'خريطة الأسرّة',
+    live: 'مباشر',
+    description: 'كل غرف القسم وأسرّته بلون حالتها، وبتتحدّث لحالها مع كل قبول أو خروج أو تنظيف.',
+    none: 'ما في غرف بالمستشفى لسا. المدير بيضيفها من صفحة الغرف.',
+    hospital: 'المستشفى: {{busy}} مشغول من {{total}}',
+    departments: 'الأقسام',
+    occupancy: '{{busy}} مشغول من {{total}}',
+    legend: 'دليل الألوان',
+    noFloor: 'بلا طابق',
+    bed: 'سرير {{bed}}، {{status}} {{patient}}',
+  },
   ward: {
     title: 'أسرّة {{department}}',
     description: 'كل أسرّة القسم ومين عليها. اضغط على سرير لتقبّل مريض، تنقله، أو تخرّجه.',
@@ -1377,6 +1389,7 @@ export const ar = {
     testAlert: 'جرّب رنين التنبيه العاجل',
   },
   nav: {
+    bedMap: 'خريطة الأسرّة',
     dashboard: 'لوحة التحكم',
     uiGallery: 'مكتبة المكوّنات',
     departments: 'الأقسام',

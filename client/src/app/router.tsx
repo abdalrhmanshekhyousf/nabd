@@ -20,6 +20,7 @@ import { DoctorCallsPage } from '@/pages/doctor/DoctorCallsPage';
 import { DoctorPatientsPage } from '@/pages/doctor/DoctorPatientsPage';
 import { OrBookingsPage } from '@/pages/doctor/OrBookingsPage';
 import { OrLivePage } from '@/pages/OrLivePage';
+import { BedMapPage } from '@/pages/BedMapPage';
 import { InventoryPage } from '@/pages/InventoryPage';
 import { LabBoardPage } from '@/pages/lab/LabBoardPage';
 import { PharmacyPage } from '@/pages/pharmacy/PharmacyPage';
@@ -58,6 +59,9 @@ export const BUILT_PAGES: Partial<Record<`${Role}:${string}`, ReactElement>> = {
   'ADMIN:rooms': <RoomsPage />,
   'ADMIN:operating-rooms': <OperatingRoomsPage />,
   'ADMIN:or-live': <OrLivePage />,
+  'ADMIN:bed-map': <BedMapPage />,
+  'DOCTOR:bed-map': <BedMapPage />,
+  'NURSE:bed-map': <BedMapPage />,
   'ADMIN:staff': <StaffPage />,
   'ADMIN:assignments': <AssignmentsPage />,
   'ADMIN:settings': <HospitalSettingsPage />,

@@ -397,6 +397,19 @@ export const en: Translation = {
     save: 'Save result',
     viewFile: 'View file',
   },
+  bedMap: {
+    title: 'Bed map',
+    live: 'Live',
+    description:
+      'Every room and bed of the department in its state colour, updating by itself with each admission, discharge or cleaning.',
+    none: 'The hospital has no rooms yet. The admin adds them from the rooms page.',
+    hospital: 'Hospital: {{busy}} of {{total}} occupied',
+    departments: 'Departments',
+    occupancy: '{{busy}} of {{total}} occupied',
+    legend: 'Colour key',
+    noFloor: 'No floor',
+    bed: 'Bed {{bed}}, {{status}} {{patient}}',
+  },
   ward: {
     title: '{{department}} beds',
     description:
@@ -1395,6 +1408,7 @@ export const en: Translation = {
     testAlert: 'Test the urgent alert ring',
   },
   nav: {
+    bedMap: 'Bed map',
     dashboard: 'Dashboard',
     uiGallery: 'Component library',
     departments: 'Departments',
