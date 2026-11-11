@@ -5,7 +5,7 @@ import { createApp } from '../src/app.js';
 import { prisma } from '../src/lib/prisma.js';
 import { signAccessToken } from '../src/lib/tokens.js';
 import { setPushTransport } from '../src/services/push.service.js';
-import { runDueReminders } from '../src/services/reminder.service.js';
+import { runAppointmentReminders, runDueReminders } from '../src/services/reminder.service.js';
 import { createHospital, createUser } from './helpers.js';
 
 const app = createApp();
@@ -227,5 +227,79 @@ describe('medication reminders (task 3.26)', () => {
     expect((await request(app).get('/api/push/key').set(nurseAuth)).status).toBe(200);
     expect((await request(app).get('/api/push/key')).status).toBe(401);
     expect((await p.subscribe('not a url')).status).toBe(400);
+  });
+});
+
+describe('visit reminders (task 3.27)', () => {
+  async function visit(p: Awaited<ReturnType<typeof patient>>, startsAt: Date, bookedAt: Date) {
+    return prisma.appointment.create({
+      data: {
+        hospitalId: p.id,
+        doctorName: 'د. سامي',
+        patientId: p.patientId,
+        startsAt,
+        endsAt: new Date(startsAt.getTime() + 30 * 60_000),
+        createdAt: bookedAt,
+      },
+    });
+  }
+  const HOUR = 3_600_000;
+
+  it('reminds the day before and two hours before, each once, on the device too', async () => {
+    const p = await patient('EN');
+    const pushed: string[] = [];
+    setPushTransport(async (_target, payload) => {
+      pushed.push(payload);
+    });
+    await p.subscribe('https://push.example.com/phone');
+    const base = Date.now();
+    const startsAt = new Date(base + 30 * HOUR);
+    const v = await visit(p, startsAt, new Date(base - 3 * 24 * HOUR));
+    const at = (hoursBefore: number) => new Date(startsAt.getTime() - hoursBefore * HOUR);
+
+    expect(await runAppointmentReminders(at(25))).toBe(0); // too early
+    expect(await runAppointmentReminders(at(23.9))).toBe(1); // the day before
+    expect(await runAppointmentReminders(at(23))).toBe(0); // not again
+    expect(await runAppointmentReminders(at(3))).toBe(0);
+    expect(await runAppointmentReminders(at(1.9))).toBe(1); // shortly before
+    expect(await runAppointmentReminders(at(1))).toBe(0);
+    expect(await runAppointmentReminders(new Date(startsAt.getTime() + 60_000))).toBe(0); // past
+
+    const notices = await prisma.notification.findMany({
+      where: { userId: p.user.id },
+      orderBy: { createdAt: 'asc' },
+    });
+    expect(notices.map((n) => (n.data as { kind: string }).kind)).toEqual(['DAY', 'SOON']);
+    expect(notices[0]).toMatchObject({
+      type: 'FOLLOW_UP_REMINDER',
+      data: expect.objectContaining({
+        doctor: 'د. سامي',
+        appointmentId: v.id,
+        startsAt: startsAt.toISOString(),
+      }),
+      link: '/patient/appointments',
+    });
+    expect(pushed.map((m) => JSON.parse(m).title)).toEqual([
+      'You have a visit tomorrow',
+      'Your visit is soon',
+    ]);
+  });
+
+  it('no "tomorrow" for a visit booked less than a day ahead; nothing for a cancelled one', async () => {
+    const p = await patient();
+    const base = Date.now();
+    const soonVisit = await visit(p, new Date(base + 10 * HOUR), new Date(base));
+    const cancelled = await visit(p, new Date(base + 20 * HOUR), new Date(base - 3 * 24 * HOUR));
+    await prisma.appointment.update({ where: { id: cancelled.id }, data: { status: 'CANCELLED' } });
+
+    expect(await runAppointmentReminders(new Date(base + 60_000))).toBe(0);
+    // Two hours before the late-booked visit: that one is sent.
+    expect(await runAppointmentReminders(new Date(soonVisit.startsAt.getTime() - 1.5 * HOUR))).toBe(
+      1,
+    );
+    const kinds = (await prisma.notification.findMany({ where: { userId: p.user.id } })).map(
+      (n) => (n.data as { kind: string; appointmentId: string }).appointmentId,
+    );
+    expect(kinds).toEqual([soonVisit.id]);
   });
 });

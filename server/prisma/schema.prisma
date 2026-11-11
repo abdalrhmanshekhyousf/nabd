@@ -991,20 +991,23 @@ model DoctorVacation {
 // A patient's visit to a doctor at a time. One booked visit per doctor and
 // start (partial unique index in the migration, task 3.20).
 model Appointment {
-  id           String            @id @default(uuid(7)) @db.Uuid
-  hospitalId   String            @db.Uuid
-  doctorId     String?           @db.Uuid
-  doctorName   String
-  patientId    String            @db.Uuid
-  startsAt     DateTime
-  endsAt       DateTime
-  status       AppointmentStatus @default(BOOKED)
-  reason       String?
-  bookedById   String?           @db.Uuid
-  cancelledAt  DateTime?
-  cancelReason String?
-  createdAt    DateTime          @default(now())
-  updatedAt    DateTime          @updatedAt
+  id                 String            @id @default(uuid(7)) @db.Uuid
+  hospitalId         String            @db.Uuid
+  doctorId           String?           @db.Uuid
+  doctorName         String
+  patientId          String            @db.Uuid
+  startsAt           DateTime
+  endsAt             DateTime
+  status             AppointmentStatus @default(BOOKED)
+  reason             String?
+  bookedById         String?           @db.Uuid
+  cancelledAt        DateTime?
+  cancelReason       String?
+  // When the patient was reminded (task 3.27): the day before, and shortly before.
+  dayReminderSentAt  DateTime?
+  soonReminderSentAt DateTime?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
 
   hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
   doctor   User?    @relation("AppointmentDoctor", fields: [doctorId], references: [id], onDelete: SetNull)

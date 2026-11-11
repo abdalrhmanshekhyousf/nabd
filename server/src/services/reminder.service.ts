@@ -191,13 +191,71 @@ export async function runDueReminders(now = new Date()) {
   return sent;
 }
 
-/** Runs the reminders every minute while the server is up (not in tests). */
+/** Runs the medication (3.26) and visit (3.27) reminders every minute while the server is up. */
 export function startReminderScheduler(everyMs = 60_000) {
   const tick = () => {
     runDueReminders().catch((error: unknown) => console.error('Reminders failed', error));
+    runAppointmentReminders().catch((error: unknown) =>
+      console.error('Appointment reminders failed', error),
+    );
   };
   tick();
   const timer = setInterval(tick, everyMs);
   timer.unref();
   return () => clearInterval(timer);
+}
+
+const HOUR = 3_600_000;
+
+/**
+ * Reminds patients of their coming visits (task 3.27): the day before, and two
+ * hours before. A reminder whose moment was before the visit was booked is
+ * skipped (no "tomorrow" right after booking for this afternoon). Each one is
+ * marked sent in the same update that claims it, so it goes out once.
+ */
+export async function runAppointmentReminders(now = new Date()) {
+  const visits = await prisma.appointment.findMany({
+    where: {
+      status: 'BOOKED',
+      startsAt: { gt: now, lte: new Date(now.getTime() + 24 * HOUR) },
+      patient: { userId: { not: null } },
+      OR: [{ dayReminderSentAt: null }, { soonReminderSentAt: null }],
+    },
+    include: { patient: { select: { userId: true } } },
+  });
+  let sent = 0;
+  for (const visit of visits) {
+    const until = visit.startsAt.getTime() - now.getTime();
+    const kind =
+      until <= 2 * HOUR
+        ? visit.createdAt.getTime() <= visit.startsAt.getTime() - 2 * HOUR &&
+          !visit.soonReminderSentAt
+          ? 'SOON'
+          : null
+        : visit.createdAt.getTime() <= visit.startsAt.getTime() - 24 * HOUR &&
+            !visit.dayReminderSentAt
+          ? 'DAY'
+          : null;
+    if (!kind) continue;
+    const field = kind === 'DAY' ? 'dayReminderSentAt' : 'soonReminderSentAt';
+    const { count } = await prisma.appointment.updateMany({
+      where: { id: visit.id, status: 'BOOKED', [field]: null },
+      data: { [field]: now },
+    });
+    if (count === 0) continue;
+    await sendNotification(forHospital(visit.hospitalId), visit.hospitalId, {
+      to: { userIds: [visit.patient.userId!] },
+      type: 'FOLLOW_UP_REMINDER',
+      data: {
+        doctor: visit.doctorName,
+        startsAt: visit.startsAt.toISOString(),
+        appointmentId: visit.id,
+        kind,
+        dueAt: kind,
+      },
+      link: '/patient/appointments',
+    });
+    sent += 1;
+  }
+  return sent;
 }

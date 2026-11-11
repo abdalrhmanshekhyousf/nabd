@@ -1688,6 +1688,7 @@ export const ar = {
       APPOINTMENT_CANCELLED: 'موعدك مع {{doctor}} {{when}} انلغى لأن الطبيب بإجازة',
       BED_DISCHARGED: 'غرفة {{room}} · سرير {{bed}}',
       CONSULTATION_REQUEST: '{{from}} عم يسألك عن {{patient}}',
+      FOLLOW_UP_REMINDER: 'مع {{doctor}} · {{when}}',
       CONSULTATION_REPLY: '{{from}} رد على سؤالك عن {{patient}}',
       REPORT_SUBMITTED: 'تقرير {{reportName}} من {{author}}',
     },

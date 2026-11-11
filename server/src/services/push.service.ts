@@ -1,4 +1,9 @@
-import type { NotificationData, NotificationType, PushSubscriptionData } from '@nabd/shared';
+import {
+  HOSPITAL_TIME_ZONE,
+  type NotificationData,
+  type NotificationType,
+  type PushSubscriptionData,
+} from '@nabd/shared';
 import * as webpush from 'web-push';
 import { env } from '../config/env.js';
 import { prisma } from '../lib/prisma.js';
@@ -42,10 +47,21 @@ function text(type: NotificationType, data: NotificationData, language: 'AR' | '
       return ar
         ? { title: `صار وقت ${v('drug')}`, body: `${v('dose')} · الساعة ${v('time')}` }
         : { title: `Time for ${v('drug')}`, body: `${v('dose')} · at ${v('time')}` };
-    case 'FOLLOW_UP_REMINDER':
+    case 'FOLLOW_UP_REMINDER': {
+      const when = new Intl.DateTimeFormat(ar ? 'ar' : 'en', {
+        weekday: 'long',
+        hour: 'numeric',
+        minute: '2-digit',
+        timeZone: HOSPITAL_TIME_ZONE,
+      }).format(new Date(v('startsAt')));
+      const soon = data.kind === 'SOON';
       return ar
-        ? { title: 'تذكير بموعدك', body: `مع ${v('doctor')} ${v('when')}` }
-        : { title: 'Appointment reminder', body: `With ${v('doctor')} ${v('when')}` };
+        ? { title: soon ? 'موعدك قرّب' : 'عندك موعد بكرة', body: `مع ${v('doctor')} · ${when}` }
+        : {
+            title: soon ? 'Your visit is soon' : 'You have a visit tomorrow',
+            body: `With ${v('doctor')} · ${when}`,
+          };
+    }
     case 'APPOINTMENT_CANCELLED':
       return ar
         ? {

@@ -1709,6 +1709,7 @@ export const en: Translation = {
         'Your visit with {{doctor}} on {{when}} was cancelled: the doctor is on vacation',
       BED_DISCHARGED: 'Room {{room}} · bed {{bed}}',
       CONSULTATION_REQUEST: '{{from}} asks you about {{patient}}',
+      FOLLOW_UP_REMINDER: 'With {{doctor}} · {{when}}',
       CONSULTATION_REPLY: '{{from}} answered your question about {{patient}}',
       REPORT_SUBMITTED: '{{reportName}} report from {{author}}',
     },
