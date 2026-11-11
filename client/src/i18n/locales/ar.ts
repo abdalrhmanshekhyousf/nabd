@@ -1494,6 +1494,7 @@ export const ar = {
     ECHO: 'إيكو',
   },
   shell: {
+    install: 'تثبيت نبض كتطبيق',
     openMenu: 'فتح القائمة',
     closeMenu: 'إغلاق القائمة',
     mainNav: 'التنقل الرئيسي',

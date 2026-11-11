@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#10223A" />
+    <title>نبض · لا يوجد اتصال</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f5f7fa;
+        --fg: #10223a;
+        --muted: #5a6b80;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #10223a;
+          --fg: #e6ecf3;
+          --muted: #9aaabd;
+        }
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: system-ui, 'Segoe UI', Tahoma, sans-serif;
+        text-align: center;
+        padding: 16px;
+      }
+      img {
+        width: 72px;
+        height: 72px;
+        border-radius: 18px;
+      }
+      h1 {
+        font-size: 1.25rem;
+        margin: 16px 0 4px;
+      }
+      p {
+        color: var(--muted);
+        margin: 4px 0;
+        line-height: 1.6;
+      }
+      button {
+        margin-top: 16px;
+        padding: 10px 20px;
+        border: 0;
+        border-radius: 10px;
+        background: #137a6b;
+        color: #fff;
+        font: inherit;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="/icons/icon-192.png" alt="" />
+      <h1>لا يوجد اتصال بالإنترنت</h1>
+      <p>نبض بحاجة اتصال ليجيب بيانات المستشفى. تأكد من الشبكة وجرّب كمان مرة.</p>
+      <p dir="ltr">You are offline. Nabd needs a connection to load the hospital's data.</p>
+      <button type="button" onclick="location.reload()">جرّب كمان مرة · Try again</button>
+    </main>
+  </body>
+</html>

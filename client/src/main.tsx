@@ -8,11 +8,14 @@ import { queryClient } from '@/app/queryClient';
 import { router } from '@/app/router';
 import '@/i18n';
 import { LoadingScreen } from '@/components/brand/LoadingScreen';
+import { registerServiceWorker } from '@/lib/serviceWorker';
 import { initSession } from '@/lib/session';
 import '@/index.css';
 
 // Restore the previous session (refresh cookie) while the first screen renders.
 void initSession();
+// Installable and quick to open, even offline (task 3.25).
+registerServiceWorker();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

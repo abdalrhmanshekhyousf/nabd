@@ -1513,6 +1513,7 @@ export const en: Translation = {
     ECHO: 'Echo',
   },
   shell: {
+    install: 'Install Nabd as an app',
     openMenu: 'Open menu',
     closeMenu: 'Close menu',
     mainNav: 'Main navigation',

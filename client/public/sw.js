@@ -1,0 +1,75 @@
+// Nabd's service worker (task 3.25). It keeps the app's own files so it opens
+// fast and shows its shell (or an offline page) without a connection. Patient
+// and hospital data (anything under /api) is never stored on the device.
+// Push messages for reminders arrive in 3.26.
+const VERSION = 'v1';
+const SHELL = `nabd-shell-${VERSION}`;
+const ASSETS = `nabd-assets-${VERSION}`;
+const PRECACHE = [
+  '/',
+  '/offline.html',
+  '/manifest.webmanifest',
+  '/favicon.svg',
+  '/icons/icon-192.png',
+];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches
+      .open(SHELL)
+      .then((cache) => cache.addAll(PRECACHE))
+      .then(() => self.skipWaiting()),
+  );
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys.filter((key) => key !== SHELL && key !== ASSETS).map((key) => caches.delete(key)),
+        ),
+      )
+      .then(() => self.clients.claim()),
+  );
+});
+
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  if (request.method !== 'GET') return;
+  const url = new URL(request.url);
+  // Only our own files; never the API, wherever it lives.
+  if (url.origin !== self.location.origin || url.pathname.startsWith('/api')) return;
+
+  // Pages: the network first (fresh app), the kept shell when offline.
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(SHELL).then((cache) => cache.put('/', copy));
+          return response;
+        })
+        .catch(async () => (await caches.match('/')) ?? (await caches.match('/offline.html'))),
+    );
+    return;
+  }
+
+  // Built files carry a hash in their name and never change: keep them.
+  if (/^\/(assets|icons|brand)\//.test(url.pathname) || url.pathname === '/favicon.svg') {
+    event.respondWith(
+      caches.match(request).then(
+        (kept) =>
+          kept ??
+          fetch(request).then((response) => {
+            if (response.ok) {
+              const copy = response.clone();
+              caches.open(ASSETS).then((cache) => cache.put(request, copy));
+            }
+            return response;
+          }),
+      ),
+    );
+  }
+});

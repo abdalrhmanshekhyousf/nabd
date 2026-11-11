@@ -13,7 +13,7 @@ import {
 const INK = '#10223A';
 const PULSE = '#E0344B';
 const CLINIC = '#F5F7FA';
-const ICON_SIZES = [32, 48, 96, 192];
+const ICON_SIZES = [32, 48, 96, 192, 512];
 
 function markSvg(traceColor: string, tile?: string) {
   const background = tile ? `<rect width="64" height="64" rx="14" fill="${tile}"/>` : '';
@@ -44,4 +44,25 @@ for (const size of ICON_SIZES) {
     .toFile(fileURLToPath(new URL(`icons/icon-${size}.png`, publicDir)));
 }
 
-console.info(`Generated favicon.svg, 2 logo marks and ${ICON_SIZES.length} PNG icons.`);
+// Installed app (task 3.25): full-bleed tiles. iOS rounds the corners itself;
+// Android's maskable icon keeps the mark inside the middle 80% safe zone.
+function fullBleed(scale: number) {
+  const offset = (64 * (1 - scale)) / 2;
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${LOGO_VIEWBOX}"><rect width="64" height="64" fill="${INK}"/>` +
+    `<g transform="translate(${offset} ${offset}) scale(${scale})">` +
+    `<path d="${LOGO_TRACE}" fill="none" stroke="${CLINIC}" stroke-width="${LOGO_STROKE_WIDTH}" stroke-linecap="round" stroke-linejoin="round"/>` +
+    `<circle cx="${LOGO_DOT.cx}" cy="${LOGO_DOT.cy}" r="${LOGO_DOT.r}" fill="${PULSE}"/></g></svg>\n`
+  );
+}
+for (const [name, size, scale] of [
+  ['apple-touch-icon.png', 180, 0.82],
+  ['icon-maskable-512.png', 512, 0.62],
+] as const) {
+  await sharp(Buffer.from(fullBleed(scale)), { density: 72 * (size / 64) * 4 })
+    .resize(size, size)
+    .png()
+    .toFile(fileURLToPath(new URL(`icons/${name}`, publicDir)));
+}
+
+console.info(`Generated favicon.svg, 2 logo marks and ${ICON_SIZES.length + 2} PNG icons.`);

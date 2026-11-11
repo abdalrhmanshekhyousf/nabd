@@ -1,10 +1,12 @@
-import { LogOut } from 'lucide-react';
+import { Download, LogOut } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 import type { SessionHospital, SessionUser } from '@/app/session';
 import { Popover } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { initials } from '@/lib/initials';
+import { useInstallOffer } from '@/hooks/useInstallOffer';
+import { installOffer } from '@/lib/serviceWorker';
 import { logout } from '@/lib/session';
 import { SoundSettings } from './SoundSettings';
 
@@ -25,6 +27,7 @@ function Avatar({ name, className }: { name: string; className?: string }) {
 export function AccountMenu({ user, hospital }: { user: SessionUser; hospital: SessionHospital }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const canInstall = useInstallOffer();
 
   return (
     <Popover
@@ -44,6 +47,19 @@ export function AccountMenu({ user, hospital }: { user: SessionUser; hospital: S
           </div>
           <SoundSettings />
           <div className="p-2">
+            {canInstall && (
+              <button
+                type="button"
+                onClick={() => {
+                  close();
+                  void installOffer.install();
+                }}
+                className="flex h-10 w-full items-center gap-3 rounded-lg px-3 text-sm text-foreground transition-colors hover:bg-surface-muted focus-visible:ring-[3px] focus-visible:ring-ring focus-visible:outline-none"
+              >
+                <Download className="size-4 text-accent" aria-hidden="true" />
+                {t('shell.install')}
+              </button>
+            )}
             <button
               type="button"
               onClick={async () => {
