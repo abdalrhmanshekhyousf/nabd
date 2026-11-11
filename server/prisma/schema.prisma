@@ -235,37 +235,39 @@ model Hospital {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  departments        Department[]
-  rooms              Room[]
-  beds               Bed[]
-  operatingRooms     OperatingRoom[]
-  users              User[]
-  doctorProfiles     DoctorProfile[]
-  staffProfiles      StaffProfile[]
-  patients           Patient[]
-  refreshTokens      RefreshToken[]
-  cleanerAssignments CleanerAssignment[]
-  notifications      Notification[]
-  medicalRecords     MedicalRecord[]
-  doctorReports      DoctorReport[]
-  prescriptions      Prescription[]
-  prescriptionItems  PrescriptionItem[]
-  triageAssessments  TriageAssessment[]
-  doctorCalls        DoctorCall[]
-  operationBookings  OperationBooking[]
-  roomStatusChanges  OperatingRoomStatusChange[]
-  cleaningRequests   CleaningRequest[]
-  inventoryItems     InventoryItem[]
-  stockMovements     StockMovement[]
-  labTests           LabTest[]
-  radiologyImages    RadiologyImage[]
-  reports            Report[]
-  bedAssignments     BedAssignment[]
-  bedStatusChanges   BedStatusChange[]
-  doctorSchedules    DoctorSchedule[]
-  doctorVacations    DoctorVacation[]
-  appointments       Appointment[]
-  consultations      Consultation[]
+  departments         Department[]
+  rooms               Room[]
+  beds                Bed[]
+  operatingRooms      OperatingRoom[]
+  users               User[]
+  doctorProfiles      DoctorProfile[]
+  staffProfiles       StaffProfile[]
+  patients            Patient[]
+  refreshTokens       RefreshToken[]
+  cleanerAssignments  CleanerAssignment[]
+  notifications       Notification[]
+  medicalRecords      MedicalRecord[]
+  doctorReports       DoctorReport[]
+  prescriptions       Prescription[]
+  prescriptionItems   PrescriptionItem[]
+  triageAssessments   TriageAssessment[]
+  doctorCalls         DoctorCall[]
+  operationBookings   OperationBooking[]
+  roomStatusChanges   OperatingRoomStatusChange[]
+  cleaningRequests    CleaningRequest[]
+  inventoryItems      InventoryItem[]
+  stockMovements      StockMovement[]
+  labTests            LabTest[]
+  radiologyImages     RadiologyImage[]
+  reports             Report[]
+  bedAssignments      BedAssignment[]
+  bedStatusChanges    BedStatusChange[]
+  doctorSchedules     DoctorSchedule[]
+  doctorVacations     DoctorVacation[]
+  pushSubscriptions   PushSubscription[]
+  medicationReminders MedicationReminder[]
+  appointments        Appointment[]
+  consultations       Consultation[]
 }
 
 model Department {
@@ -395,6 +397,7 @@ model User {
   scheduleDays           DoctorSchedule[]
   vacations              DoctorVacation[]            @relation("VacationDoctor")
   vacationsSet           DoctorVacation[]            @relation("VacationSetter")
+  pushSubscriptions      PushSubscription[]
   appointmentsAsDoctor   Appointment[]               @relation("AppointmentDoctor")
   appointmentsBooked     Appointment[]               @relation("AppointmentBooker")
   consultationsGiven     Consultation[]              @relation("ConsultationConsultant")
@@ -476,13 +479,14 @@ model Patient {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  hospital          Hospital           @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  user              User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
-  medicalRecord     MedicalRecord?
-  bedAssignments    BedAssignment[]
-  appointments      Appointment[]
-  erVisits          TriageAssessment[]
-  operationBookings OperationBooking[]
+  hospital            Hospital             @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  user                User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
+  medicalRecord       MedicalRecord?
+  bedAssignments      BedAssignment[]
+  appointments        Appointment[]
+  medicationReminders MedicationReminder[]
+  erVisits            TriageAssessment[]
+  operationBookings   OperationBooking[]
 
   @@unique([hospitalId, nationalId])
   @@index([hospitalId])
@@ -586,6 +590,8 @@ model PrescriptionItem {
   hospital     Hospital        @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
   prescription Prescription    @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
   movements    StockMovement[]
+
+  reminders MedicationReminder[]
 
   @@index([prescriptionId])
 }
@@ -874,6 +880,63 @@ model StockMovement {
 
   @@index([itemId, createdAt])
   @@index([hospitalId, createdAt])
+}
+
+// ─── Reminders (tasks 3.26–3.27) ─────────────────────────────────────────────
+
+// A browser that agreed to receive this user's notifications, even with the
+// site closed (Web Push).
+model PushSubscription {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  hospitalId String   @db.Uuid
+  userId     String   @db.Uuid
+  endpoint   String   @unique
+  p256dh     String
+  auth       String
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// A patient's reminder to take a medicine (task 3.26): at these local times
+// ("08:00") every day from the first day to the last (inclusive).
+model MedicationReminder {
+  id                 String    @id @default(uuid(7)) @db.Uuid
+  hospitalId         String    @db.Uuid
+  patientId          String    @db.Uuid
+  prescriptionItemId String?   @db.Uuid
+  drugName           String
+  dose               String
+  times              String[]
+  startDate          DateTime  @db.Date
+  endDate            DateTime? @db.Date
+  active             Boolean   @default(true)
+  createdAt          DateTime  @default(now())
+
+  hospital         Hospital           @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  patient          Patient            @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  prescriptionItem PrescriptionItem?  @relation(fields: [prescriptionItemId], references: [id], onDelete: SetNull)
+  deliveries       ReminderDelivery[]
+
+  @@index([hospitalId, active])
+  @@index([patientId])
+}
+
+// One reminder sent for one due time: the unique key makes a dose's reminder
+// go out once, whatever the scheduler does.
+model ReminderDelivery {
+  id         String   @id @default(uuid(7)) @db.Uuid
+  reminderId String   @db.Uuid
+  dueAt      DateTime
+  sentAt     DateTime @default(now())
+
+  reminder MedicationReminder @relation(fields: [reminderId], references: [id], onDelete: Cascade)
+
+  @@unique([reminderId, dueAt])
 }
 
 // ─── Appointments (tasks 3.19–3.22) ──────────────────────────────────────────

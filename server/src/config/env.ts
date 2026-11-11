@@ -39,4 +39,8 @@ export const env = {
   refreshTokenTtlDays,
   /** Uploaded files (logos, images, reports). Never served directly, only via the API. */
   uploadsDir: resolve(process.env.UPLOADS_DIR ?? 'uploads'),
+  /** Web push (task 3.26); without the keys reminders stay in-app only. */
+  vapidPublicKey: process.env.VAPID_PUBLIC_KEY ?? '',
+  vapidPrivateKey: process.env.VAPID_PRIVATE_KEY ?? '',
+  vapidSubject: process.env.VAPID_SUBJECT ?? 'mailto:admin@example.com',
 } as const;

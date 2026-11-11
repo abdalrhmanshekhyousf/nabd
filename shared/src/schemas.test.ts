@@ -3,6 +3,9 @@ import {
   bedServiceSchema,
   consultationReplySchema,
   admitSchema,
+  pushSubscriptionSchema,
+  reminderSchema,
+  reminderUpdateSchema,
   scheduleSchema,
   visitLengthSchema,
   vacationSchema,
@@ -306,6 +309,15 @@ describe('client output is valid server input', () => {
       },
     ],
     [vacationSchema, { from: '2026-12-01', to: '2026-12-07', reason: ' مؤتمر ' }],
+    [
+      reminderSchema,
+      { drugName: ' أملوديبين ', dose: '5 ملغ', times: ['08:00'], startDate: '2026-11-12' },
+    ],
+    [reminderUpdateSchema, { active: false }],
+    [
+      pushSubscriptionSchema,
+      { endpoint: 'https://push.example.com/abc', keys: { p256dh: 'k', auth: 'a' } },
+    ],
     [
       admitSchema,
       {

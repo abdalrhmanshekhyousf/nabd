@@ -10,6 +10,7 @@ import type { Role } from '../generated/prisma/enums.js';
 import type { ScopedPrisma } from '../lib/scopedPrisma.js';
 import { emitTo, rooms } from '../realtime/realtime.js';
 import { HttpError } from '../middleware/errorHandler.js';
+import { PUSH_TYPES, pushTo } from './push.service.js';
 
 /**
  * Who should get it: named people, everyone with a role, or everyone with a
@@ -88,6 +89,8 @@ export async function sendNotification(
   for (const row of rows) {
     emitTo(rooms.user(row.userId), REALTIME_EVENTS.notification, toItem(row));
   }
+  // What a patient must not miss also reaches their devices, site closed or not (3.26).
+  if (PUSH_TYPES.includes(type)) await pushTo(userIds, type, data, link);
   return rows.map(toItem);
 }
 
