@@ -539,6 +539,12 @@ export const en: Translation = {
     followUps: 'Follow-up visits',
     none: 'No medical file is linked to your account yet. It opens at your first visit.',
   },
+  printFile: {
+    button: 'Print / PDF',
+    title: 'Medical file',
+    printedAt: 'Printed {{date}}',
+    footer: 'Medical file issued by {{hospital}}; confidential, for its holder only.',
+  },
   ward: {
     title: '{{department}} beds',
     description:

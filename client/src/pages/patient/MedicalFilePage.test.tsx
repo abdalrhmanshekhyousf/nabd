@@ -1,7 +1,8 @@
 import type { PatientFile } from '@nabd/shared';
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MotionGlobalConfig } from 'framer-motion';
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { queryClient } from '@/app/queryClient';
 import type { SessionUser } from '@/app/session';
 import { INTRO_SEEN_KEY } from '@/hooks/useIntroSplash';
@@ -136,5 +137,25 @@ describe('MedicalFilePage (task 3.23)', () => {
     hasFile = false;
     renderApp('/patient/file');
     expect(await screen.findByText(/ما في ملف طبي مربوط بحسابك/)).toBeInTheDocument();
+  });
+
+  it('prints the file or saves it as PDF, with the hospital on top and Nabd below (task 3.24)', async () => {
+    const print = vi.spyOn(window, 'print').mockImplementation(() => {});
+    renderApp('/patient/file');
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'طباعة / PDF' }));
+    const sheet = await screen.findByTestId('file-sheet');
+    expect(sheet).toHaveTextContent('مستشفى الأمل');
+    expect(sheet).toHaveTextContent('الملف الطبي');
+    expect(sheet).toHaveTextContent('سارة الأحمد');
+    expect(sheet).toHaveTextContent('البنسلين');
+    expect(sheet).toHaveTextContent('الضغط مضبوط');
+    expect(sheet).toHaveTextContent('Powered by');
+    expect(sheet).toHaveTextContent('Nabd');
+    expect(document.body).toHaveClass('printing');
+    await waitFor(() => expect(print).toHaveBeenCalled());
+    window.dispatchEvent(new Event('afterprint'));
+    await waitFor(() => expect(screen.queryByTestId('file-sheet')).toBeNull());
+    expect(document.body).not.toHaveClass('printing');
+    print.mockRestore();
   });
 });

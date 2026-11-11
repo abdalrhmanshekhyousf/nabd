@@ -35,6 +35,7 @@ import { ImagingOrderDialog } from '@/components/patients/ImagingOrderDialog';
 import { ImagingViewer } from '@/components/patients/ImagingViewer';
 import { LabOrderDialog } from '@/components/patients/LabOrderDialog';
 import { PatientAvatar } from '@/components/patients/PatientAvatar';
+import { PrintFileButton } from '@/components/patients/PrintFileButton';
 import { patientFacts, patientName } from '@/components/patients/patientDisplay';
 import { PrescriptionDialog } from '@/components/patients/PrescriptionDialog';
 import { ReportDialog } from '@/components/patients/ReportDialog';
@@ -465,9 +466,9 @@ export function PatientFileView({
 
       <motion.div {...enter(0)}>
         <Card className="space-y-4 p-5">
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <PatientAvatar patient={patient} className="size-14 text-xl" />
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <h2 className="truncate text-xl font-bold text-foreground">
                 {patientName(patient, t)}
               </h2>
@@ -478,6 +479,7 @@ export function PatientFileView({
                 </p>
               )}
             </div>
+            <PrintFileButton file={file} className="w-full sm:w-auto" />
           </div>
           {details.length > 0 && (
             <dl className="grid gap-3 border-t border-border pt-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
