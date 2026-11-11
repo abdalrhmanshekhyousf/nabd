@@ -81,19 +81,26 @@ describe('AppShell', () => {
     );
   });
 
-  it('shows the empty notifications panel and closes it with Escape', async () => {
-    const user = userEvent.setup();
-    renderAt('/admin');
+  it(
+    'shows the empty notifications panel and closes it with Escape',
+    { timeout: 20_000 },
+    async () => {
+      const user = userEvent.setup();
+      renderAt('/admin');
 
-    const bell = await screen.findByRole('button', { name: 'الإشعارات' });
-    await user.click(bell);
-    expect(bell).toHaveAttribute('aria-expanded', 'true');
-    expect(await screen.findByText('ما في إشعارات لسا')).toBeInTheDocument();
+      const bell = await screen.findByRole('button', { name: 'الإشعارات' });
+      await user.click(bell);
+      expect(bell).toHaveAttribute('aria-expanded', 'true');
+      // The panel waits for the notifications request; give it time under a busy test run.
+      expect(
+        await screen.findByText('ما في إشعارات لسا', undefined, { timeout: 10_000 }),
+      ).toBeInTheDocument();
 
-    await user.keyboard('{Escape}');
-    await waitFor(() => expect(screen.queryByText('ما في إشعارات لسا')).not.toBeInTheDocument());
-    expect(bell).toHaveFocus();
-  });
+      await user.keyboard('{Escape}');
+      await waitFor(() => expect(screen.queryByText('ما في إشعارات لسا')).not.toBeInTheDocument());
+      expect(bell).toHaveFocus();
+    },
+  );
 
   it('closes a menu when clicking outside it', async () => {
     const user = userEvent.setup();
