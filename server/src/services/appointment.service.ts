@@ -180,8 +180,18 @@ export function toAppointmentView(row: AppointmentRow): AppointmentView {
   };
 }
 
-/** Doctors who take bookings: active, with working hours (task 3.22). */
-const bookable = { role: 'DOCTOR', isActive: true, scheduleDays: { some: {} } } as const;
+/**
+ * Doctors who take bookings (task 3.22): active, with working hours, in a
+ * clinic — the ER and the operating theatre are not booked ahead.
+ */
+const bookable = {
+  role: 'DOCTOR' as const,
+  isActive: true,
+  scheduleDays: { some: {} },
+  staffProfile: {
+    department: { code: { notIn: ['EMERGENCY', 'OPERATIONS'] as ('EMERGENCY' | 'OPERATIONS')[] } },
+  },
+} satisfies Prisma.UserWhereInput;
 
 /** The departments a patient can book in, with how many doctors take bookings there. */
 export async function bookableDepartments(db: ScopedPrisma): Promise<BookableDepartment[]> {
@@ -208,7 +218,10 @@ export async function bookableDoctors(
   departmentId: string,
 ): Promise<BookableDoctor[]> {
   const doctors = await db.user.findMany({
-    where: { ...bookable, staffProfile: { departmentId } },
+    where: {
+      ...bookable,
+      staffProfile: { departmentId, department: bookable.staffProfile.department },
+    },
     select: {
       id: true,
       fullName: true,

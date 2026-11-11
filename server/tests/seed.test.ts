@@ -81,15 +81,41 @@ describe('the demo seed (task 2.27)', () => {
     expect(late).toEqual(expect.arrayContaining([2, 3]));
     expect(queue[1]).toMatchObject({ status: 'IN_TREATMENT', patient: { isAnonymous: true } });
 
-    // Wards with empty beds for admissions (3.15–3.18).
+    // Wards with beds for admissions (3.15–3.18): most empty, some taken (3.28).
     expect(first.wards).toBe(true);
     const wardBeds = await prisma.bed.findMany({
       where: { hospitalId },
       select: { status: true, room: { select: { department: { select: { code: true } } } } },
     });
     expect(wardBeds.length).toBeGreaterThan(40);
-    expect(new Set(wardBeds.map((b) => b.status))).toEqual(new Set(['EMPTY']));
+    expect(new Set(wardBeds.map((b) => b.status))).toEqual(new Set(['EMPTY', 'OCCUPIED']));
     expect(new Set(wardBeds.map((b) => b.room.department.code))).toContain('INTERNAL_MEDICINE');
+
+    // A working week (3.28): every doctor has hours, ward beds have patients with
+    // their notes, prescriptions, tests and imaging, and visits are booked.
+    expect(first.care).toMatchObject({ care: true, stays: 7 });
+    expect(first.care.booked).toBeGreaterThanOrEqual(5);
+    expect(
+      await prisma.user.count({
+        where: { hospitalId, role: 'DOCTOR', scheduleDays: { none: {} } },
+      }),
+    ).toBe(0);
+    const stays = await prisma.bedAssignment.findMany({
+      where: { hospitalId, dischargedAt: null },
+      include: { bed: { select: { status: true } } },
+    });
+    expect(stays).toHaveLength(7);
+    expect(new Set(stays.map((s) => s.bed.status))).toEqual(new Set(['OCCUPIED']));
+    expect(
+      await prisma.prescription.count({ where: { hospitalId, status: 'PENDING' } }),
+    ).toBeGreaterThanOrEqual(7);
+    expect(await prisma.labTest.count({ where: { hospitalId, status: 'DONE' } })).toBe(4);
+    expect(
+      await prisma.radiologyImage.count({ where: { hospitalId, status: 'REQUESTED' } }),
+    ).toBeGreaterThanOrEqual(4);
+    expect(await prisma.appointment.count({ where: { hospitalId, status: 'BOOKED' } })).toBe(
+      first.care.booked,
+    );
 
     const rooms = await prisma.operatingRoom.findMany({
       where: { hospitalId },
@@ -114,6 +140,8 @@ describe('the demo seed (task 2.27)', () => {
     expect(types.map((t) => t.type).sort()).toEqual([
       'CLEANING_REQUEST',
       'DOCTOR_CALL',
+      // The lab's results reach the doctors (3.28).
+      'LAB_RESULT',
       // Several radiologists now: items added already short alert the others.
       'LOW_STOCK',
       'OPERATION_ENDED',
@@ -129,10 +157,15 @@ describe('the demo seed (task 2.27)', () => {
         prisma.inventoryItem.count({ where: { hospitalId } }),
         prisma.stockMovement.count({ where: { hospitalId } }),
         prisma.bed.count({ where: { hospitalId } }),
+        prisma.bedAssignment.count({ where: { hospitalId } }),
+        prisma.appointment.count({ where: { hospitalId } }),
+        prisma.doctorSchedule.count({ where: { hospitalId } }),
+        prisma.labTest.count({ where: { hospitalId } }),
       ]);
     const before = await count();
     const again = await seedDemo(details, { sampleStock: true });
     expect(again).toMatchObject({
+      care: { hoursAdded: 0, care: false },
       activity: false,
       wards: false,
       stock: false,

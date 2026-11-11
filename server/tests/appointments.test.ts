@@ -295,6 +295,31 @@ describe('patient booking (task 3.22)', () => {
     });
     expect(Date.parse(doctor.nextSlot)).toBeGreaterThan(Date.now());
     expect((await sara.doctors(cardio.id)).body.doctors).toHaveLength(1);
+    // The ER is not booked ahead, even with doctors on shifts.
+    const er = await prisma.department.create({
+      data: { hospitalId: h.id, name: 'الإسعاف', code: 'EMERGENCY' },
+    });
+    const erDoctor = await createUser(h.id, {
+      email: `er-${crypto.randomUUID()}@nabd.test`,
+      password: 'x',
+      role: 'DOCTOR',
+    });
+    await prisma.staffProfile.create({
+      data: { hospitalId: h.id, userId: erDoctor.id, departmentId: er.id },
+    });
+    await prisma.doctorSchedule.create({
+      data: {
+        hospitalId: h.id,
+        doctorId: erDoctor.id,
+        weekday: 0,
+        startMinute: 480,
+        endMinute: 600,
+      },
+    });
+    expect(
+      (await sara.departments()).body.departments.map((d: { code: string }) => d.code),
+    ).toEqual(['CARDIOLOGY']);
+    expect((await sara.doctors(er.id)).body.doctors).toEqual([]);
   });
 
   it('shows my visits, coming and past, and lets me cancel one before it happens', async () => {
