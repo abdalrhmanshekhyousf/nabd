@@ -66,6 +66,12 @@ export default tseslint.config(
     languageOptions: { globals: globals.node },
   },
 
+  // The service worker runs in its own world: self, caches, clients (task 3.25)
+  {
+    files: ['client/public/sw.js'],
+    languageOptions: { globals: globals.serviceworker },
+  },
+
   // Must be last: turns off rules that conflict with Prettier
   prettier,
 );
