@@ -34,6 +34,7 @@ import { CleanerTasksPage } from '@/pages/cleaner/CleanerTasksPage';
 import { PatientFilePage } from '@/pages/doctor/PatientFilePage';
 import { AppointmentsPage } from '@/pages/patient/AppointmentsPage';
 import { MedicalFilePage } from '@/pages/patient/MedicalFilePage';
+import { RegisterPatientPage } from '@/pages/reception/RegisterPatientPage';
 import { MedicationsPage } from '@/pages/patient/MedicationsPage';
 import { ConsultationsPage } from '@/pages/doctor/ConsultationsPage';
 import { SchedulePage } from '@/pages/doctor/SchedulePage';
@@ -91,6 +92,7 @@ export const BUILT_PAGES: Partial<Record<`${Role}:${string}`, ReactElement>> = {
   'NURSE:new-case': <NewCasePage />,
   'PATIENT:appointments': <AppointmentsPage />,
   'PATIENT:file': <MedicalFilePage />,
+  'RECEPTIONIST:register': <RegisterPatientPage />,
   'PATIENT:medications': <MedicationsPage />,
 };
 

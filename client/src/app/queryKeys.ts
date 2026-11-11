@@ -65,5 +65,7 @@ export const queryKeys = {
   myFile: ['patient-file', 'mine'] as const,
   /** The patient's medicines and reminders (task 3.26). */
   myMedications: ['medications', 'mine'] as const,
+  /** Reception's patient search (task 4.1). */
+  receptionPatients: (search: string) => ['reception', 'patients', search] as const,
   publicHospitals: (search: string) => ['public-hospitals', search] as const,
 };

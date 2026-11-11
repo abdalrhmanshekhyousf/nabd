@@ -116,6 +116,14 @@ const MESSAGES: Record<ErrorCode, Record<Language, string>> = {
     ar: 'عند المريض موعد تاني بنفس الوقت',
     en: 'The patient has another visit at that time',
   },
+  PATIENT_EXISTS: {
+    ar: 'في مريض مسجّل بهالرقم الوطني',
+    en: 'A patient with this national number is already registered',
+  },
+  HAS_ACCOUNT: {
+    ar: 'هالمريض عندو حساب من قبل',
+    en: 'This patient already has an account',
+  },
   OUT_OF_STOCK: {
     ar: 'الكمية بالمخزون ما بتكفي',
     en: 'Not enough in stock',

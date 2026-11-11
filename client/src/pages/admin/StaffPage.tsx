@@ -19,7 +19,6 @@ import { AnimatePresence, motion } from 'framer-motion';
 import {
   Banknote,
   Check,
-  Copy,
   Eye,
   EyeOff,
   KeyRound,
@@ -44,6 +43,7 @@ import { Link, useSearchParams } from 'react-router';
 import { queryKeys } from '@/app/queryKeys';
 import { departmentLabel, type Department } from '@/components/departments/departmentDisplay';
 import { DOCTOR_STATUS_TONE } from '@/components/doctor/doctorStatusStyles';
+import { CredentialsDialog, type Credentials } from '@/components/accounts/CredentialsDialog';
 import { DoctorScheduleDialog } from '@/components/schedule/DoctorScheduleDialog';
 import {
   Button,
@@ -80,7 +80,6 @@ export type StaffMember = {
   doctorStatus: DoctorStatus | null;
 };
 
-type Credentials = { name: string; email: string; password: string };
 type DialogTarget = { mode: 'create' } | { mode: 'edit'; member: StaffMember } | null;
 
 const ROLE_TONE: Partial<Record<Role, StatusTone>> = {
@@ -403,78 +402,6 @@ function StaffForm({
         </Button>
       </div>
     </form>
-  );
-}
-
-function CopyRow({ label, value, copyLabel }: { label: string; value: string; copyLabel: string }) {
-  const { t } = useTranslation();
-  const [copied, setCopied] = useState(false);
-
-  return (
-    <div className="flex items-center gap-3 rounded-lg bg-surface-muted px-3 py-2.5">
-      <div className="min-w-0 flex-1">
-        <p className="text-xs text-muted">{label}</p>
-        <p dir="ltr" className="truncate text-start font-mono text-sm text-foreground">
-          {value}
-        </p>
-      </div>
-      <Button
-        size="sm"
-        variant="outline"
-        aria-label={copyLabel}
-        icon={copied ? <Check className="size-4 text-success" /> : <Copy className="size-4" />}
-        onClick={async () => {
-          try {
-            await navigator.clipboard.writeText(value);
-          } catch {
-            // Clipboard blocked (permissions, insecure origin): say so instead of
-            // pretending it worked; the value stays visible to copy by hand.
-            notify.error(t('staff.copyFailed'));
-            return;
-          }
-          setCopied(true);
-          playSound('success');
-          window.setTimeout(() => setCopied(false), 1500);
-        }}
-      >
-        {copied ? t('staff.copied') : copyLabel}
-      </Button>
-    </div>
-  );
-}
-
-function CredentialsDialog({
-  credentials,
-  onClose,
-}: {
-  credentials: Credentials | null;
-  onClose: () => void;
-}) {
-  const { t } = useTranslation();
-  return (
-    <Modal
-      open={credentials !== null}
-      onClose={onClose}
-      title={credentials ? t('staff.credentialsTitle', { name: credentials.name }) : ''}
-      description={t('staff.credentialsBody')}
-      size="sm"
-      footer={<Button onClick={onClose}>{t('staff.done')}</Button>}
-    >
-      {credentials && (
-        <div className="space-y-2">
-          <CopyRow
-            label={t('staff.email')}
-            value={credentials.email}
-            copyLabel={t('staff.copyEmail')}
-          />
-          <CopyRow
-            label={t('staff.password')}
-            value={credentials.password}
-            copyLabel={t('staff.copyPassword')}
-          />
-        </div>
-      )}
-    </Modal>
   );
 }
 

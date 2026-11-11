@@ -24,6 +24,7 @@ import { wardRouter } from './routes/ward.routes.js';
 import { appointmentRouter } from './routes/appointment.routes.js';
 import { patientRouter } from './routes/patient.routes.js';
 import { pushRouter } from './routes/push.routes.js';
+import { receptionRouter } from './routes/reception.routes.js';
 import { devRouter } from './routes/dev.routes.js';
 import { doctorRouter } from './routes/doctor.routes.js';
 import { erRouter } from './routes/er.routes.js';
@@ -70,6 +71,7 @@ export function createApp() {
   app.use('/api/appointments', appointmentRouter);
   app.use('/api/patients', patientRouter);
   app.use('/api/push', pushRouter);
+  app.use('/api/reception', receptionRouter);
   if (!env.isProduction) app.use('/api/dev', devRouter);
 
   app.use(notFound);

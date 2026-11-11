@@ -3,6 +3,7 @@ import {
   bedServiceSchema,
   consultationReplySchema,
   admitSchema,
+  receptionPatientSchema,
   pushSubscriptionSchema,
   reminderSchema,
   reminderUpdateSchema,
@@ -317,6 +318,17 @@ describe('client output is valid server input', () => {
     [
       pushSubscriptionSchema,
       { endpoint: 'https://push.example.com/abc', keys: { p256dh: 'k', auth: 'a' } },
+    ],
+    [
+      receptionPatientSchema,
+      {
+        fullName: ' سارة ',
+        gender: 'FEMALE',
+        phone: '0991234567',
+        nationalId: '',
+        bloodType: 'A+',
+        account: { email: 'S@X.co', password: 'Strong#Pass1' },
+      },
     ],
     [
       admitSchema,
@@ -936,5 +948,25 @@ describe('doctor vacations (task 3.21)', () => {
     expect(ok({ from: '2026-12-07', to: '2026-12-01' })).toBe(false);
     expect(ok({ from: '2026-01-01', to: '2027-06-01' })).toBe(false);
     expect(ok({ from: '', to: '2026-12-01' })).toBe(false);
+  });
+});
+
+describe('reception registration (task 4.1)', () => {
+  const base = { fullName: 'سارة', gender: 'FEMALE' };
+  it('needs a name and a gender; the rest is optional, the account too', () => {
+    expect(receptionPatientSchema.parse(base)).toMatchObject({
+      nationalId: null,
+      account: null,
+      bloodType: null,
+    });
+    expect(receptionPatientSchema.safeParse({ fullName: 'سارة' }).success).toBe(false);
+  });
+  it('refuses a malformed national number or blood type, and a weak password', () => {
+    expect(receptionPatientSchema.safeParse({ ...base, nationalId: '12ab' }).success).toBe(false);
+    expect(receptionPatientSchema.safeParse({ ...base, bloodType: 'C+' }).success).toBe(false);
+    expect(
+      receptionPatientSchema.safeParse({ ...base, account: { email: 'a@b.co', password: '123' } })
+        .success,
+    ).toBe(false);
   });
 });
