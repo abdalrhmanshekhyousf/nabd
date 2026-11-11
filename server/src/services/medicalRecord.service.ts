@@ -221,3 +221,17 @@ export async function addPrescription(
   await touch(db, recordId);
   return toPrescriptionView(prescription);
 }
+
+/**
+ * The patient's own file (task 3.23), read-only: everything the doctors wrote
+ * and ordered, without the staff's internal notes and consultations.
+ */
+export async function myOwnFile(db: ScopedPrisma, userId: string): Promise<PatientFile> {
+  const record = await db.medicalRecord.findFirst({
+    where: { patient: { userId } },
+    select: { id: true },
+  });
+  if (!record) throw new HttpError(404, 'NOT_FOUND', 'No medical file for this account');
+  const file = await loadFile(db, { id: record.id });
+  return { ...file, record: { ...file.record, notes: null }, consultations: [] };
+}

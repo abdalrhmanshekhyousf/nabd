@@ -532,6 +532,13 @@ export const en: Translation = {
     confirmCancel: 'Cancel the visit',
     cancelled: 'The visit was cancelled',
   },
+  myFile: {
+    title: 'My medical file',
+    description:
+      'Everything your doctors wrote or ordered for you: reports, prescriptions, lab tests and their results, and imaging.',
+    followUps: 'Follow-up visits',
+    none: 'No medical file is linked to your account yet. It opens at your first visit.',
+  },
   ward: {
     title: '{{department}} beds',
     description:
