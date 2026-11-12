@@ -62,6 +62,9 @@ export const slotsQuerySchema = z.object({
   days: z.coerce.number().int().min(1).max(31).default(14),
 });
 
+/** GET /appointments/day (task 4.2): the reception desk's day, a local date. */
+export const deskDayQuerySchema = z.object({ date: z.iso.date() });
+
 export type BookAppointmentInput = z.input<typeof bookAppointmentSchema>;
 export type BookAppointmentData = z.output<typeof bookAppointmentSchema>;
 

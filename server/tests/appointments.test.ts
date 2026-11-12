@@ -360,3 +360,97 @@ describe('patient booking (task 3.22)', () => {
     expect(after.past[0]).toMatchObject({ id: a.id, status: 'CANCELLED' });
   });
 });
+
+describe('reception books for a patient (task 4.2)', () => {
+  it('books for a walk-in patient, lists the day and the patient, and cancels', async () => {
+    const h = await clinic();
+    const sara = await h.patient('سارة');
+    // A patient without an account, registered at the desk.
+    const walkIn = await prisma.patient.create({
+      data: { hospitalId: h.id, fullName: 'عمر', phone: '0991234567' },
+    });
+    const desk = await prisma.user.findFirstOrThrow({
+      where: { hospitalId: h.id, role: 'RECEPTIONIST' },
+    });
+    const auth = {
+      Authorization: `Bearer ${signAccessToken({ sub: desk.id, hospitalId: h.id, role: 'RECEPTIONIST' })}`,
+    };
+
+    // The patient must be chosen, and must exist.
+    expect((await h.receptionBook({ startsAt: at(tomorrow, '08:00') })).status).toBe(400);
+    const missing = await h.receptionBook({
+      startsAt: at(tomorrow, '08:00'),
+      patientId: crypto.randomUUID(),
+    });
+    expect(missing.status).toBe(404);
+
+    const booked = await h.receptionBook({
+      startsAt: at(tomorrow, '08:30'),
+      patientId: walkIn.id,
+      reason: 'مراجعة',
+    });
+    expect(booked.status).toBe(201);
+    expect(booked.body.appointment).toMatchObject({ patientId: walkIn.id, status: 'BOOKED' });
+    expect(
+      await prisma.appointment.findUniqueOrThrow({ where: { id: booked.body.appointment.id } }),
+    ).toMatchObject({ bookedById: desk.id });
+    await sara.book(at(tomorrow, '08:00'));
+
+    // The desk's day, in time order, with who is coming.
+    const day = await request(app).get('/api/appointments/day').query({ date: tomorrow }).set(auth);
+    expect(
+      day.body.appointments.map((v: { patient: { fullName: string } }) => v.patient.fullName),
+    ).toEqual(['سارة', 'عمر']);
+    expect(day.body.appointments[1].patient.phone).toBe('0991234567');
+    const other = await request(app)
+      .get('/api/appointments/day')
+      .query({ date: addLocalDays(tomorrow, 1) })
+      .set(auth);
+    expect(other.body.appointments).toEqual([]);
+    expect((await request(app).get('/api/appointments/day').set(auth)).status).toBe(400);
+
+    // One patient's visits.
+    const omar = await request(app).get(`/api/appointments/patient/${walkIn.id}`).set(auth);
+    expect(omar.body.upcoming.map((v: { id: string }) => v.id)).toEqual([
+      booked.body.appointment.id,
+    ]);
+    expect(
+      (await request(app).get(`/api/appointments/patient/${crypto.randomUUID()}`).set(auth)).status,
+    ).toBe(404);
+
+    // Reception cancels any visit; a patient still only their own.
+    const cancelled = await request(app)
+      .delete(`/api/appointments/${booked.body.appointment.id}`)
+      .set(auth);
+    expect(cancelled.body.appointment).toMatchObject({
+      status: 'CANCELLED',
+      cancelReason: 'RECEPTION',
+    });
+    expect((await sara.cancel(booked.body.appointment.id)).status).toBe(404);
+    // The slot is free again.
+    expect(
+      (await h.receptionBook({ startsAt: at(tomorrow, '08:30'), patientId: walkIn.id })).status,
+    ).toBe(201);
+  });
+
+  it('keeps the desk lists away from patients and other staff', async () => {
+    const h = await clinic();
+    const sara = await h.patient('سارة');
+    const patientUser = await prisma.patient.findUniqueOrThrow({ where: { id: sara.id } });
+    const asPatient = {
+      Authorization: `Bearer ${signAccessToken({ sub: patientUser.userId!, hospitalId: h.id, role: 'PATIENT' })}`,
+    };
+    const asDoctor = {
+      Authorization: `Bearer ${signAccessToken({ sub: h.doctor.id, hospitalId: h.id, role: 'DOCTOR' })}`,
+    };
+    for (const auth of [asPatient, asDoctor]) {
+      expect(
+        (await request(app).get('/api/appointments/day').query({ date: tomorrow }).set(auth))
+          .status,
+      ).toBe(403);
+      expect(
+        (await request(app).get(`/api/appointments/patient/${sara.id}`).set(auth)).status,
+      ).toBe(403);
+    }
+  });
+});

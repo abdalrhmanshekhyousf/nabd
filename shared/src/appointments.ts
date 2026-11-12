@@ -182,3 +182,8 @@ export type BookableDoctor = {
   visitMinutes: number;
   nextSlot: string | null;
 };
+
+/** A visit on the reception desk's day list (task 4.2): who is coming, and how to reach them. */
+export type DeskAppointment = AppointmentView & {
+  patient: { fullName: string | null; isAnonymous: boolean; phone: string | null };
+};

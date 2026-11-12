@@ -4,7 +4,9 @@ import {
   cutSlots,
   onVacation,
   zonedDate,
+  zonedInstant,
   type AppointmentView,
+  type DeskAppointment,
   type BookableDepartment,
   type BookableDoctor,
   type BookAppointmentData,
@@ -154,6 +156,24 @@ export async function bookAppointment(
   }
 }
 
+/**
+ * The reception desk's day (task 4.2): every visit of a local day in the
+ * hospital, in time order, with who is coming and their phone.
+ */
+export async function deskDay(db: ScopedPrisma, date: string): Promise<DeskAppointment[]> {
+  const rows = await db.appointment.findMany({
+    where: {
+      startsAt: { gte: zonedInstant(date, 0), lt: zonedInstant(addLocalDays(date, 1), 0) },
+    },
+    include: {
+      ...appointmentInclude,
+      patient: { select: { fullName: true, isAnonymous: true, phone: true } },
+    },
+    orderBy: [{ startsAt: 'asc' }, { doctorName: 'asc' }],
+  });
+  return rows.map((row) => ({ ...toAppointmentView(row), patient: row.patient }));
+}
+
 /** What a visit row needs to be shown: its doctor's department. */
 export const appointmentInclude = {
   doctor: {
@@ -245,7 +265,17 @@ export async function bookableDoctors(
 
 /** The patient's own visits: what is coming, then the last ones. */
 export async function myAppointments(db: ScopedPrisma, userId: string) {
-  const patientId = await patientOfUser(db, userId);
+  return patientAppointments(db, await patientOfUser(db, userId));
+}
+
+/** A patient's visits as reception sees them (task 4.2); 404 for no such patient. */
+export async function patientAtDesk(db: ScopedPrisma, patientId: string) {
+  const patient = await db.patient.findUnique({ where: { id: patientId }, select: { id: true } });
+  if (!patient) throw new HttpError(404, 'NOT_FOUND', 'Patient not found');
+  return patientAppointments(db, patientId);
+}
+
+async function patientAppointments(db: ScopedPrisma, patientId: string) {
   const now = new Date();
   const [upcoming, past] = await Promise.all([
     db.appointment.findMany({
@@ -263,16 +293,29 @@ export async function myAppointments(db: ScopedPrisma, userId: string) {
   return { upcoming: upcoming.map(toAppointmentView), past: past.map(toAppointmentView) };
 }
 
-/** The patient cancels a visit of theirs that has not happened yet; the slot frees up. */
-export async function cancelMyAppointment(db: ScopedPrisma, userId: string, id: string) {
-  const patientId = await patientOfUser(db, userId);
+/**
+ * Cancels a visit that has not happened yet; the slot frees up. A patient
+ * cancels only their own (3.22); reception and the admin any visit, usually
+ * when the patient phones in (4.2).
+ */
+export async function cancelAppointment(
+  db: ScopedPrisma,
+  canceller: { userId: string; role: Role },
+  id: string,
+) {
+  const own = canceller.role === 'PATIENT';
+  const mine = own ? { patientId: await patientOfUser(db, canceller.userId) } : {};
   const { count } = await db.appointment.updateMany({
-    where: { id, patientId, status: 'BOOKED', startsAt: { gt: new Date() } },
-    data: { status: 'CANCELLED', cancelledAt: new Date(), cancelReason: 'PATIENT' },
+    where: { id, ...mine, status: 'BOOKED', startsAt: { gt: new Date() } },
+    data: {
+      status: 'CANCELLED',
+      cancelledAt: new Date(),
+      cancelReason: own ? 'PATIENT' : 'RECEPTION',
+    },
   });
   if (count === 0) {
     const exists = await db.appointment.findFirst({
-      where: { id, patientId },
+      where: { id, ...mine },
       select: { id: true },
     });
     if (!exists) throw new HttpError(404, 'NOT_FOUND', 'Appointment not found');

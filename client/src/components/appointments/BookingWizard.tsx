@@ -29,6 +29,9 @@ import { calm } from '@/lib/motion';
 import { notify } from '@/lib/notify';
 import { playSound } from '@/lib/sound';
 
+/** Who reception books for (task 4.2); a patient books for themselves. */
+export type BookingPatient = { id: string; name: string };
+
 export type BookingStart = {
   department: Pick<BookableDepartment, 'id' | 'name' | 'code'>;
   doctor: { id: string; fullName: string };
@@ -191,9 +194,11 @@ function Doctors({
 
 function Slots({
   doctor,
+  patient,
   onBooked,
 }: {
   doctor: { id: string; fullName: string };
+  patient?: BookingPatient;
   onBooked: (appointment: AppointmentView) => void;
 }) {
   const { t, i18n } = useTranslation();
@@ -216,12 +221,18 @@ function Slots({
       (
         await api.post<{ appointment: AppointmentView }>(
           '/appointments',
-          { doctorId: doctor.id, startsAt: slot!.startsAt, reason },
+          {
+            doctorId: doctor.id,
+            ...(patient && { patientId: patient.id }),
+            startsAt: slot!.startsAt,
+            reason,
+          },
           { skipErrorToast: true },
         )
       ).data.appointment,
     onSuccess: (appointment) => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.myAppointments });
+      // Mine (3.22), the desk's day and the patient's visits (4.2).
+      void queryClient.invalidateQueries({ queryKey: ['appointments'] });
       onBooked(appointment);
     },
     onError: (failure) => {
@@ -340,7 +351,8 @@ function Slots({
             }}
           >
             <p className="text-sm text-foreground">
-              {t('booking.summary', { doctor: doctor.fullName })} ·{' '}
+              {t('booking.summary', { doctor: doctor.fullName })}
+              {patient && ` · ${t('booking.forPatient', { name: patient.name })}`} ·{' '}
               <bdi className="font-semibold">{format.full(slot.startsAt)}</bdi>
             </p>
             <Textarea
@@ -369,7 +381,15 @@ function Slots({
 // slot), then a day and a time in hospital time; a slot someone else takes
 // meanwhile disappears live. Can start at a doctor (booking again after a
 // cancelled visit).
-export function BookingWizard({ start, onClose }: { start: BookingStart; onClose: () => void }) {
+export function BookingWizard({
+  start,
+  patient,
+  onClose,
+}: {
+  start: BookingStart;
+  patient?: BookingPatient;
+  onClose: () => void;
+}) {
   const { t, i18n } = useTranslation();
   const format = hospitalFormat(i18n.language);
   const [step, setStep] = useState<Step>(start ? 'slot' : 'department');
@@ -391,11 +411,15 @@ export function BookingWizard({ start, onClose }: { start: BookingStart; onClose
           >
             <Check className="size-7" aria-hidden="true" />
           </motion.span>
-          <p className="text-lg font-bold text-foreground">{t('booking.booked')}</p>
+          <p className="text-lg font-bold text-foreground">
+            {patient ? t('booking.bookedFor', { name: patient.name }) : t('booking.booked')}
+          </p>
           <p className="text-sm text-muted">
             {booked.doctorName} · <bdi>{format.full(booked.startsAt)}</bdi>
           </p>
-          <Button onClick={onClose}>{t('booking.toMyVisits')}</Button>
+          <Button onClick={onClose}>
+            {patient ? t('booking.toTheirVisits') : t('booking.toMyVisits')}
+          </Button>
         </div>
       );
     }
@@ -417,6 +441,7 @@ export function BookingWizard({ start, onClose }: { start: BookingStart; onClose
           </p>
           <Slots
             doctor={doctor}
+            patient={patient}
             onBooked={(appointment) => {
               playSound('success');
               setBooked(appointment);
@@ -454,7 +479,9 @@ export function BookingWizard({ start, onClose }: { start: BookingStart; onClose
   return (
     <Card aria-label={t('booking.title')} className="space-y-5 p-4 sm:p-5">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="font-semibold text-foreground">{t('booking.title')}</h3>
+        <h3 className="font-semibold text-foreground">
+          {patient ? t('booking.titleFor', { name: patient.name }) : t('booking.title')}
+        </h3>
         {step !== 'done' && (
           <Button size="sm" variant="ghost" onClick={onClose}>
             {t('common.cancel')}
