@@ -50,7 +50,15 @@ beforeEach(() => {
       return {
         status: 200,
         data: {
-          items: [{ id: 'i1', name: 'سيتامول', unit: 'علبة', quantity: 2, minQuantity: 10 }],
+          items: [
+            {
+              id: '01a1e0b8-0000-7000-8000-000000000001',
+              name: 'سيتامول',
+              unit: 'علبة',
+              quantity: 2,
+              minQuantity: 10,
+            },
+          ],
         },
       };
     if (config.url === '/department-requests/purchases' && config.method === 'post') {
@@ -88,7 +96,7 @@ beforeEach(() => {
 
 describe('DepartmentRequestsPage (task 4.6)', () => {
   it('the head adds what is short and sends a purchase request with its total', async () => {
-    renderApp('/pharmacist/purchases');
+    renderApp('/pharmacy/purchases');
     const user = userEvent.setup();
     const form = await screen.findByRole('form', { name: 'طلب شراء' });
     await user.click(await within(form).findByRole('button', { name: /سيتامول/ }));
@@ -98,12 +106,18 @@ describe('DepartmentRequestsPage (task 4.6)', () => {
     expect(form).toHaveTextContent('ل.س');
     await user.click(within(form).getByRole('button', { name: 'إرسال للمدير' }));
 
-    const post = fake.calls.find((c) => c.method === 'post')!;
-    expect(JSON.parse(post.data as string).items).toEqual([
-      { inventoryItemId: 'i1', name: 'سيتامول', unit: 'علبة', quantity: '18', unitCost: '2500' },
-    ]);
     const list = await screen.findByRole('region', { name: 'طلبات الشراء' });
     expect(await within(list).findByText('بانتظار القرار')).toBeInTheDocument();
+    const post = fake.calls.find((c) => c.method === 'post')!;
+    expect(JSON.parse(post.data as string).items).toEqual([
+      {
+        inventoryItemId: '01a1e0b8-0000-7000-8000-000000000001',
+        name: 'سيتامول',
+        unit: 'علبة',
+        quantity: '18',
+        unitCost: '2500',
+      },
+    ]);
   });
 
   it('others in the department are pointed to the head', async () => {
@@ -112,7 +126,7 @@ describe('DepartmentRequestsPage (task 4.6)', () => {
       isHead: false,
       head: { id: 'x', fullName: 'سامي', role: 'PHARMACIST' },
     };
-    renderApp('/pharmacist/purchases');
+    renderApp('/pharmacy/purchases');
     expect(
       await screen.findByText(
         'طلبات القسم بتطلع من رئيس القسم سامي. إذا في شي ناقص أو معطّل بلّغه.',
