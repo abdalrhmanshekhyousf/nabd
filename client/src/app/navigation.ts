@@ -116,7 +116,7 @@ export const NAV_BY_ROLE: Record<Role, NavGroup[]> = {
         { path: 'consultations', labelKey: 'nav.consultations', icon: MessagesSquare, phase: 3 },
       ],
     },
-    { labelKey: 'navGroups.requests', items: [leave] },
+    { labelKey: 'navGroups.requests', items: [purchases, leave] },
   ],
   NURSE: [
     { items: [dashboard] },

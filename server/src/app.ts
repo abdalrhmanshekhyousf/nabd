@@ -23,6 +23,7 @@ import { reportRouter } from './routes/report.routes.js';
 import { wardRouter } from './routes/ward.routes.js';
 import { appointmentRouter } from './routes/appointment.routes.js';
 import { leaveRouter } from './routes/leave.routes.js';
+import { departmentRequestRouter } from './routes/departmentRequest.routes.js';
 import { patientRouter } from './routes/patient.routes.js';
 import { pushRouter } from './routes/push.routes.js';
 import { receptionRouter } from './routes/reception.routes.js';
@@ -71,6 +72,7 @@ export function createApp() {
   app.use('/api/ward', wardRouter);
   app.use('/api/appointments', appointmentRouter);
   app.use('/api/leave', leaveRouter);
+  app.use('/api/department-requests', departmentRequestRouter);
   app.use('/api/patients', patientRouter);
   app.use('/api/push', pushRouter);
   app.use('/api/reception', receptionRouter);

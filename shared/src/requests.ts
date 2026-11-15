@@ -42,3 +42,56 @@ export type LeaveView = {
     department: { id: string; name: string; code: DepartmentCode | null } | null;
   };
 };
+
+type DepartmentRef = { id: string; name: string; code: DepartmentCode | null };
+
+/** Where I stand for my department's requests (task 4.6). */
+export type DepartmentRequestContext = {
+  department: DepartmentRef | null;
+  head: DepartmentHead | null;
+  isHead: boolean;
+};
+
+/** A purchase request with its items (tasks 4.6, 4.7). Money as numbers. */
+export type PurchaseView = {
+  id: string;
+  department: DepartmentRef;
+  requestedByName: string | null;
+  note: string | null;
+  totalCost: number;
+  status: RequestStatus;
+  decisionNote: string | null;
+  decidedAt: string | null;
+  createdAt: string;
+  items: {
+    id: string;
+    inventoryItemId: string | null;
+    name: string;
+    unit: string | null;
+    quantity: number;
+    unitCost: number;
+  }[];
+};
+
+/** A repair request (user addition). */
+export type RepairView = {
+  id: string;
+  department: DepartmentRef;
+  requestedByName: string | null;
+  equipment: string;
+  description: string;
+  urgency: RepairUrgency;
+  status: RequestStatus;
+  decisionNote: string | null;
+  decidedAt: string | null;
+  createdAt: string;
+};
+
+/** A stock item below its minimum, to add to a purchase request in one tap. */
+export type ShortItem = {
+  id: string;
+  name: string;
+  unit: string;
+  quantity: number;
+  minQuantity: number;
+};

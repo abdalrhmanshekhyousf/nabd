@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { requiredText } from './common.js';
+import { optionalText, requiredText } from './common.js';
 
 /**
  * POST /leave (task 4.5): any staff member asks for days off, local dates with
@@ -19,3 +19,45 @@ export const leaveRequestSchema = z
 
 export type LeaveRequestInput = z.input<typeof leaveRequestSchema>;
 export type LeaveRequestData = z.output<typeof leaveRequestSchema>;
+
+const money = z.coerce
+  .number('validation.invalid')
+  .min(0, 'validation.invalid')
+  .max(100_000_000, 'validation.invalid');
+
+/**
+ * POST /department-requests/purchases (task 4.6): the department head asks to
+ * buy what is short: items, quantities and what each costs.
+ */
+export const purchaseRequestSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        inventoryItemId: z.uuid().nullable().default(null),
+        name: requiredText(120),
+        unit: optionalText(30).default(null),
+        quantity: z.coerce
+          .number('validation.invalid')
+          .int()
+          .min(1, 'validation.invalid')
+          .max(100_000),
+        unitCost: money,
+      }),
+    )
+    .min(1, 'validation.required')
+    .max(50),
+  note: optionalText(300).default(null),
+});
+
+export type PurchaseRequestInput = z.input<typeof purchaseRequestSchema>;
+export type PurchaseRequestData = z.output<typeof purchaseRequestSchema>;
+
+/** POST /department-requests/repairs (user addition): equipment that needs repair. */
+export const repairRequestSchema = z.object({
+  equipment: requiredText(120),
+  description: requiredText(500),
+  urgency: z.enum(['LOW', 'NORMAL', 'URGENT'], 'validation.required'),
+});
+
+export type RepairRequestInput = z.input<typeof repairRequestSchema>;
+export type RepairRequestData = z.output<typeof repairRequestSchema>;

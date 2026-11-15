@@ -221,6 +221,8 @@ enum NotificationType {
   FOLLOW_UP_REMINDER
   APPOINTMENT_CANCELLED
   REPORT_SUBMITTED
+  REPAIR_REQUEST
+  STAFF_AWAY
 }
 
 // ─── Structure ────────────────────────────────────────────────────────────────
