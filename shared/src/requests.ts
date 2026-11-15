@@ -22,3 +22,23 @@ export function headRoleFor(code: DepartmentCode | null): Role {
 
 /** A department's head as lists show it. */
 export type DepartmentHead = { id: string; fullName: string; role: Role };
+
+/** A leave request as its requester and the admin see it (tasks 4.5, 4.7). */
+export type LeaveView = {
+  id: string;
+  from: string;
+  to: string;
+  days: number;
+  reason: string;
+  status: RequestStatus;
+  decisionNote: string | null;
+  decidedAt: string | null;
+  decidedByName: string | null;
+  createdAt: string;
+  requester: {
+    id: string;
+    fullName: string;
+    role: Role;
+    department: { id: string; name: string; code: DepartmentCode | null } | null;
+  };
+};

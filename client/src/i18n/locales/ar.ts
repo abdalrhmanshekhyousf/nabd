@@ -507,6 +507,36 @@ export const ar = {
     bookedFor: 'انحجز الموعد لـ {{name}}',
     toTheirVisits: 'تمام',
   },
+  requests: {
+    status: {
+      PENDING: 'بانتظار القرار',
+      APPROVED: 'موافق عليه',
+      REJECTED: 'مرفوض',
+      CANCELLED: 'مسحوب',
+    },
+  },
+  leave: {
+    title: 'طلبات الغياب',
+    description:
+      'اطلب إجازة من الإدارة وتابع شو صار بطلباتك. فيك تسحب الطلب طول ما لسا ما انرد عليه.',
+    new: 'طلب إجازة جديد',
+    from: 'من يوم',
+    to: 'لحد يوم',
+    reason: 'السبب',
+    send: 'إرسال للمدير',
+    sent: 'انبعت طلبك للمدير',
+    mine: 'طلباتي',
+    none: 'ما طلبت إجازة لسا.',
+    days_zero: '{{count}} يوم',
+    days_one: 'يوم واحد',
+    days_two: 'يومين',
+    days_few: '{{count}} أيام',
+    days_many: '{{count}} يوم',
+    days_other: '{{count}} يوم',
+    note: 'رد الإدارة: {{note}}',
+    withdraw: 'سحب الطلب',
+    withdrawn: 'انسحب الطلب',
+  },
   heads: {
     title: 'رئيس قسم {{department}}',
     rule: {
@@ -1788,6 +1818,7 @@ export const ar = {
       FOLLOW_UP_REMINDER: 'مع {{doctor}} · {{when}}',
       CONSULTATION_REPLY: '{{from}} رد على سؤالك عن {{patient}}',
       REPORT_SUBMITTED: 'تقرير {{reportName}} من {{author}}',
+      LEAVE_REQUEST: '{{name}}: من {{from}} لحد {{to}}',
     },
   },
   gallery: {

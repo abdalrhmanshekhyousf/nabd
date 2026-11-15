@@ -37,6 +37,7 @@ import { MedicalFilePage } from '@/pages/patient/MedicalFilePage';
 import { RegisterPatientPage } from '@/pages/reception/RegisterPatientPage';
 import { DeskAppointmentsPage } from '@/pages/reception/DeskAppointmentsPage';
 import { ReceptionEmergencyPage } from '@/pages/reception/ReceptionEmergencyPage';
+import { LeavePage } from '@/pages/requests/LeavePage';
 import { MedicationsPage } from '@/pages/patient/MedicationsPage';
 import { ConsultationsPage } from '@/pages/doctor/ConsultationsPage';
 import { SchedulePage } from '@/pages/doctor/SchedulePage';
@@ -97,6 +98,21 @@ export const BUILT_PAGES: Partial<Record<`${Role}:${string}`, ReactElement>> = {
   'RECEPTIONIST:register': <RegisterPatientPage />,
   'RECEPTIONIST:appointments': <DeskAppointmentsPage />,
   'RECEPTIONIST:emergency': <ReceptionEmergencyPage />,
+  // Every staff member's leave requests (task 4.5).
+  ...Object.fromEntries(
+    (
+      [
+        'DOCTOR',
+        'NURSE',
+        'PHARMACIST',
+        'LAB_TECHNICIAN',
+        'RADIOLOGIST',
+        'CLEANER',
+        'RECEPTIONIST',
+        'ACCOUNTANT',
+      ] as const
+    ).map((role) => [`${role}:leave`, <LeavePage />]),
+  ),
   'PATIENT:medications': <MedicationsPage />,
 };
 

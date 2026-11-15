@@ -75,5 +75,7 @@ export const queryKeys = {
   /** Who may head a department (task 4.4). */
   headCandidates: (departmentId: string) =>
     ['departments', 'head-candidates', departmentId] as const,
+  /** My leave requests (task 4.5); the admin's lists live under ['requests'] (4.7). */
+  myLeave: ['requests', 'leave', 'mine'] as const,
   publicHospitals: (search: string) => ['public-hospitals', search] as const,
 };

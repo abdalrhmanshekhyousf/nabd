@@ -112,6 +112,10 @@ const MESSAGES: Record<ErrorCode, Record<Language, string>> = {
     ar: 'هالوقت مو من مواعيد الطبيب المتاحة',
     en: 'This time is not one of the doctor’s free slots',
   },
+  LEAVE_OVERLAP: {
+    ar: 'عندك طلب إجازة بنفس هالأيام',
+    en: 'You already asked for leave on these days',
+  },
   PATIENT_BUSY: {
     ar: 'عند المريض موعد تاني بنفس الوقت',
     en: 'The patient has another visit at that time',

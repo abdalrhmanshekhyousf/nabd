@@ -510,6 +510,36 @@ export const en: Translation = {
     bookedFor: 'Booked for {{name}}',
     toTheirVisits: 'Done',
   },
+  requests: {
+    status: {
+      PENDING: 'Awaiting decision',
+      APPROVED: 'Approved',
+      REJECTED: 'Rejected',
+      CANCELLED: 'Withdrawn',
+    },
+  },
+  leave: {
+    title: 'Leave requests',
+    description:
+      'Ask the administration for leave and follow your requests. You can withdraw one until it is answered.',
+    new: 'New leave request',
+    from: 'From',
+    to: 'Until',
+    reason: 'Reason',
+    send: 'Send to the admin',
+    sent: 'Your request was sent to the admin',
+    mine: 'My requests',
+    none: 'No leave requested yet.',
+    days_zero: '{{count}} days',
+    days_one: '1 day',
+    days_two: '2 days',
+    days_few: '{{count}} days',
+    days_many: '{{count}} days',
+    days_other: '{{count}} days',
+    note: 'Admin’s answer: {{note}}',
+    withdraw: 'Withdraw',
+    withdrawn: 'Request withdrawn',
+  },
   heads: {
     title: 'Head of {{department}}',
     rule: {
@@ -1811,6 +1841,7 @@ export const en: Translation = {
       FOLLOW_UP_REMINDER: 'With {{doctor}} · {{when}}',
       CONSULTATION_REPLY: '{{from}} answered your question about {{patient}}',
       REPORT_SUBMITTED: '{{reportName}} report from {{author}}',
+      LEAVE_REQUEST: '{{name}}: {{from}} to {{to}}',
     },
   },
   gallery: {

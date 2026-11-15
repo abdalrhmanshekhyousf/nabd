@@ -32,6 +32,7 @@ export * from './schemas/reports.js';
 export * from './schemas/consultations.js';
 export * from './schemas/ward.js';
 export * from './schemas/appointments.js';
+export * from './schemas/requests.js';
 export * from './schemas/reminders.js';
 export * from './schemas/hospital.js';
 export * from './schemas/me.js';
