@@ -1,4 +1,4 @@
-import { DEPARTMENT_CODES, type DepartmentCode } from '@nabd/shared';
+import { DEPARTMENT_CODES, headRoleFor, type DepartmentCode } from '@nabd/shared';
 import { Prisma } from '../generated/prisma/client.js';
 import type { ScopedPrisma } from '../lib/scopedPrisma.js';
 import { HttpError } from '../middleware/errorHandler.js';
@@ -25,6 +25,7 @@ const departmentSelect = {
   name: true,
   code: true,
   createdAt: true,
+  head: { select: { id: true, fullName: true, role: true } },
   _count: { select: { rooms: true, staff: true } },
 } as const;
 
@@ -110,4 +111,43 @@ export async function deleteDepartment(db: ScopedPrisma, id: string) {
     });
   }
   await db.department.delete({ where: { id } });
+}
+
+/** The department's staff who may head it (user addition): active, of the right role. */
+export async function headCandidates(db: ScopedPrisma, id: string) {
+  const department = await db.department.findUnique({ where: { id }, select: { code: true } });
+  if (!department) throw new HttpError(404, 'NOT_FOUND', 'Department not found');
+  return db.user.findMany({
+    where: {
+      isActive: true,
+      role: headRoleFor(department.code),
+      staffProfile: { departmentId: id },
+    },
+    select: { id: true, fullName: true, role: true },
+    orderBy: { fullName: 'asc' },
+  });
+}
+
+/**
+ * The admin names the department's head, or clears it (user addition). The
+ * head must be one of its candidates; whoever headed it before steps down.
+ */
+export async function setDepartmentHead(db: ScopedPrisma, id: string, userId: string | null) {
+  if (userId) {
+    const allowed = await headCandidates(db, id);
+    if (!allowed.some((user) => user.id === userId)) {
+      throw new HttpError(400, 'VALIDATION_ERROR', 'Not one of the department’s staff', {
+        issues: [{ path: ['userId'], message: 'validation.invalid' }],
+      });
+    }
+  } else if (!(await db.department.findUnique({ where: { id }, select: { id: true } }))) {
+    throw new HttpError(404, 'NOT_FOUND', 'Department not found');
+  }
+  return toPublic(
+    await db.department.update({
+      where: { id },
+      data: { headId: userId },
+      select: departmentSelect,
+    }),
+  );
 }

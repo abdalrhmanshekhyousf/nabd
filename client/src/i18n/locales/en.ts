@@ -510,6 +510,21 @@ export const en: Translation = {
     bookedFor: 'Booked for {{name}}',
     toTheirVisits: 'Done',
   },
+  heads: {
+    title: 'Head of {{department}}',
+    rule: {
+      DOCTOR: 'The head is one of the department’s doctors.',
+      PHARMACY: 'The head is one of the pharmacy’s pharmacists.',
+      LABORATORY: 'The head is one of the lab’s technicians.',
+      RADIOLOGY: 'The head is one of the radiology technicians.',
+    },
+    pick: 'Choose the head',
+    none: 'Nobody in the department can head it yet.',
+    nobody: 'No head',
+    current: 'Head: {{name}}',
+    assign: 'Assign a head',
+    saved: 'Head saved',
+  },
   erDesk: {
     title: 'Quick ER registration',
     description:

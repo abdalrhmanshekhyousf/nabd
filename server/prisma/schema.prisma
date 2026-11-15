@@ -265,6 +265,10 @@ model Hospital {
   doctorSchedules     DoctorSchedule[]
   doctorVacations     DoctorVacation[]
   pushSubscriptions   PushSubscription[]
+  leaveRequests       LeaveRequest[]
+  purchaseRequests    PurchaseRequest[]
+  purchaseItems       PurchaseItem[]
+  repairRequests      RepairRequest[]
   medicationReminders MedicationReminder[]
   appointments        Appointment[]
   consultations       Consultation[]
@@ -275,10 +279,16 @@ model Department {
   hospitalId String          @db.Uuid
   name       String
   code       DepartmentCode?
+  // The head (user addition, tasks 4.4–4.7): a doctor of the department, or
+  // for pharmacy, lab and radiology one of their own staff. Set by the admin.
+  headId     String?         @unique @db.Uuid
   createdAt  DateTime        @default(now())
   updatedAt  DateTime        @updatedAt
 
   hospital         Hospital            @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  head             User?               @relation("DepartmentHead", fields: [headId], references: [id], onDelete: SetNull)
+  purchaseRequests PurchaseRequest[]
+  repairRequests   RepairRequest[]
   rooms            Room[]
   staff            StaffProfile[]
   cleaners         CleanerAssignment[]
@@ -401,6 +411,13 @@ model User {
   appointmentsAsDoctor   Appointment[]               @relation("AppointmentDoctor")
   appointmentsBooked     Appointment[]               @relation("AppointmentBooker")
   consultationsGiven     Consultation[]              @relation("ConsultationConsultant")
+  headOf                 Department?                 @relation("DepartmentHead")
+  leaveRequests          LeaveRequest[]              @relation("LeaveRequester")
+  leaveDecisions         LeaveRequest[]              @relation("LeaveDecider")
+  purchaseRequests       PurchaseRequest[]           @relation("PurchaseRequester")
+  purchaseDecisions      PurchaseRequest[]           @relation("PurchaseDecider")
+  repairRequests         RepairRequest[]             @relation("RepairRequester")
+  repairDecisions        RepairRequest[]             @relation("RepairDecider")
 
   @@unique([hospitalId, email])
   @@index([hospitalId, role])
@@ -1172,4 +1189,112 @@ model RefreshToken {
 
   @@index([userId])
   @@index([hospitalId])
+}
+
+// ─── Requests to the administration (tasks 4.4–4.7) ─────────────────────────
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+// A staff member asks for leave (4.5); the admin decides (4.7) and, when
+// approved, the head of their department is told they will be away.
+model LeaveRequest {
+  id           String        @id @default(uuid(7)) @db.Uuid
+  hospitalId   String        @db.Uuid
+  userId       String        @db.Uuid
+  startDate    DateTime      @db.Date
+  endDate      DateTime      @db.Date
+  reason       String
+  status       RequestStatus @default(PENDING)
+  decidedById  String?       @db.Uuid
+  decidedAt    DateTime?
+  decisionNote String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  hospital  Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  user      User     @relation("LeaveRequester", fields: [userId], references: [id], onDelete: Cascade)
+  decidedBy User?    @relation("LeaveDecider", fields: [decidedById], references: [id], onDelete: SetNull)
+
+  @@index([hospitalId, status])
+  @@index([userId])
+}
+
+// A department's purchase request (4.6), filed by its head: what is short,
+// how many, and what it costs. Approved purchases count as expenses (4.17).
+model PurchaseRequest {
+  id            String        @id @default(uuid(7)) @db.Uuid
+  hospitalId    String        @db.Uuid
+  departmentId  String        @db.Uuid
+  requestedById String?       @db.Uuid
+  note          String?
+  totalCost     Decimal       @default(0) @db.Decimal(12, 2)
+  status        RequestStatus @default(PENDING)
+  decidedById   String?       @db.Uuid
+  decidedAt     DateTime?
+  decisionNote  String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  hospital    Hospital       @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  department  Department     @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  requestedBy User?          @relation("PurchaseRequester", fields: [requestedById], references: [id], onDelete: SetNull)
+  decidedBy   User?          @relation("PurchaseDecider", fields: [decidedById], references: [id], onDelete: SetNull)
+  items       PurchaseItem[]
+
+  @@index([hospitalId, status])
+  @@index([departmentId])
+}
+
+model PurchaseItem {
+  id              String  @id @default(uuid(7)) @db.Uuid
+  hospitalId      String  @db.Uuid
+  requestId       String  @db.Uuid
+  // The stock item it refills, when there is one (3.2).
+  inventoryItemId String? @db.Uuid
+  name            String
+  unit            String?
+  quantity        Int
+  unitCost        Decimal @db.Decimal(12, 2)
+
+  hospital Hospital        @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  request  PurchaseRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+}
+
+enum RepairUrgency {
+  LOW
+  NORMAL
+  URGENT
+}
+
+// Equipment of a department that needs repair, reported by its head (user
+// addition) to the admin.
+model RepairRequest {
+  id            String        @id @default(uuid(7)) @db.Uuid
+  hospitalId    String        @db.Uuid
+  departmentId  String        @db.Uuid
+  requestedById String?       @db.Uuid
+  equipment     String
+  description   String
+  urgency       RepairUrgency @default(NORMAL)
+  status        RequestStatus @default(PENDING)
+  decidedById   String?       @db.Uuid
+  decidedAt     DateTime?
+  decisionNote  String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  hospital    Hospital   @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  department  Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  requestedBy User?      @relation("RepairRequester", fields: [requestedById], references: [id], onDelete: SetNull)
+  decidedBy   User?      @relation("RepairDecider", fields: [decidedById], references: [id], onDelete: SetNull)
+
+  @@index([hospitalId, status])
+  @@index([departmentId])
 }

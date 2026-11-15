@@ -507,6 +507,21 @@ export const ar = {
     bookedFor: 'انحجز الموعد لـ {{name}}',
     toTheirVisits: 'تمام',
   },
+  heads: {
+    title: 'رئيس قسم {{department}}',
+    rule: {
+      DOCTOR: 'رئيس القسم واحد من أطباء القسم.',
+      PHARMACY: 'رئيس الصيدلية واحد من صيادلة القسم.',
+      LABORATORY: 'رئيس المخبر واحد من فنيين المخبر.',
+      RADIOLOGY: 'رئيس الأشعة واحد من فنيين الأشعة.',
+    },
+    pick: 'اختار رئيس القسم',
+    none: 'ما في حدا بالقسم بيصلح يكون رئيس لسا.',
+    nobody: 'بلا رئيس',
+    current: 'الرئيس: {{name}}',
+    assign: 'تعيين رئيس للقسم',
+    saved: 'انحفظ رئيس القسم',
+  },
   erDesk: {
     title: 'تسجيل إسعافي سريع',
     description:

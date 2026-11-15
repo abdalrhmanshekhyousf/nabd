@@ -1,5 +1,13 @@
 import { Router } from 'express';
-import { addDefaults, create, list, remove, rename } from '../controllers/department.controller.js';
+import {
+  addDefaults,
+  candidates,
+  create,
+  list,
+  remove,
+  rename,
+  setHead,
+} from '../controllers/department.controller.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 
 // Departments of the caller's hospital: everyone signed in may list them (forms,
@@ -12,3 +20,6 @@ departmentRouter.post('/', requireRole('ADMIN'), create);
 departmentRouter.post('/defaults', requireRole('ADMIN'), addDefaults);
 departmentRouter.patch('/:id', requireRole('ADMIN'), rename);
 departmentRouter.delete('/:id', requireRole('ADMIN'), remove);
+// The department's head (user addition, tasks 4.4–4.7).
+departmentRouter.get('/:id/head-candidates', requireRole('ADMIN'), candidates);
+departmentRouter.put('/:id/head', requireRole('ADMIN'), setHead);

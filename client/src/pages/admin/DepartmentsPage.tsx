@@ -2,12 +2,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { departmentSchema, type DepartmentInput, type ValidationKey } from '@nabd/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Building2, DoorOpen, Pencil, Plus, Trash2, Users, Wand2 } from 'lucide-react';
+import { Building2, Crown, DoorOpen, Pencil, Plus, Trash2, Users, Wand2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { queryKeys } from '@/app/queryKeys';
 import { DepartmentIcon } from '@/components/departments/DepartmentIcon';
+import { HeadDialog } from '@/components/departments/HeadDialog';
 import { departmentLabel, type Department } from '@/components/departments/departmentDisplay';
 import { Button, Card, Input, Modal, StatusBadge } from '@/components/ui';
 import { api, describeApiError } from '@/lib/api';
@@ -91,10 +92,12 @@ function DepartmentCard({
   department,
   onRename,
   onDelete,
+  onHead,
 }: {
   department: Department;
   onRename: () => void;
   onDelete: () => void;
+  onHead: () => void;
 }) {
   const { t } = useTranslation();
   const label = departmentLabel(department, t);
@@ -128,6 +131,18 @@ function DepartmentCard({
               {t('departments.staff', { count: department.staffCount })}
             </span>
           </p>
+          <button
+            type="button"
+            onClick={onHead}
+            className="inline-flex max-w-full items-center gap-1.5 rounded-md text-xs font-medium text-accent transition-colors hover:text-accent/80"
+          >
+            <Crown className="size-3.5 shrink-0" aria-hidden="true" />
+            <span className="truncate">
+              {department.head
+                ? t('heads.current', { name: department.head.fullName })
+                : t('heads.assign')}
+            </span>
+          </button>
         </div>
         <div className="flex shrink-0 gap-1">
           {!department.code && (
@@ -162,6 +177,7 @@ export function DepartmentsPage() {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState<Editing>(null);
   const [deleting, setDeleting] = useState<Department | null>(null);
+  const [heading, setHeading] = useState<Department | null>(null);
 
   const { data: departments, isPending } = useQuery({
     queryKey: queryKeys.departments,
@@ -236,6 +252,7 @@ export function DepartmentsPage() {
                   department={department}
                   onRename={() => setEditing({ mode: 'rename', department })}
                   onDelete={() => setDeleting(department)}
+                  onHead={() => setHeading(department)}
                 />
               ))}
             </AnimatePresence>
@@ -282,6 +299,11 @@ export function DepartmentsPage() {
             </Button>
           </>
         }
+      />
+      <HeadDialog
+        key={heading?.id ?? 'none'}
+        department={heading}
+        onClose={() => setHeading(null)}
       />
     </div>
   );

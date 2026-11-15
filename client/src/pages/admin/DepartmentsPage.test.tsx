@@ -52,6 +52,15 @@ beforeEach(() => {
         if (!departments.some((d) => d.code === code)) add(code, code);
       return { status: 200, data: { added: 12, departments } };
     }
+    if (config.url?.endsWith('/head-candidates'))
+      return {
+        status: 200,
+        data: { candidates: [{ id: 'doc1', fullName: 'د. سامر', role: 'DOCTOR' }] },
+      };
+    if (config.method === 'put' && found) {
+      found.head = body.userId ? { id: 'doc1', fullName: 'د. سامر', role: 'DOCTOR' } : null;
+      return { status: 200, data: { department: found } };
+    }
     if (config.method === 'post') {
       if (departments.some((d) => d.name === body.name)) {
         return apiError(409, 'DEPARTMENT_EXISTS', 'في قسم بنفس الاسم بالمستشفى');
@@ -157,5 +166,20 @@ describe('DepartmentsPage', () => {
     await user.click(within(dialog).getByRole('button', { name: 'حذف الحروق' }));
     expect(await screen.findByText('ما فيك تحذف قسم فيه غرف أو موظفين')).toBeInTheDocument();
     expect(screen.getByText('الحروق')).toBeInTheDocument();
+  });
+
+  it('assigns a doctor as the department head (task 4.4)', async () => {
+    add('القلبية', 'CARDIOLOGY');
+    renderApp('/admin/departments');
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'تعيين رئيس للقسم' }));
+    const dialog = await screen.findByRole('dialog', { name: 'رئيس قسم القلبية' });
+    expect(dialog).toHaveTextContent('رئيس القسم واحد من أطباء القسم.');
+    await user.click(await within(dialog).findByRole('radio', { name: 'د. سامر' }));
+    await user.click(within(dialog).getByRole('button', { name: 'حفظ' }));
+    expect(await screen.findByRole('button', { name: 'الرئيس: د. سامر' })).toBeInTheDocument();
+    const put = fake.calls.find((c) => c.method === 'put')!;
+    expect(put.url).toMatch(/^\/departments\/d\d+\/head$/);
+    expect(JSON.parse(put.data as string)).toEqual({ userId: 'doc1' });
   });
 });

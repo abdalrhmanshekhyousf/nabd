@@ -72,5 +72,8 @@ export const queryKeys = {
   patientVisits: (patientId: string) => ['appointments', 'patient', patientId] as const,
   /** Reception's unidentified ER patients (task 4.3), under reception. */
   unidentified: ['reception', 'unidentified'] as const,
+  /** Who may head a department (task 4.4). */
+  headCandidates: (departmentId: string) =>
+    ['departments', 'head-candidates', departmentId] as const,
   publicHospitals: (search: string) => ['public-hospitals', search] as const,
 };

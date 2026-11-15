@@ -36,6 +36,7 @@ const as = (auth: string) => ({
     request(app).post(url).set('Authorization', auth).send(body),
   patch: (url: string, body: object) =>
     request(app).patch(url).set('Authorization', auth).send(body),
+  put: (url: string, body: object) => request(app).put(url).set('Authorization', auth).send(body),
   delete: (url: string) => request(app).delete(url).set('Authorization', auth),
 });
 
@@ -142,5 +143,70 @@ describe('/api/departments', () => {
     const admin = as((await staffOf('ADMIN')).auth);
     expect((await admin.post('/api/departments', { name: '   ' })).status).toBe(400);
     expect((await admin.patch('/api/departments/not-a-uuid', { name: 'x' })).status).toBe(400);
+  });
+});
+
+describe('department heads (user addition, task 4.4)', () => {
+  it('names a doctor of a clinic, or the pharmacy’s own pharmacist, as head', async () => {
+    const admin = await staffOf('ADMIN');
+    const h = admin.hospitalId;
+    const api = as(admin.auth);
+    const cardio = await prisma.department.create({
+      data: { hospitalId: h, name: 'القلبية', code: 'CARDIOLOGY' },
+    });
+    const pharmacy = await prisma.department.create({
+      data: { hospitalId: h, name: 'الصيدلية', code: 'PHARMACY' },
+    });
+    const person = async (role: 'DOCTOR' | 'NURSE' | 'PHARMACIST', departmentId: string) => {
+      const user = await createUser(h, {
+        email: `${role}-${crypto.randomUUID()}@nabd.test`,
+        password: 'x',
+        role,
+      });
+      await prisma.staffProfile.create({ data: { hospitalId: h, userId: user.id, departmentId } });
+      return user;
+    };
+    const doctor = await person('DOCTOR', cardio.id);
+    const nurse = await person('NURSE', cardio.id);
+    const pharmacist = await person('PHARMACIST', pharmacy.id);
+    const pharmacyDoctor = await person('DOCTOR', pharmacy.id);
+
+    const candidates = (await api.get(`/api/departments/${cardio.id}/head-candidates`)).body
+      .candidates;
+    expect(candidates.map((c: { id: string }) => c.id)).toEqual([doctor.id]);
+
+    // A nurse, or a doctor of another department, cannot head it.
+    expect((await api.put(`/api/departments/${cardio.id}/head`, { userId: nurse.id })).status).toBe(
+      400,
+    );
+    expect(
+      (await api.put(`/api/departments/${cardio.id}/head`, { userId: pharmacist.id })).status,
+    ).toBe(400);
+    expect(
+      (await api.put(`/api/departments/${pharmacy.id}/head`, { userId: pharmacyDoctor.id })).status,
+    ).toBe(400);
+
+    const named = await api.put(`/api/departments/${cardio.id}/head`, { userId: doctor.id });
+    expect(named.body.department.head).toMatchObject({ id: doctor.id, role: 'DOCTOR' });
+    const pharmacyHead = await api.put(`/api/departments/${pharmacy.id}/head`, {
+      userId: pharmacist.id,
+    });
+    expect(pharmacyHead.body.department.head.id).toBe(pharmacist.id);
+    const listed = (await api.get('/api/departments')).body.departments;
+    expect(listed.find((d: { id: string }) => d.id === cardio.id).head.id).toBe(doctor.id);
+
+    // Cleared.
+    const cleared = await api.put(`/api/departments/${cardio.id}/head`, { userId: null });
+    expect(cleared.body.department.head).toBeNull();
+  });
+
+  it('leaves the choice to the admin', async () => {
+    const doctor = await staffOf('DOCTOR');
+    const dept = await prisma.department.create({
+      data: { hospitalId: doctor.hospitalId, name: 'x', code: 'CARDIOLOGY' },
+    });
+    expect(
+      (await as(doctor.auth).put(`/api/departments/${dept.id}/head`, { userId: null })).status,
+    ).toBe(403);
   });
 });

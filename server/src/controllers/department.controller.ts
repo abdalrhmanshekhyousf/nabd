@@ -31,6 +31,19 @@ export async function rename(req: Request, res: Response) {
   res.json({ department: await departmentService.renameDepartment(db, id, name) });
 }
 
+export async function candidates(req: Request, res: Response) {
+  const { db } = session(req);
+  const { id } = idParam.parse(req.params);
+  res.json({ candidates: await departmentService.headCandidates(db, id) });
+}
+
+export async function setHead(req: Request, res: Response) {
+  const { db } = session(req);
+  const { id } = idParam.parse(req.params);
+  const { userId } = z.object({ userId: z.uuid().nullable() }).parse(req.body);
+  res.json({ department: await departmentService.setDepartmentHead(db, id, userId) });
+}
+
 export async function remove(req: Request, res: Response) {
   const { db } = session(req);
   const { id } = idParam.parse(req.params);
