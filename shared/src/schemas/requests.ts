@@ -61,3 +61,16 @@ export const repairRequestSchema = z.object({
 
 export type RepairRequestInput = z.input<typeof repairRequestSchema>;
 export type RepairRequestData = z.output<typeof repairRequestSchema>;
+
+/** What the admin decides on (task 4.7). */
+export const REQUEST_KINDS = ['leave', 'purchase', 'repair'] as const;
+export type RequestKind = (typeof REQUEST_KINDS)[number];
+
+/** POST /approvals/:kind/:id (task 4.7): approve, or reject saying why. */
+export const decisionSchema = z.object({
+  decision: z.enum(['APPROVED', 'REJECTED'], 'validation.required'),
+  note: optionalText(300).default(null),
+});
+
+export type DecisionInput = z.input<typeof decisionSchema>;
+export type DecisionData = z.output<typeof decisionSchema>;

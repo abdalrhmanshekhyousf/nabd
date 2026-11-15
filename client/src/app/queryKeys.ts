@@ -81,5 +81,7 @@ export const queryKeys = {
   requestContext: ['requests', 'context'] as const,
   departmentRequests: ['requests', 'department'] as const,
   shortages: ['requests', 'shortages'] as const,
+  /** The admin's approvals (task 4.7), under requests. */
+  approvals: (status: string) => ['requests', 'approvals', status] as const,
   publicHospitals: (search: string) => ['public-hospitals', search] as const,
 };

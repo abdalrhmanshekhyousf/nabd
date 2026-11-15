@@ -574,6 +574,22 @@ export const en: Translation = {
     noPurchases: 'No purchase requests.',
     noRepairs: 'No repair requests.',
   },
+  approvals: {
+    title: 'Approvals',
+    description:
+      'Leave requests from staff, and purchase and repair requests from department heads. Approve, or reject with a reason; the requester is told.',
+    tabs: { PENDING: 'Awaiting decision', DECIDED: 'Decided' },
+    leave: 'Leave',
+    purchases: 'Purchases',
+    repairs: 'Repairs',
+    none: 'Nothing here.',
+    approve: 'Approve',
+    reject: 'Reject',
+    approved: 'Approved; the requester was told',
+    rejected: 'Rejected; the requester was told why',
+    rejectTitle: 'Reject: {{title}}',
+    why: 'Why? (the requester will see it)',
+  },
   heads: {
     title: 'Head of {{department}}',
     rule: {
