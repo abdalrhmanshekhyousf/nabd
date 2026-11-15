@@ -510,6 +510,24 @@ export const en: Translation = {
     bookedFor: 'Booked for {{name}}',
     toTheirVisits: 'Done',
   },
+  erDesk: {
+    title: 'Quick ER registration',
+    description:
+      'Register an emergency arrival at the desk so the ER nurses see it at once for triage, even when nobody knows who they are. Name an unidentified patient once someone knows them.',
+    arrival: 'An arrival',
+    sent: 'Sent to the ER',
+    sentKnown: '{{name}} is on the ER waiting list.',
+    sentAnonymous: 'The unidentified patient is on the ER waiting list.',
+    unknown: 'Unidentified patients',
+    noneUnknown: 'No unidentified patients.',
+    identify: 'Identify',
+    identifyTitle: 'Identify the patient',
+    identifyHint:
+      'Who are they? If their national number is already registered, the unidentified file joins their file.',
+    nationalIdHint: 'Finds them if they were registered before.',
+    named: 'Patient identified: {{name}}',
+    merged: 'Already registered: the file joined that of {{name}}',
+  },
   desk: {
     title: 'Appointments',
     description:

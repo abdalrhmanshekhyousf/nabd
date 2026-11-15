@@ -80,10 +80,29 @@ export const receptionPatientSchema = z.object({
   account: patientAccountSchema.nullable().default(null),
 });
 
-/** GET /reception/patients: by name, phone or national number. */
+/** GET /reception/patients: by name, phone or national number; or only the unidentified (4.3). */
 export const receptionSearchSchema = z.object({
   search: z.string().trim().max(100).default(''),
+  anonymous: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((value) => value === 'true'),
 });
+
+/**
+ * POST /reception/patients/:id/identify (task 4.3): an unidentified ER patient
+ * gets their name. A national number already registered joins the two files.
+ */
+export const identifyPatientSchema = receptionPatientSchema.pick({
+  fullName: true,
+  gender: true,
+  dateOfBirth: true,
+  phone: true,
+  nationalId: true,
+});
+
+export type IdentifyPatientInput = z.input<typeof identifyPatientSchema>;
+export type IdentifyPatientData = z.output<typeof identifyPatientSchema>;
 
 export type ReceptionPatientInput = z.input<typeof receptionPatientSchema>;
 export type ReceptionPatientData = z.output<typeof receptionPatientSchema>;

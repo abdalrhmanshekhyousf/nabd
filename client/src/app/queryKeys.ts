@@ -70,5 +70,7 @@ export const queryKeys = {
   /** The reception desk (task 4.2), under appointments: every booking or cancel refreshes it. */
   deskDay: (date: string) => ['appointments', 'day', date] as const,
   patientVisits: (patientId: string) => ['appointments', 'patient', patientId] as const,
+  /** Reception's unidentified ER patients (task 4.3), under reception. */
+  unidentified: ['reception', 'unidentified'] as const,
   publicHospitals: (search: string) => ['public-hospitals', search] as const,
 };

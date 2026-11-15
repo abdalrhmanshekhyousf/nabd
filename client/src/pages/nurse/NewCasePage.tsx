@@ -39,7 +39,7 @@ type FormValues = {
   arrivalNote: string;
 };
 
-type Registered = {
+export type Registered = {
   id: string;
   patientName: string | null;
   isAnonymous: boolean;
@@ -132,7 +132,14 @@ function KindChoice({
   );
 }
 
-function RegistrationForm({ onRegistered }: { onRegistered: (visit: Registered) => void }) {
+/** The arrival form; reception posts it to its own desk (task 4.3). */
+export function RegistrationForm({
+  onRegistered,
+  endpoint = '/er/visits',
+}: {
+  onRegistered: (visit: Registered) => void;
+  endpoint?: string;
+}) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const {
@@ -155,7 +162,7 @@ function RegistrationForm({ onRegistered }: { onRegistered: (visit: Registered) 
   const onSubmit = handleSubmit(
     async (values) => {
       try {
-        const { data } = await api.post<{ visit: Registered }>('/er/visits', values, {
+        const { data } = await api.post<{ visit: Registered }>(endpoint, values, {
           skipErrorToast: true,
         });
         void queryClient.invalidateQueries({ queryKey: queryKeys.erQueue });

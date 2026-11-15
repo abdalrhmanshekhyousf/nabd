@@ -36,6 +36,7 @@ import { AppointmentsPage } from '@/pages/patient/AppointmentsPage';
 import { MedicalFilePage } from '@/pages/patient/MedicalFilePage';
 import { RegisterPatientPage } from '@/pages/reception/RegisterPatientPage';
 import { DeskAppointmentsPage } from '@/pages/reception/DeskAppointmentsPage';
+import { ReceptionEmergencyPage } from '@/pages/reception/ReceptionEmergencyPage';
 import { MedicationsPage } from '@/pages/patient/MedicationsPage';
 import { ConsultationsPage } from '@/pages/doctor/ConsultationsPage';
 import { SchedulePage } from '@/pages/doctor/SchedulePage';
@@ -95,6 +96,7 @@ export const BUILT_PAGES: Partial<Record<`${Role}:${string}`, ReactElement>> = {
   'PATIENT:file': <MedicalFilePage />,
   'RECEPTIONIST:register': <RegisterPatientPage />,
   'RECEPTIONIST:appointments': <DeskAppointmentsPage />,
+  'RECEPTIONIST:emergency': <ReceptionEmergencyPage />,
   'PATIENT:medications': <MedicationsPage />,
 };
 

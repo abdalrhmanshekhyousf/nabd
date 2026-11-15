@@ -57,7 +57,7 @@ const EMPTY: Form = {
 };
 
 /** Opening an account for a registered patient: an email and a generated password. */
-function AccountDialog({
+export function AccountDialog({
   patient,
   onClose,
   onOpened,

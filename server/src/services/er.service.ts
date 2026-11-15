@@ -41,7 +41,8 @@ export async function requireErNurse(db: ScopedPrisma, userId: string) {
 export async function registerArrival(
   db: ScopedPrisma,
   hospitalId: string,
-  nurseId: string,
+  /** The ER nurse, or null when reception registered the arrival (task 4.3). */
+  nurseId: string | null,
   input: QuickRegistrationData,
 ) {
   return db.$transaction(async (tx) => {
