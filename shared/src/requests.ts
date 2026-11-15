@@ -95,3 +95,21 @@ export type ShortItem = {
   quantity: number;
   minQuantity: number;
 };
+
+/** Matches the ComplaintStatus enum (tasks 4.8, 4.9). */
+export const COMPLAINT_STATUSES = ['OPEN', 'ANSWERED', 'CLOSED'] as const;
+export type ComplaintStatus = (typeof COMPLAINT_STATUSES)[number];
+
+/** A complaint as its author and the admin see it. */
+export type ComplaintView = {
+  id: string;
+  subject: string;
+  body: string;
+  status: ComplaintStatus;
+  reply: string | null;
+  repliedAt: string | null;
+  repliedByName: string | null;
+  createdAt: string;
+  author: { id: string; fullName: string };
+  department: DepartmentRef | null;
+};

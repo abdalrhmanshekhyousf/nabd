@@ -271,6 +271,7 @@ model Hospital {
   purchaseRequests    PurchaseRequest[]
   purchaseItems       PurchaseItem[]
   repairRequests      RepairRequest[]
+  complaints          Complaint[]
   medicationReminders MedicationReminder[]
   appointments        Appointment[]
   consultations       Consultation[]
@@ -291,6 +292,7 @@ model Department {
   head             User?               @relation("DepartmentHead", fields: [headId], references: [id], onDelete: SetNull)
   purchaseRequests PurchaseRequest[]
   repairRequests   RepairRequest[]
+  complaints       Complaint[]
   rooms            Room[]
   staff            StaffProfile[]
   cleaners         CleanerAssignment[]
@@ -420,6 +422,8 @@ model User {
   purchaseDecisions      PurchaseRequest[]           @relation("PurchaseDecider")
   repairRequests         RepairRequest[]             @relation("RepairRequester")
   repairDecisions        RepairRequest[]             @relation("RepairDecider")
+  complaints             Complaint[]                 @relation("ComplaintAuthor")
+  complaintReplies       Complaint[]                 @relation("ComplaintReplier")
 
   @@unique([hospitalId, email])
   @@index([hospitalId, role])
@@ -1299,4 +1303,37 @@ model RepairRequest {
 
   @@index([hospitalId, status])
   @@index([departmentId])
+}
+
+// ─── Complaints (tasks 4.8, 4.9) ────────────────────────────────────────────
+
+enum ComplaintStatus {
+  OPEN
+  ANSWERED
+  CLOSED
+}
+
+// A patient's complaint to the administration, maybe about a department; the
+// admin answers it (4.9) and the patient reads the answer.
+model Complaint {
+  id           String          @id @default(uuid(7)) @db.Uuid
+  hospitalId   String          @db.Uuid
+  userId       String          @db.Uuid
+  departmentId String?         @db.Uuid
+  subject      String
+  body         String
+  status       ComplaintStatus @default(OPEN)
+  reply        String?
+  repliedById  String?         @db.Uuid
+  repliedAt    DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  hospital   Hospital    @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  user       User        @relation("ComplaintAuthor", fields: [userId], references: [id], onDelete: Cascade)
+  repliedBy  User?       @relation("ComplaintReplier", fields: [repliedById], references: [id], onDelete: SetNull)
+  department Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+
+  @@index([hospitalId, status])
+  @@index([userId])
 }

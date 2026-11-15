@@ -574,6 +574,22 @@ export const en: Translation = {
     noPurchases: 'No purchase requests.',
     noRepairs: 'No repair requests.',
   },
+  complaints: {
+    title: 'My complaints',
+    description:
+      'If something went wrong, tell the hospital’s administration. It reads every complaint, and its answer reaches you here.',
+    new: 'New complaint',
+    subject: 'What is it about',
+    department: 'Department',
+    general: 'General',
+    body: 'What happened',
+    send: 'Send to the administration',
+    sent: 'Your complaint reached the administration',
+    mine: 'My complaints',
+    none: 'No complaints sent.',
+    answer: 'The administration’s answer',
+    status: { OPEN: 'Being read', ANSWERED: 'Answered', CLOSED: 'Closed' },
+  },
   approvals: {
     title: 'Approvals',
     description:

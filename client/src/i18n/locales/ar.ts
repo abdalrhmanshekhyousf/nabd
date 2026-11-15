@@ -570,6 +570,21 @@ export const ar = {
     noPurchases: 'ما في طلبات شراء.',
     noRepairs: 'ما في طلبات صيانة.',
   },
+  complaints: {
+    title: 'شكاويي',
+    description: 'إذا صار شي مو منيح خبّر إدارة المستشفى. الإدارة بتقرأ كل شكوى وبيوصلك ردها هون.',
+    new: 'شكوى جديدة',
+    subject: 'عن شو الشكوى',
+    department: 'القسم',
+    general: 'عامة',
+    body: 'شو صار',
+    send: 'إرسال للإدارة',
+    sent: 'وصلت شكوتك للإدارة',
+    mine: 'شكاويي',
+    none: 'ما بعتت شكاوي.',
+    answer: 'رد الإدارة',
+    status: { OPEN: 'عم تنقرأ', ANSWERED: 'انرد عليها', CLOSED: 'مسكّرة' },
+  },
   approvals: {
     title: 'الموافقات',
     description:

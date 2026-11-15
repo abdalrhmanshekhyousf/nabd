@@ -25,6 +25,7 @@ import { appointmentRouter } from './routes/appointment.routes.js';
 import { leaveRouter } from './routes/leave.routes.js';
 import { departmentRequestRouter } from './routes/departmentRequest.routes.js';
 import { approvalRouter } from './routes/approval.routes.js';
+import { complaintRouter } from './routes/complaint.routes.js';
 import { patientRouter } from './routes/patient.routes.js';
 import { pushRouter } from './routes/push.routes.js';
 import { receptionRouter } from './routes/reception.routes.js';
@@ -75,6 +76,7 @@ export function createApp() {
   app.use('/api/leave', leaveRouter);
   app.use('/api/department-requests', departmentRequestRouter);
   app.use('/api/approvals', approvalRouter);
+  app.use('/api/complaints', complaintRouter);
   app.use('/api/patients', patientRouter);
   app.use('/api/push', pushRouter);
   app.use('/api/reception', receptionRouter);

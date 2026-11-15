@@ -74,3 +74,13 @@ export const decisionSchema = z.object({
 
 export type DecisionInput = z.input<typeof decisionSchema>;
 export type DecisionData = z.output<typeof decisionSchema>;
+
+/** POST /complaints (task 4.8): what about, maybe which department, and what happened. */
+export const complaintSchema = z.object({
+  departmentId: z.uuid().nullable().default(null),
+  subject: requiredText(120),
+  body: requiredText(2000),
+});
+
+export type ComplaintInput = z.input<typeof complaintSchema>;
+export type ComplaintData = z.output<typeof complaintSchema>;
