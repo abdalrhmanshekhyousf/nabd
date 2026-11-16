@@ -89,8 +89,9 @@ describe('placeholder pages', () => {
         document.body.innerHTML = '';
       }
     },
-    // Opens every page of the role one after another.
-    30_000,
+    // Opens every page of the role one after another; the admin has many,
+    // and the whole suite runs at once.
+    60_000,
   );
 
   it("refuses another role's page", async () => {
