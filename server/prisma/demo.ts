@@ -7,6 +7,7 @@ import { hashPassword } from '../src/lib/password.js';
 import { prisma } from '../src/lib/prisma.js';
 import { seedInventory } from './seedInventory.js';
 import { seedWards } from './seedWards.js';
+import { seedPhaseFour } from './seedPhaseFour.js';
 import { seedPhaseThree } from './seedPhaseThree.js';
 import { seedPhaseTwo } from './seedPhaseTwo.js';
 
@@ -161,5 +162,7 @@ export async function seedDemo(
   const stock = await seedInventory(hospitalId, { sample: sampleStock });
   // Needs the wards, the stock and the teams above (task 3.28).
   const care = await seedPhaseThree(hospitalId);
-  return { hospital, activity, wards, stock, care };
+  // The administration at work (task 4.24).
+  const office = await seedPhaseFour(hospitalId);
+  return { hospital, activity, wards, stock, care, office };
 }

@@ -93,6 +93,23 @@ describe('the demo seed (task 2.27)', () => {
 
     // A working week (3.28): every doctor has hours, ward beds have patients with
     // their notes, prescriptions, tests and imaging, and visits are booked.
+    // The office (4.24): salaries, heads, invoices over six months that mostly
+    // leave a profit, requests waiting for the admin, complaints and meetings.
+    expect(first.office).toMatchObject({ activity: true });
+    expect(first.office.invoices).toBeGreaterThan(100);
+    expect(await prisma.staffProfile.count({ where: { hospitalId, salary: 0 } })).toBe(0);
+    expect(
+      await prisma.leaveRequest.count({ where: { hospitalId, status: 'PENDING' } }),
+    ).toBeGreaterThan(0);
+    expect(
+      await prisma.purchaseRequest.count({ where: { hospitalId, status: 'PENDING' } }),
+    ).toBeGreaterThan(0);
+    expect(await prisma.complaint.count({ where: { hospitalId, status: 'OPEN' } })).toBeGreaterThan(
+      0,
+    );
+    expect(
+      await prisma.department.count({ where: { hospitalId, code: 'PHARMACY', headId: null } }),
+    ).toBe(0);
     expect(first.care).toMatchObject({ care: true, stays: 7 });
     expect(first.care.booked).toBeGreaterThanOrEqual(5);
     expect(
@@ -161,11 +178,13 @@ describe('the demo seed (task 2.27)', () => {
         prisma.appointment.count({ where: { hospitalId } }),
         prisma.doctorSchedule.count({ where: { hospitalId } }),
         prisma.labTest.count({ where: { hospitalId } }),
+        prisma.invoice.count({ where: { hospitalId } }),
       ]);
     const before = await count();
     const again = await seedDemo(details, { sampleStock: true });
     expect(again).toMatchObject({
       care: { hoursAdded: 0, care: false },
+      office: { activity: false, salaried: 0, heads: 0 },
       activity: false,
       wards: false,
       stock: false,

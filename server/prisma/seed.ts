@@ -5,7 +5,7 @@ import { DEMO_USERS, PASSWORD, seedDemo } from './demo.js';
 import { PHASE_TWO_ACCOUNTS } from './seedPhaseTwo.js';
 
 try {
-  const { hospital, activity, stock, care } = await seedDemo();
+  const { hospital, activity, stock, care, office } = await seedDemo();
   console.info(`Hospital: ${hospital.name} (${hospital.id})`);
   console.info(`Demo accounts (password ${PASSWORD}):`);
   for (const { role, email } of DEMO_USERS) console.info(`  ${role.padEnd(15)} ${email}`);
@@ -27,6 +27,12 @@ try {
     care.care
       ? `A working week added: ${care.stays} patients in ward beds, ${care.booked} visits booked, ${care.nearLow} items near their minimum.`
       : 'Working week already there, left as is.',
+  );
+  console.info(
+    `Office: salaries for ${office.salaried} staff, ${office.heads} department heads` +
+      (office.activity
+        ? `, ${office.invoices} invoices over six months, leave, purchase and repair requests, complaints and meetings.`
+        : '; office activity already there, left as is.'),
   );
 } finally {
   await prisma.$disconnect();
