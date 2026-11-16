@@ -277,7 +277,7 @@ function ItemPrices({ kind, list }: { kind: 'LAB_TEST' | 'DRUG'; list: List }) {
   const shown = needle ? items.filter((item) => item.name.toLowerCase().includes(needle)) : items;
   const title = t(`prices.every.${kind}`);
   return (
-    <Card aria-label={title} className="space-y-3 p-4">
+    <Card aria-label={title} className="min-w-0 space-y-3 p-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="space-y-0.5">
           <h3 className="font-semibold text-foreground">{title}</h3>
