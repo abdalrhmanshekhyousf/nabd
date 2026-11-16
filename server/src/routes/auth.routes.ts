@@ -6,11 +6,13 @@ import {
   register,
   registerPatient,
 } from '../controllers/auth.controller.js';
+import { loginLimit, registerLimit } from '../middleware/rateLimit.js';
 
 export const authRouter = Router();
 
-authRouter.post('/login', login);
-authRouter.post('/register', register);
-authRouter.post('/register/patient', registerPatient);
+// Guessing passwords or mass sign-ups are slowed down (task 4.23).
+authRouter.post('/login', loginLimit, login);
+authRouter.post('/register', registerLimit, register);
+authRouter.post('/register/patient', registerLimit, registerPatient);
 authRouter.post('/refresh', refresh);
 authRouter.post('/logout', logout);
