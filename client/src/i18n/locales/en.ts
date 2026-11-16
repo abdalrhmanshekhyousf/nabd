@@ -1092,6 +1092,8 @@ export const en: Translation = {
   },
   reports: {
     kinds: { PHARMACY: 'Pharmacy', REVENUE: 'Revenue' },
+    kindFilter: 'Report kind',
+    allKinds: 'All',
     title: 'Pharmacy reports',
     description:
       'Pick a period, check the figures and send the report to the admin with your notes.',

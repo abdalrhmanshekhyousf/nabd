@@ -1069,6 +1069,8 @@ export const ar = {
   },
   reports: {
     kinds: { PHARMACY: 'الصيدلية', REVENUE: 'الإيرادات' },
+    kindFilter: 'نوع التقرير',
+    allKinds: 'الكل',
     title: 'تقارير الصيدلية',
     description: 'اختار الفترة، شوف الأرقام، وابعت التقرير للمدير مع ملاحظاتك.',
     adminTitle: 'تقارير الأقسام',
