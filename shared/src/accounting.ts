@@ -112,3 +112,16 @@ export type AdminOverview = {
   unreadReports: number;
   month: MonthProfit;
 };
+
+/** One line of the activity log (task 4.22). */
+export type AuditEntry = {
+  id: string;
+  userName: string;
+  role: string;
+  action: 'VIEW' | 'EDIT';
+  patientId: string | null;
+  patientName: string | null;
+  path: string;
+  ip: string | null;
+  createdAt: string;
+};

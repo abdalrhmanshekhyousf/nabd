@@ -87,3 +87,70 @@ describe('the audit log of patient files (task 4.21)', () => {
     expect((await logsOf(id))[0]).toMatchObject({ action: 'VIEW', patientId: patient.id });
   });
 });
+
+describe('the activity log page (task 4.22)', () => {
+  it('lists entries newest first, filtered by name, action and dates; admin only', async () => {
+    const { id } = await createHospital();
+    hospitalIds.push(id);
+    const admin = await createUser(id, {
+      email: 'a-' + crypto.randomUUID() + '@nabd.test',
+      password: 'x',
+      role: 'ADMIN',
+    });
+    const auth = {
+      Authorization: 'Bearer ' + signAccessToken({ sub: admin.id, hospitalId: id, role: 'ADMIN' }),
+    };
+    const base = { hospitalId: id, method: 'GET', path: '/x', role: 'DOCTOR' as const };
+    await prisma.auditLog.createMany({
+      data: [
+        {
+          ...base,
+          userName: 'د. ريم',
+          action: 'VIEW',
+          patientName: 'سارة',
+          createdAt: new Date('2026-11-01T10:00:00Z'),
+        },
+        {
+          ...base,
+          userName: 'د. سامي',
+          action: 'EDIT',
+          patientName: 'عمر',
+          createdAt: new Date('2026-11-05T10:00:00Z'),
+        },
+        {
+          ...base,
+          userName: 'د. ريم',
+          action: 'EDIT',
+          patientName: 'عمر',
+          createdAt: new Date('2026-11-09T10:00:00Z'),
+        },
+      ],
+    });
+    const get = (query: object) => request(app).get('/api/audit').query(query).set(auth);
+    const all = (await get({})).body;
+    expect(all.total).toBe(3);
+    expect(all.entries.map((e: { userName: string }) => e.userName)).toEqual([
+      'د. ريم',
+      'د. سامي',
+      'د. ريم',
+    ]);
+    expect((await get({ search: 'سامي' })).body.total).toBe(1);
+    expect((await get({ search: 'عمر', action: 'EDIT' })).body.total).toBe(2);
+    expect((await get({ from: '2026-11-02', to: '2026-11-05' })).body.total).toBe(1);
+    const doctor = await createUser(id, {
+      email: 'd-' + crypto.randomUUID() + '@nabd.test',
+      password: 'x',
+      role: 'DOCTOR',
+    });
+    expect(
+      (
+        await request(app)
+          .get('/api/audit')
+          .set({
+            Authorization:
+              'Bearer ' + signAccessToken({ sub: doctor.id, hospitalId: id, role: 'DOCTOR' }),
+          })
+      ).status,
+    ).toBe(403);
+  });
+});

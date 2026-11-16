@@ -104,5 +104,7 @@ export const queryKeys = {
   profitBreakdown: (month: string) => ['accounts', 'profit', month] as const,
   /** The admin's home (task 4.20); every request, complaint or payment refreshes it. */
   overview: ['overview'] as const,
+  /** The admin's activity log (task 4.22). */
+  audit: (filters: object) => ['audit', filters] as const,
   publicHospitals: (search: string) => ['public-hospitals', search] as const,
 };
