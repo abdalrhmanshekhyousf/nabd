@@ -1,0 +1,17 @@
+import { Router } from 'express';
+import { z } from 'zod';
+import { authenticate, requireRole, session } from '../middleware/auth.js';
+import { lastMonths, monthlyProfit } from '../services/profit.service.js';
+
+// The hospital's profit (task 4.17): month by month, for the admin.
+export const profitRouter = Router();
+
+profitRouter.use(authenticate, requireRole('ADMIN'));
+
+profitRouter.get('/', async (req, res) => {
+  const { db } = session(req);
+  const { months } = z
+    .object({ months: z.coerce.number().int().min(1).max(24).default(12) })
+    .parse(req.query);
+  res.json({ months: await monthlyProfit(db, lastMonths(months)) });
+});

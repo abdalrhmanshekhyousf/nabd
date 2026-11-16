@@ -74,3 +74,16 @@ export const DEFAULT_PRICES: Record<ServiceKind, number> = {
   DRUG: 10_000,
   BED_DAY: 150_000,
 };
+
+/** One month of the hospital's profit (task 4.17). Money in Syrian pounds. */
+export type MonthProfit = {
+  /** "2026-11" in hospital time. */
+  month: string;
+  /** Payments received. */
+  revenue: number;
+  /** Purchases the admin approved. */
+  purchases: number;
+  /** Salaries of the staff employed that month. */
+  salaries: number;
+  profit: number;
+};
