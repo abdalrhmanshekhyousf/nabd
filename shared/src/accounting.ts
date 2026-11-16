@@ -100,3 +100,15 @@ export type MonthBreakdown = {
   }[];
   expensesByType: { type: 'SALARIES' | 'PURCHASES'; amount: number }[];
 };
+
+/** The admin's home at a glance (task 4.20). */
+export type AdminOverview = {
+  staff: { total: number; byRole: { role: string; count: number }[]; awayToday: number };
+  pending: { leave: number; purchases: number; repairs: number };
+  openComplaints: number;
+  beds: { status: string; count: number }[];
+  operatingRooms: { status: string; count: number }[];
+  upcomingMeetings: number;
+  unreadReports: number;
+  month: MonthProfit;
+};

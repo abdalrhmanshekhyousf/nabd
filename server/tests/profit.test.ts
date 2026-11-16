@@ -175,3 +175,54 @@ describe('the month in detail (task 4.18)', () => {
     expect(detail.expensesByType.map((e) => e.type)).toEqual(['SALARIES', 'PURCHASES']);
   });
 });
+
+describe('the admin home (task 4.20)', () => {
+  it('counts staff, what waits for a decision, complaints and rooms', async () => {
+    const { id } = await createHospital();
+    hospitalIds.push(id);
+    const admin = await createUser(id, {
+      email: 'a-' + crypto.randomUUID() + '@nabd.test',
+      password: 'x',
+      role: 'ADMIN',
+    });
+    const nurse = await createUser(id, {
+      email: 'n-' + crypto.randomUUID() + '@nabd.test',
+      password: 'x',
+      role: 'NURSE',
+    });
+    const patient = await createUser(id, {
+      email: 'p-' + crypto.randomUUID() + '@nabd.test',
+      password: 'x',
+      role: 'PATIENT',
+    });
+    const today = new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00Z');
+    await prisma.leaveRequest.createMany({
+      data: [
+        {
+          hospitalId: id,
+          userId: nurse.id,
+          startDate: today,
+          endDate: today,
+          reason: 'x',
+          status: 'APPROVED',
+        },
+        { hospitalId: id, userId: nurse.id, startDate: today, endDate: today, reason: 'y' },
+      ],
+    });
+    await prisma.complaint.create({
+      data: { hospitalId: id, userId: patient.id, subject: 's', body: 'b' },
+    });
+    const res = await request(app)
+      .get('/api/profit/overview')
+      .set({
+        Authorization:
+          'Bearer ' + signAccessToken({ sub: admin.id, hospitalId: id, role: 'ADMIN' }),
+      });
+    expect(res.body).toMatchObject({
+      staff: { total: 2, awayToday: 1 },
+      pending: { leave: 1, purchases: 0, repairs: 0 },
+      openComplaints: 1,
+    });
+    expect(res.body.month.month).toBe(monthOf(new Date()));
+  });
+});

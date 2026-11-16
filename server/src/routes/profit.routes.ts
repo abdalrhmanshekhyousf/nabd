@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { authenticate, requireRole, session } from '../middleware/auth.js';
+import { adminOverview } from '../services/overview.service.js';
 import { lastMonths, monthBreakdown, monthlyProfit, monthOf } from '../services/profit.service.js';
 
 // The hospital's profit (task 4.17): month by month, for the admin.
@@ -27,4 +28,10 @@ profitRouter.get('/breakdown', async (req, res) => {
     })
     .parse(req.query);
   res.json(await monthBreakdown(db, month ?? monthOf(new Date())));
+});
+
+// The admin's home (task 4.20).
+profitRouter.get('/overview', async (req, res) => {
+  const { db } = session(req);
+  res.json(await adminOverview(db));
 });
