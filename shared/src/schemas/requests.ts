@@ -84,3 +84,6 @@ export const complaintSchema = z.object({
 
 export type ComplaintInput = z.input<typeof complaintSchema>;
 export type ComplaintData = z.output<typeof complaintSchema>;
+
+/** POST /complaints/:id/reply (task 4.9): the administration's answer. */
+export const complaintReplySchema = z.object({ reply: requiredText(2000) });

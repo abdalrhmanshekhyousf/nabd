@@ -585,6 +585,16 @@ export const ar = {
     answer: 'رد الإدارة',
     status: { OPEN: 'عم تنقرأ', ANSWERED: 'انرد عليها', CLOSED: 'مسكّرة' },
   },
+  adminComplaints: {
+    title: 'الشكاوي',
+    description: 'شكاوي المرضى للإدارة. رد على كل وحدة، والمريض بيقرأ الرد بصفحته.',
+    tabs: { OPEN: 'بدها رد', DONE: 'انرد عليها' },
+    none: 'ما في شكاوي هون.',
+    reply: 'الرد على المريض',
+    send: 'إرسال الرد',
+    sent: 'انبعت الرد للمريض',
+    edit: 'تعديل الرد',
+  },
   approvals: {
     title: 'الموافقات',
     description:

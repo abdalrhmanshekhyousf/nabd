@@ -76,3 +76,45 @@ describe('patient complaints (task 4.8)', () => {
     ).toBe(403);
   });
 });
+
+describe('the admin answers complaints (task 4.9)', () => {
+  it('lists the open ones, answers, and the patient reads the answer', async () => {
+    const h = await complaintsHospital();
+    const admin = await h.person('ADMIN');
+    const patient = await h.person('PATIENT');
+    const filed = (
+      await request(app)
+        .post('/api/complaints')
+        .set(patient.auth)
+        .send({ subject: 'تأخير', body: 'ساعتين' })
+    ).body.complaint;
+    const open = (await request(app).get('/api/complaints').set(admin.auth)).body.complaints;
+    expect(open.map((c: { id: string }) => c.id)).toEqual([filed.id]);
+    expect(
+      (
+        await request(app)
+          .post('/api/complaints/' + filed.id + '/reply')
+          .set(admin.auth)
+          .send({ reply: '' })
+      ).status,
+    ).toBe(400);
+    const answered = await request(app)
+      .post('/api/complaints/' + filed.id + '/reply')
+      .set(admin.auth)
+      .send({ reply: 'آسفين، تابعنا الموضوع' });
+    expect(answered.body.complaint).toMatchObject({
+      status: 'ANSWERED',
+      reply: 'آسفين، تابعنا الموضوع',
+    });
+    expect((await request(app).get('/api/complaints').set(admin.auth)).body.complaints).toEqual([]);
+    expect(
+      (await request(app).get('/api/complaints?status=DONE').set(admin.auth)).body.complaints,
+    ).toHaveLength(1);
+    const mine = (await request(app).get('/api/complaints/mine').set(patient.auth)).body.complaints;
+    expect(mine[0].reply).toBe('آسفين، تابعنا الموضوع');
+    expect(
+      (await prisma.notification.findMany({ where: { userId: patient.id } })).map((n) => n.type),
+    ).toEqual(['REQUEST_DECIDED']);
+    expect((await request(app).get('/api/complaints').set(patient.auth)).status).toBe(403);
+  });
+});

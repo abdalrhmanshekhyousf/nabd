@@ -1,6 +1,7 @@
 import type { ComplaintData, ComplaintView } from '@nabd/shared';
 import { Prisma } from '../generated/prisma/client.js';
 import type { ScopedPrisma } from '../lib/scopedPrisma.js';
+import { HttpError } from '../middleware/errorHandler.js';
 import { sendNotification } from './notification.service.js';
 
 export const complaintInclude = {
@@ -56,6 +57,41 @@ export async function fileComplaint(
     type: 'COMPLAINT',
     data: { subject, name: row.user.fullName },
     link: '/admin/complaints',
+  });
+  return toComplaintView(row);
+}
+
+/** The admin's complaints (task 4.9): the open ones oldest first, or the answered ones. */
+export async function hospitalComplaints(db: ScopedPrisma, status: 'OPEN' | 'DONE') {
+  const rows = await db.complaint.findMany({
+    where: status === 'OPEN' ? { status: 'OPEN' } : { status: { in: ['ANSWERED', 'CLOSED'] } },
+    include: complaintInclude,
+    orderBy: status === 'OPEN' ? { createdAt: 'asc' } : { repliedAt: 'desc' },
+    take: status === 'OPEN' ? 200 : 50,
+  });
+  return rows.map(toComplaintView);
+}
+
+/** The admin answers a complaint (task 4.9); the patient is told. Answering again updates it. */
+export async function replyToComplaint(
+  db: ScopedPrisma,
+  hospitalId: string,
+  adminId: string,
+  id: string,
+  reply: string,
+) {
+  const found = await db.complaint.findUnique({ where: { id }, select: { id: true } });
+  if (!found) throw new HttpError(404, 'NOT_FOUND', 'Complaint not found');
+  const row = await db.complaint.update({
+    where: { id },
+    data: { reply, status: 'ANSWERED', repliedById: adminId, repliedAt: new Date() },
+    include: complaintInclude,
+  });
+  await sendNotification(db, hospitalId, {
+    to: { userIds: [row.user.id] },
+    type: 'REQUEST_DECIDED',
+    data: { kind: 'complaint', subject: row.subject },
+    link: '/patient/complaints',
   });
   return toComplaintView(row);
 }

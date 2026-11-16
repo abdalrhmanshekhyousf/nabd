@@ -85,5 +85,6 @@ export const queryKeys = {
   approvals: (status: string) => ['requests', 'approvals', status] as const,
   /** Complaints (tasks 4.8, 4.9); the server refreshes ['complaints']. */
   myComplaints: ['complaints', 'mine'] as const,
+  complaints: (status: string) => ['complaints', 'admin', status] as const,
   publicHospitals: (search: string) => ['public-hospitals', search] as const,
 };

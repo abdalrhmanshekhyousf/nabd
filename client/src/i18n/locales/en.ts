@@ -590,6 +590,17 @@ export const en: Translation = {
     answer: 'The administration’s answer',
     status: { OPEN: 'Being read', ANSWERED: 'Answered', CLOSED: 'Closed' },
   },
+  adminComplaints: {
+    title: 'Complaints',
+    description:
+      'Patients’ complaints to the administration. Answer each; the patient reads the answer on their page.',
+    tabs: { OPEN: 'To answer', DONE: 'Answered' },
+    none: 'No complaints here.',
+    reply: 'Answer to the patient',
+    send: 'Send answer',
+    sent: 'Answer sent to the patient',
+    edit: 'Edit answer',
+  },
   approvals: {
     title: 'Approvals',
     description:
