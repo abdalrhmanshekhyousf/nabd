@@ -1,9 +1,12 @@
+import { paymentSchema } from '@nabd/shared';
 import { Router } from 'express';
 import { z } from 'zod';
 import { authenticate, requireRole, session } from '../middleware/auth.js';
 import { emitRefresh, rooms } from '../realtime/realtime.js';
 import {
   getInvoice,
+  invoicesByStatus,
+  recordPayment,
   issueInvoice,
   openAccounts,
   patientAccount,
@@ -38,6 +41,27 @@ invoiceRouter.post('/', async (req, res) => {
     .object({ patientId: z.uuid(), itemIds: z.array(z.uuid()).min(1).nullable().default(null) })
     .parse(req.body);
   const invoice = await issueInvoice(db, auth.hospitalId, auth.userId, patientId, itemIds);
+  refresh(auth.hospitalId);
+  res.status(201).json({ invoice });
+});
+
+// Payments (task 4.14): what is still owed, and taking a payment.
+invoiceRouter.get('/', async (req, res) => {
+  const { db } = session(req);
+  const { status, search } = z
+    .object({
+      status: z.enum(['OWED', 'PAID']).default('OWED'),
+      search: z.string().trim().max(100).default(''),
+    })
+    .parse(req.query);
+  res.json({ invoices: await invoicesByStatus(db, status, search) });
+});
+
+invoiceRouter.post('/:id/payments', async (req, res) => {
+  const { auth, db } = session(req);
+  const { id } = z.object({ id: z.uuid() }).parse(req.params);
+  const input = paymentSchema.parse(req.body);
+  const invoice = await recordPayment(db, auth.hospitalId, auth.userId, id, input);
   refresh(auth.hospitalId);
   res.status(201).json({ invoice });
 });

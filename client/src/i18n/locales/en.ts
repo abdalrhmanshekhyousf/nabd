@@ -640,6 +640,26 @@ export const en: Translation = {
       CANCELLED: 'Cancelled',
     },
   },
+  payments: {
+    title: 'Payments',
+    description:
+      'Invoices still owed, oldest first. Record a payment (in full or in part) and the invoice updates itself.',
+    tabs: { OWED: 'Owed', PAID: 'Paid' },
+    search: 'Search by patient name or invoice number',
+    owedTotal: 'Total owed:',
+    noneOwed: 'No invoices owed.',
+    nonePaid: 'No paid invoices.',
+    pay: 'Record payment',
+    payTitle: 'Payment on invoice {{number}}',
+    due: 'Due: {{amount}}',
+    amount: 'Amount',
+    method: 'Method',
+    methods: { CASH: 'Cash', CARD: 'Card', TRANSFER: 'Transfer' },
+    note: 'Note (optional)',
+    record: 'Record payment',
+    recorded: 'Payment recorded',
+    badAmount: 'The amount must be above zero and no more than is due.',
+  },
   prices: {
     title: 'Price list',
     description:

@@ -115,3 +115,13 @@ export const servicePriceSchema = z.object({
 });
 
 export type ServicePriceInput = z.input<typeof servicePriceSchema>;
+
+/** POST /invoices/:id/payments (task 4.14): how much, and how it was paid. */
+export const paymentSchema = z.object({
+  amount: z.coerce.number('validation.invalid').positive('validation.invalid').max(1_000_000_000),
+  method: z.enum(['CASH', 'CARD', 'TRANSFER'], 'validation.required'),
+  note: optionalText(200).default(null),
+});
+
+export type PaymentInput = z.input<typeof paymentSchema>;
+export type PaymentData = z.output<typeof paymentSchema>;

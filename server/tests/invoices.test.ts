@@ -122,3 +122,52 @@ describe('invoices (task 4.13)', () => {
     expect((await request(app).get('/api/invoices/accounts').set(auth)).status).toBe(403);
   });
 });
+
+describe('payments (task 4.14)', () => {
+  it('a part, then the rest: the invoice moves to partly paid, then paid; never more than due', async () => {
+    const b = await books();
+    await b.charge('VISIT', 'v1');
+    const invoice = (
+      await request(app).post('/api/invoices').set(b.auth).send({ patientId: b.patient.id })
+    ).body.invoice;
+    const pay = (body: object) =>
+      request(app)
+        .post('/api/invoices/' + invoice.id + '/payments')
+        .set(b.auth)
+        .send(body);
+    expect((await pay({ amount: 60000, method: 'CASH' })).status).toBe(400);
+    const part = await pay({ amount: 20000, method: 'CASH', note: 'دفعة أولى' });
+    expect(part.body.invoice).toMatchObject({ status: 'PARTIALLY_PAID', paid: 20000 });
+    const owed = (await request(app).get('/api/invoices').set(b.auth)).body.invoices;
+    expect(owed.map((i: { id: string }) => i.id)).toEqual([invoice.id]);
+    const rest = await pay({ amount: 30000, method: 'CARD' });
+    expect(rest.body.invoice).toMatchObject({ status: 'PAID', paid: 50000 });
+    expect(rest.body.invoice.payments.map((p: { method: string }) => p.method)).toEqual([
+      'CASH',
+      'CARD',
+    ]);
+    expect((await pay({ amount: 1, method: 'CASH' })).status).toBe(409);
+    expect((await request(app).get('/api/invoices').set(b.auth)).body.invoices).toEqual([]);
+    expect(
+      (await request(app).get('/api/invoices?status=PAID').set(b.auth)).body.invoices,
+    ).toHaveLength(1);
+  });
+
+  it('two payments at once cannot both take the last amount', async () => {
+    const b = await books();
+    await b.charge('VISIT', 'v1');
+    const invoice = (
+      await request(app).post('/api/invoices').set(b.auth).send({ patientId: b.patient.id })
+    ).body.invoice;
+    const results = await Promise.all(
+      [1, 2].map(() =>
+        request(app)
+          .post('/api/invoices/' + invoice.id + '/payments')
+          .set(b.auth)
+          .send({ amount: 50000, method: 'CASH' }),
+      ),
+    );
+    expect(results.map((r) => r.status).sort()).toEqual([201, 409]);
+    expect(await prisma.payment.count({ where: { invoiceId: invoice.id } })).toBe(1);
+  });
+});
