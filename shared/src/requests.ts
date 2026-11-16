@@ -113,3 +113,19 @@ export type ComplaintView = {
   author: { id: string; fullName: string };
   department: DepartmentRef | null;
 };
+
+/** Matches the MeetingStatus enum (task 4.10). */
+export const MEETING_STATUSES = ['REQUESTED', 'ACCEPTED', 'DECLINED', 'CANCELLED'] as const;
+export type MeetingStatus = (typeof MEETING_STATUSES)[number];
+
+/** A meeting the admin called with a doctor. */
+export type MeetingView = {
+  id: string;
+  startsAt: string;
+  topic: string;
+  status: MeetingStatus;
+  response: string | null;
+  createdAt: string;
+  doctor: { id: string; fullName: string };
+  calledBy: { id: string; fullName: string } | null;
+};

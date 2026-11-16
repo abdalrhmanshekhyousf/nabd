@@ -87,3 +87,21 @@ export type ComplaintData = z.output<typeof complaintSchema>;
 
 /** POST /complaints/:id/reply (task 4.9): the administration's answer. */
 export const complaintReplySchema = z.object({ reply: requiredText(2000) });
+
+/** POST /meetings (task 4.10): the admin asks a doctor to meet at a time. */
+export const meetingSchema = z.object({
+  doctorId: z.uuid('validation.required'),
+  startsAt: z.iso.datetime({ offset: true, message: 'validation.required' }),
+  topic: requiredText(200),
+});
+
+export type MeetingInput = z.input<typeof meetingSchema>;
+export type MeetingData = z.output<typeof meetingSchema>;
+
+/** POST /meetings/:id/answer: the doctor accepts or declines, maybe with a word. */
+export const meetingAnswerSchema = z.object({
+  answer: z.enum(['ACCEPTED', 'DECLINED'], 'validation.required'),
+  response: optionalText(300).default(null),
+});
+
+export type MeetingAnswerData = z.output<typeof meetingAnswerSchema>;

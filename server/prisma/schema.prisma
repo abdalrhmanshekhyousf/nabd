@@ -272,6 +272,7 @@ model Hospital {
   purchaseItems       PurchaseItem[]
   repairRequests      RepairRequest[]
   complaints          Complaint[]
+  meetings            Meeting[]
   medicationReminders MedicationReminder[]
   appointments        Appointment[]
   consultations       Consultation[]
@@ -424,6 +425,8 @@ model User {
   repairDecisions        RepairRequest[]             @relation("RepairDecider")
   complaints             Complaint[]                 @relation("ComplaintAuthor")
   complaintReplies       Complaint[]                 @relation("ComplaintReplier")
+  meetingsCalled         Meeting[]                   @relation("MeetingCaller")
+  meetingsInvited        Meeting[]                   @relation("MeetingDoctor")
 
   @@unique([hospitalId, email])
   @@index([hospitalId, role])
@@ -1336,4 +1339,35 @@ model Complaint {
 
   @@index([hospitalId, status])
   @@index([userId])
+}
+
+// ─── Meetings (task 4.10) ───────────────────────────────────────────────────
+
+enum MeetingStatus {
+  REQUESTED
+  ACCEPTED
+  DECLINED
+  CANCELLED
+}
+
+// The admin asks a doctor to meet at a time, about something; the doctor
+// accepts or declines with a word.
+model Meeting {
+  id         String        @id @default(uuid(7)) @db.Uuid
+  hospitalId String        @db.Uuid
+  calledById String?       @db.Uuid
+  doctorId   String        @db.Uuid
+  startsAt   DateTime
+  topic      String
+  status     MeetingStatus @default(REQUESTED)
+  response   String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  calledBy User?    @relation("MeetingCaller", fields: [calledById], references: [id], onDelete: SetNull)
+  doctor   User     @relation("MeetingDoctor", fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@index([hospitalId, startsAt])
+  @@index([doctorId])
 }
