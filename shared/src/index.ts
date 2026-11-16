@@ -16,6 +16,7 @@ export * from './beds.js';
 export * from './ward.js';
 export * from './appointments.js';
 export * from './requests.js';
+export * from './accounting.js';
 export * from './reminders.js';
 export * from './roles.js';
 export * from './schemas/auth.js';

@@ -273,6 +273,10 @@ model Hospital {
   repairRequests      RepairRequest[]
   complaints          Complaint[]
   meetings            Meeting[]
+  servicePrices       ServicePrice[]
+  invoices            Invoice[]
+  chargeItems         InvoiceItem[]
+  payments            Payment[]
   medicationReminders MedicationReminder[]
   appointments        Appointment[]
   consultations       Consultation[]
@@ -427,6 +431,8 @@ model User {
   complaintReplies       Complaint[]                 @relation("ComplaintReplier")
   meetingsCalled         Meeting[]                   @relation("MeetingCaller")
   meetingsInvited        Meeting[]                   @relation("MeetingDoctor")
+  invoicesIssued         Invoice[]                   @relation("InvoiceIssuer")
+  paymentsReceived       Payment[]                   @relation("PaymentReceiver")
 
   @@unique([hospitalId, email])
   @@index([hospitalId, role])
@@ -513,6 +519,8 @@ model Patient {
   medicationReminders MedicationReminder[]
   erVisits            TriageAssessment[]
   operationBookings   OperationBooking[]
+  invoices            Invoice[]
+  chargeItems         InvoiceItem[]
 
   @@unique([hospitalId, nationalId])
   @@index([hospitalId])
@@ -1370,4 +1378,116 @@ model Meeting {
 
   @@index([hospitalId, startsAt])
   @@index([doctorId])
+}
+
+// ─── Accounting (tasks 4.11–4.16) ───────────────────────────────────────────
+
+// What a charge is for; each has its price in the hospital's price list (4.12).
+enum ServiceKind {
+  VISIT
+  OPERATION
+  LAB_TEST
+  IMAGING
+  DRUG
+  BED_DAY
+}
+
+enum InvoiceStatus {
+  ISSUED
+  PARTIALLY_PAID
+  PAID
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  TRANSFER
+}
+
+// The hospital's price list (4.12): one price per kind, or per kind and code
+// (a lab test's name, an imaging modality, a drug's stock item).
+model ServicePrice {
+  id         String      @id @default(uuid(7)) @db.Uuid
+  hospitalId String      @db.Uuid
+  kind       ServiceKind
+  // Empty: the kind's default price.
+  code       String      @default("")
+  name       String
+  price      Decimal     @db.Decimal(12, 2)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+
+  @@unique([hospitalId, kind, code])
+}
+
+// A charge on a patient's account (4.12), added by the service that gave it.
+// Until an invoice takes it (4.13), it is still open on the account. The
+// source makes it added once only.
+model InvoiceItem {
+  id          String      @id @default(uuid(7)) @db.Uuid
+  hospitalId  String      @db.Uuid
+  patientId   String      @db.Uuid
+  invoiceId   String?     @db.Uuid
+  kind        ServiceKind
+  description String
+  quantity    Int         @default(1)
+  unitPrice   Decimal     @db.Decimal(12, 2)
+  total       Decimal     @db.Decimal(12, 2)
+  sourceId    String?
+  createdAt   DateTime    @default(now())
+
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  patient  Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  invoice  Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  @@unique([hospitalId, kind, sourceId])
+  @@index([patientId, invoiceId])
+}
+
+// An invoice the accountant issues for a patient's open charges (4.13);
+// payments against it (4.14) move it to partly paid, then paid.
+model Invoice {
+  id         String        @id @default(uuid(7)) @db.Uuid
+  hospitalId String        @db.Uuid
+  patientId  String        @db.Uuid
+  // 1, 2, 3… per hospital, printed on the invoice.
+  number     Int
+  status     InvoiceStatus @default(ISSUED)
+  total      Decimal       @db.Decimal(12, 2)
+  paid       Decimal       @default(0) @db.Decimal(12, 2)
+  issuedById String?       @db.Uuid
+  issuedAt   DateTime      @default(now())
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  hospital Hospital      @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  patient  Patient       @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  issuedBy User?         @relation("InvoiceIssuer", fields: [issuedById], references: [id], onDelete: SetNull)
+  items    InvoiceItem[]
+  payments Payment[]
+
+  @@unique([hospitalId, number])
+  @@index([hospitalId, status])
+  @@index([patientId])
+}
+
+model Payment {
+  id           String        @id @default(uuid(7)) @db.Uuid
+  hospitalId   String        @db.Uuid
+  invoiceId    String        @db.Uuid
+  amount       Decimal       @db.Decimal(12, 2)
+  method       PaymentMethod
+  note         String?
+  receivedById String?       @db.Uuid
+  paidAt       DateTime      @default(now())
+
+  hospital   Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  invoice    Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  receivedBy User?    @relation("PaymentReceiver", fields: [receivedById], references: [id], onDelete: SetNull)
+
+  @@index([hospitalId, paidAt])
+  @@index([invoiceId])
 }
