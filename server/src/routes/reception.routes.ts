@@ -17,6 +17,7 @@ import {
   searchPatients,
 } from '../services/reception.service.js';
 import { chargeErVisit } from '../services/charge.service.js';
+import { auditPatientFile } from '../middleware/audit.js';
 
 // Reception (task 4.1): finding a patient, registering a new one with their
 // file (and account if they want one), and opening an account later.
@@ -35,6 +36,11 @@ receptionRouter.post('/patients', async (req, res) => {
   const input = receptionPatientSchema.parse(req.body);
   res.status(201).json({ patient: await registerAtReception(db, auth.hospitalId, input) });
 });
+
+receptionRouter.use(
+  '/patients/:id',
+  auditPatientFile((req) => String(req.params.id)),
+);
 
 receptionRouter.post('/patients/:id/account', async (req, res) => {
   const { auth, db } = session(req);

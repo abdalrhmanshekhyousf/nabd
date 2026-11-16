@@ -11,11 +11,17 @@ import {
   myMedications,
   updateReminder,
 } from '../services/reminder.service.js';
+import { auditPatientFile } from '../middleware/audit.js';
 
 // The patient's own space (phase 3): their medical file (task 3.23).
 export const patientRouter = Router();
 
 patientRouter.use(authenticate, requireRole('PATIENT'));
+
+patientRouter.use(
+  '/me/file',
+  auditPatientFile((req, db) => patientOfUser(db, session(req).auth.userId)),
+);
 
 patientRouter.get('/me/file', async (req, res) => {
   const { auth, db } = session(req);

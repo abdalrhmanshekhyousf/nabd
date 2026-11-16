@@ -278,6 +278,7 @@ model Hospital {
   invoices            Invoice[]
   chargeItems         InvoiceItem[]
   payments            Payment[]
+  auditLogs           AuditLog[]
   medicationReminders MedicationReminder[]
   appointments        Appointment[]
   consultations       Consultation[]
@@ -1495,4 +1496,34 @@ model Payment {
 
   @@index([hospitalId, paidAt])
   @@index([invoiceId])
+}
+
+// ─── Audit (tasks 4.21, 4.22) ───────────────────────────────────────────────
+
+enum AuditAction {
+  VIEW
+  EDIT
+}
+
+// Every time someone opens or changes a patient's file. Kept even if the
+// person or the patient goes: names are copied, ids are not foreign keys.
+model AuditLog {
+  id          String      @id @default(uuid(7)) @db.Uuid
+  hospitalId  String      @db.Uuid
+  userId      String?     @db.Uuid
+  userName    String
+  role        Role
+  action      AuditAction
+  patientId   String?     @db.Uuid
+  patientName String?
+  method      String
+  path        String
+  ip          String?
+  createdAt   DateTime    @default(now())
+
+  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+
+  @@index([hospitalId, createdAt])
+  @@index([patientId])
+  @@index([userId])
 }

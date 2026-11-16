@@ -33,6 +33,7 @@ import {
   getPatientFile,
   listMyPatients,
 } from '../services/medicalRecord.service.js';
+import { auditPatientFile, patientIdParam } from '../middleware/audit.js';
 
 // Doctors' own tools (phase 2).
 export const doctorRouter = Router();
@@ -75,6 +76,19 @@ doctorRouter.get('/me/patients', requireRole('DOCTOR'), async (req, res) => {
   const { search } = patientSearchSchema.parse(req.query);
   res.json({ patients: await listMyPatients(db, auth.userId, search) });
 });
+
+// Every opening or change of a patient's file is recorded (task 4.21).
+doctorRouter.use('/me/patients/:patientId', auditPatientFile(patientIdParam));
+doctorRouter.use(
+  '/me/consultations/:id/file',
+  auditPatientFile(async (req, db) => {
+    const found = await db.consultation.findUnique({
+      where: { id: String(req.params.id) },
+      select: { record: { select: { patientId: true } } },
+    });
+    return found?.record.patientId ?? null;
+  }),
+);
 
 doctorRouter.get('/me/patients/:patientId', requireRole('DOCTOR'), async (req, res) => {
   const { auth, db } = session(req);
