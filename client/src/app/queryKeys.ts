@@ -92,5 +92,8 @@ export const queryKeys = {
   meetingDoctors: ['staff', { role: 'DOCTOR', for: 'meetings' }] as const,
   /** The price list (task 4.12). */
   prices: ['prices'] as const,
+  /** Patients' accounts and invoices (task 4.13); the server refreshes ['accounts']. */
+  accounts: (search: string) => ['accounts', 'list', search] as const,
+  account: (patientId: string) => ['accounts', 'one', patientId] as const,
   publicHospitals: (search: string) => ['public-hospitals', search] as const,
 };
