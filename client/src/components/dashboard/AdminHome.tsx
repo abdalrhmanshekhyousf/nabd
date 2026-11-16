@@ -72,7 +72,8 @@ export function AdminHome() {
     // Requests, complaints and payments arrive all day: a fresh look every minute.
     refetchInterval: 60_000,
   });
-  if (!data) {
+  // Until the figures arrive (or if they don't come back whole).
+  if (!data?.pending) {
     return (
       <div className="flex justify-center py-12">
         <Spinner />
