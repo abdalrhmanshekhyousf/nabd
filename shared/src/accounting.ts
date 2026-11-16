@@ -1,3 +1,5 @@
+import type { DepartmentCode } from './schemas/department.js';
+
 /** Matches the ServiceKind enum (tasks 4.11, 4.12): what a charge is for. */
 export const SERVICE_KINDS = [
   'VISIT',
@@ -86,4 +88,15 @@ export type MonthProfit = {
   /** Salaries of the staff employed that month. */
   salaries: number;
   profit: number;
+};
+
+/** One month in detail (task 4.18). */
+export type MonthBreakdown = {
+  month: string;
+  /** Services given, by the department that gave them; null for unassigned. */
+  revenueByDepartment: {
+    department: { id: string; name: string; code: DepartmentCode | null } | null;
+    amount: number;
+  }[];
+  expensesByType: { type: 'SALARIES' | 'PURCHASES'; amount: number }[];
 };

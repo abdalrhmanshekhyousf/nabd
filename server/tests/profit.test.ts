@@ -1,11 +1,17 @@
-import { zonedInstant } from '@nabd/shared';
+import { DEFAULT_PRICES, zonedInstant } from '@nabd/shared';
 import request from 'supertest';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app.js';
 import { prisma } from '../src/lib/prisma.js';
 import { forHospital } from '../src/lib/scopedPrisma.js';
 import { signAccessToken } from '../src/lib/tokens.js';
-import { lastMonths, monthlyProfit, monthOf } from '../src/services/profit.service.js';
+import { addCharge } from '../src/services/charge.service.js';
+import {
+  lastMonths,
+  monthBreakdown,
+  monthlyProfit,
+  monthOf,
+} from '../src/services/profit.service.js';
 import { createHospital, createUser } from './helpers.js';
 
 const app = createApp();
@@ -129,5 +135,43 @@ describe('monthly profit (task 4.17)', () => {
           })
       ).status,
     ).toBe(403);
+  });
+});
+
+describe('the month in detail (task 4.18)', () => {
+  it('revenue by the department that gave each service, and expenses by type', async () => {
+    const { id } = await createHospital();
+    hospitalIds.push(id);
+    const db = forHospital(id);
+    const lab = await prisma.department.create({
+      data: { hospitalId: id, name: 'مخبر', code: 'LABORATORY' },
+    });
+    const er = await prisma.department.create({
+      data: { hospitalId: id, name: 'إسعاف', code: 'EMERGENCY' },
+    });
+    const patient = await prisma.patient.create({ data: { hospitalId: id, fullName: 'س' } });
+    const charge = (kind: 'LAB_TEST' | 'VISIT', sourceId: string, departmentId: string) =>
+      addCharge(db, {
+        hospitalId: id,
+        patientId: patient.id,
+        kind,
+        description: kind,
+        sourceId,
+        departmentId,
+      });
+    await charge('LAB_TEST', 't1', lab.id);
+    await charge('LAB_TEST', 't2', lab.id);
+    await charge('VISIT', 'v1', er.id);
+    const month = monthOf(new Date());
+    const detail = await monthBreakdown(db, month);
+    expect(
+      detail.revenueByDepartment
+        .map((r) => [r.department?.code, r.amount])
+        .sort((x, y) => String(x[0]).localeCompare(String(y[0]))),
+    ).toEqual([
+      ['EMERGENCY', DEFAULT_PRICES.VISIT],
+      ['LABORATORY', DEFAULT_PRICES.LAB_TEST * 2],
+    ]);
+    expect(detail.expensesByType.map((e) => e.type)).toEqual(['SALARIES', 'PURCHASES']);
   });
 });

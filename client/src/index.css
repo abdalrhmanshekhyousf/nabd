@@ -49,6 +49,9 @@
   --warning: #a84d08;
   --warning-foreground: #ffffff;
   --info: #2f6fb3;
+  /* Profit and loss in charts (task 4.18), validated for colour blindness. */
+  --chart-gain: #2f6fb3;
+  --chart-loss: #c8283e;
   --info-foreground: #ffffff;
 
   /* ESI triage levels (1 = most urgent) */
@@ -88,6 +91,9 @@
   --warning: #f59e0b;
   --warning-foreground: #10223a;
   --info: #5b9be0;
+  /* Profit and loss in charts (task 4.18), validated for colour blindness. */
+  --chart-gain: #4a8bd4;
+  --chart-loss: #e5566c;
   --info-foreground: #10223a;
 
   --esi-1: #f0566a;
@@ -301,4 +307,7 @@ html[data-vt='language']::view-transition-new(root) {
   --success: #137a6b;
   --warning: #a84d08;
   --info: #2f6fb3;
+  /* Profit and loss in charts (task 4.18), validated for colour blindness. */
+  --chart-gain: #2f6fb3;
+  --chart-loss: #c8283e;
 }

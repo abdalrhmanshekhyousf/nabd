@@ -1,4 +1,10 @@
-import { addLocalDays, zonedDate, zonedInstant, type MonthProfit } from '@nabd/shared';
+import {
+  addLocalDays,
+  zonedDate,
+  zonedInstant,
+  type MonthBreakdown,
+  type MonthProfit,
+} from '@nabd/shared';
 import type { ScopedPrisma } from '../lib/scopedPrisma.js';
 
 /** "2026-11" for an instant, in hospital time. */
@@ -69,4 +75,40 @@ export async function monthlyProfit(db: ScopedPrisma, months: string[]): Promise
       profit: revenue - bought - salaries,
     };
   });
+}
+
+/**
+ * One month in detail (task 4.18): the services each department gave (at their
+ * charged prices), and the month's expenses by type.
+ */
+export async function monthBreakdown(db: ScopedPrisma, month: string): Promise<MonthBreakdown> {
+  const { start, end } = monthRange(month);
+  const [byDepartment, [summary]] = await Promise.all([
+    db.invoiceItem.groupBy({
+      by: ['departmentId'],
+      where: { createdAt: { gte: start, lt: end } },
+      _sum: { total: true },
+    }),
+    monthlyProfit(db, [month]),
+  ]);
+  const departments = await db.department.findMany({
+    where: {
+      id: { in: byDepartment.flatMap((row) => (row.departmentId ? [row.departmentId] : [])) },
+    },
+    select: { id: true, name: true, code: true },
+  });
+  return {
+    month,
+    revenueByDepartment: byDepartment
+      .map((row) => ({
+        department: departments.find((d) => d.id === row.departmentId) ?? null,
+        amount: Number(row._sum.total ?? 0),
+      }))
+      .filter((row) => row.amount > 0)
+      .sort((a, b) => b.amount - a.amount),
+    expensesByType: [
+      { type: 'SALARIES' as const, amount: summary!.salaries },
+      { type: 'PURCHASES' as const, amount: summary!.purchases },
+    ],
+  };
 }

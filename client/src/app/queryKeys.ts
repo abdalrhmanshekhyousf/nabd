@@ -99,5 +99,8 @@ export const queryKeys = {
   myInvoices: ['accounts', 'mine'] as const,
   /** Owed or paid invoices (task 4.14), under accounts. */
   invoices: (status: string, search: string) => ['accounts', 'invoices', status, search] as const,
+  /** The admin's profit (tasks 4.17, 4.18), under accounts so payments refresh it. */
+  profit: ['accounts', 'profit'] as const,
+  profitBreakdown: (month: string) => ['accounts', 'profit', month] as const,
   publicHospitals: (search: string) => ['public-hospitals', search] as const,
 };

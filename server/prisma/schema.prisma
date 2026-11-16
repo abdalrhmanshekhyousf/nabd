@@ -299,6 +299,7 @@ model Department {
   purchaseRequests PurchaseRequest[]
   repairRequests   RepairRequest[]
   complaints       Complaint[]
+  charges          InvoiceItem[]
   rooms            Room[]
   staff            StaffProfile[]
   cleaners         CleanerAssignment[]
@@ -1428,21 +1429,24 @@ model ServicePrice {
 // Until an invoice takes it (4.13), it is still open on the account. The
 // source makes it added once only.
 model InvoiceItem {
-  id          String      @id @default(uuid(7)) @db.Uuid
-  hospitalId  String      @db.Uuid
-  patientId   String      @db.Uuid
-  invoiceId   String?     @db.Uuid
-  kind        ServiceKind
-  description String
-  quantity    Int         @default(1)
-  unitPrice   Decimal     @db.Decimal(12, 2)
-  total       Decimal     @db.Decimal(12, 2)
-  sourceId    String?
-  createdAt   DateTime    @default(now())
+  id           String      @id @default(uuid(7)) @db.Uuid
+  hospitalId   String      @db.Uuid
+  patientId    String      @db.Uuid
+  invoiceId    String?     @db.Uuid
+  // The department that gave it, for revenue by department (4.18).
+  departmentId String?     @db.Uuid
+  kind         ServiceKind
+  description  String
+  quantity     Int         @default(1)
+  unitPrice    Decimal     @db.Decimal(12, 2)
+  total        Decimal     @db.Decimal(12, 2)
+  sourceId     String?
+  createdAt    DateTime    @default(now())
 
-  hospital Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  patient  Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  invoice  Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  hospital   Hospital    @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  patient    Patient     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  invoice    Invoice?    @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  department Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
 
   @@unique([hospitalId, kind, sourceId])
   @@index([patientId, invoiceId])

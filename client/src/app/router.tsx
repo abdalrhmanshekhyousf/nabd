@@ -47,6 +47,7 @@ import { InvoicesPage } from '@/pages/accounting/InvoicesPage';
 import { PaymentsPage } from '@/pages/accounting/PaymentsPage';
 import { MyInvoicesPage } from '@/pages/patient/InvoicesPage';
 import { MonthlyReportPage } from '@/pages/accounting/MonthlyReportPage';
+import { ProfitPage } from '@/pages/admin/ProfitPage';
 import { ComplaintsPage } from '@/pages/patient/ComplaintsPage';
 import { LeavePage } from '@/pages/requests/LeavePage';
 import { MedicationsPage } from '@/pages/patient/MedicationsPage';
@@ -119,6 +120,7 @@ export const BUILT_PAGES: Partial<Record<`${Role}:${string}`, ReactElement>> = {
   'ACCOUNTANT:payments': <PaymentsPage />,
   'PATIENT:invoices': <MyInvoicesPage />,
   'ACCOUNTANT:monthly-report': <MonthlyReportPage />,
+  'ADMIN:profit': <ProfitPage />,
   // A department's purchase and repair requests, through its head (task 4.6).
   ...Object.fromEntries(
     (['DOCTOR', 'PHARMACIST', 'LAB_TECHNICIAN', 'RADIOLOGIST'] as const).map((role) => [

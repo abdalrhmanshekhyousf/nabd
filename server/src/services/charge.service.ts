@@ -1,4 +1,4 @@
-import { DEFAULT_PRICES, type ServiceKind } from '@nabd/shared';
+import { DEFAULT_PRICES, type DepartmentCode, type ServiceKind } from '@nabd/shared';
 import type { ScopedPrisma } from '../lib/scopedPrisma.js';
 
 // Every service a patient gets is added to their account (task 4.12), at the
@@ -15,7 +15,15 @@ type Charge = {
   description: string;
   quantity?: number;
   sourceId: string;
+  /** The department that gave it (4.18). */
+  departmentId?: string | null;
 };
+
+/** A built-in department of the hospital, by its code. */
+async function departmentByCode(db: ScopedPrisma, code: DepartmentCode) {
+  const found = await db.department.findFirst({ where: { code }, select: { id: true } });
+  return found?.id ?? null;
+}
 
 /** The price of a service: exact code, the kind's default, then the built-in one. */
 export async function priceOf(db: ScopedPrisma, kind: ServiceKind, code = '') {
@@ -42,6 +50,7 @@ export async function addCharge(db: ScopedPrisma, charge: Charge) {
         unitPrice,
         total: unitPrice * quantity,
         sourceId: charge.sourceId,
+        departmentId: charge.departmentId ?? null,
       },
     ],
     skipDuplicates: true,
@@ -58,7 +67,11 @@ export async function dropCharge(db: ScopedPrisma, kind: ServiceKind, sourceId: 
 export async function chargeAppointment(db: ScopedPrisma, hospitalId: string, id: string) {
   const visit = await db.appointment.findUnique({
     where: { id },
-    select: { patientId: true, doctorName: true },
+    select: {
+      patientId: true,
+      doctorName: true,
+      doctor: { select: { staffProfile: { select: { departmentId: true } } } },
+    },
   });
   if (!visit) return;
   await addCharge(db, {
@@ -67,6 +80,7 @@ export async function chargeAppointment(db: ScopedPrisma, hospitalId: string, id
     kind: 'VISIT',
     description: visit.doctorName,
     sourceId: id,
+    departmentId: visit.doctor?.staffProfile?.departmentId ?? null,
   });
 }
 
@@ -84,6 +98,7 @@ export async function chargeErVisit(db: ScopedPrisma, hospitalId: string, id: st
     code: 'EMERGENCY',
     description: 'EMERGENCY',
     sourceId: id,
+    departmentId: await departmentByCode(db, 'EMERGENCY'),
   });
 }
 
@@ -101,6 +116,7 @@ export async function chargeLabTest(db: ScopedPrisma, hospitalId: string, id: st
     code: test.code,
     description: test.code,
     sourceId: id,
+    departmentId: await departmentByCode(db, 'LABORATORY'),
   });
 }
 
@@ -123,6 +139,7 @@ export async function chargeImaging(db: ScopedPrisma, hospitalId: string, id: st
     code: study.modality,
     description: `${study.modality} · ${study.bodyPart}`,
     sourceId: id,
+    departmentId: await departmentByCode(db, 'RADIOLOGY'),
   });
 }
 
@@ -136,6 +153,7 @@ export async function chargePrescription(db: ScopedPrisma, hospitalId: string, i
     },
   });
   if (!prescription) return;
+  const pharmacy = await departmentByCode(db, 'PHARMACY');
   for (const item of prescription.items) {
     if (!item.dispensedQuantity) continue;
     const movement = await db.stockMovement.findFirst({
@@ -150,6 +168,7 @@ export async function chargePrescription(db: ScopedPrisma, hospitalId: string, i
       description: item.dispensedName ?? '',
       quantity: item.dispensedQuantity,
       sourceId: item.id,
+      departmentId: pharmacy,
     });
   }
 }
@@ -158,7 +177,12 @@ export async function chargePrescription(db: ScopedPrisma, hospitalId: string, i
 export async function chargeStay(db: ScopedPrisma, hospitalId: string, id: string) {
   const stay = await db.bedAssignment.findUnique({
     where: { id },
-    select: { patientId: true, admittedAt: true, dischargedAt: true },
+    select: {
+      patientId: true,
+      admittedAt: true,
+      dischargedAt: true,
+      bed: { select: { room: { select: { departmentId: true } } } },
+    },
   });
   if (!stay?.dischargedAt) return;
   const days = Math.max(
@@ -172,6 +196,7 @@ export async function chargeStay(db: ScopedPrisma, hospitalId: string, id: strin
     description: 'BED_DAY',
     quantity: days,
     sourceId: id,
+    departmentId: stay.bed.room.departmentId,
   });
 }
 
@@ -185,6 +210,7 @@ export async function chargeOperations(db: ScopedPrisma, hospitalId: string, roo
     },
     select: { id: true, patientId: true, procedure: true },
   });
+  const operations = await departmentByCode(db, 'OPERATIONS');
   for (const booking of done) {
     await addCharge(db, {
       hospitalId,
@@ -192,6 +218,7 @@ export async function chargeOperations(db: ScopedPrisma, hospitalId: string, roo
       kind: 'OPERATION',
       description: booking.procedure,
       sourceId: booking.id,
+      departmentId: operations,
     });
   }
 }
