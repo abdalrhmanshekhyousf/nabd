@@ -16,6 +16,7 @@ import {
   setWardBedStatus,
   wardBoard,
 } from '../services/ward.service.js';
+import { chargeStay } from '../services/charge.service.js';
 
 // The ward nurse's beds (task 3.16): the board, admitting a patient, moving
 // them, discharging them, and holding or freeing a bed by hand.
@@ -64,6 +65,7 @@ wardRouter.post('/stays/:id/discharge', async (req, res) => {
   const { id } = idParam.parse(req.params);
   const input = dischargeStaySchema.parse(req.body ?? {});
   const { departmentId } = await dischargeStay(db, auth.hospitalId, auth.userId, id, input);
+  await chargeStay(db, auth.hospitalId, id);
   announce(auth.hospitalId, departmentId);
   res.json({ ok: true });
 });

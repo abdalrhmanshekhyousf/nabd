@@ -12,6 +12,7 @@ import * as operatingRoomService from '../services/operatingRoom.service.js';
 import { orActorsOf, transitionRoom } from '../services/orTransition.service.js';
 import { roomHistory } from '../services/roomStatus.service.js';
 import { emitRefresh, rooms } from '../realtime/realtime.js';
+import { chargeOperations } from '../services/charge.service.js';
 
 const idParam = z.object({ id: z.uuid() });
 
@@ -111,6 +112,8 @@ export async function transition(req: Request, res: Response) {
     to,
     bookingId,
   });
+  // An operation that just ended goes on the patient's account (4.12).
+  if (to === 'AWAITING_STERILIZATION') await chargeOperations(db, auth.hospitalId, id);
   // Every screen showing the rooms or bookings (the live board, 2.26) updates.
   emitRefresh(rooms.hospital(auth.hospitalId), [['operating-rooms'], ['bookings']]);
   res.json({ operatingRoom });

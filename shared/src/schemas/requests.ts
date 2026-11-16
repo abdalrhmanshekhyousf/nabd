@@ -105,3 +105,13 @@ export const meetingAnswerSchema = z.object({
 });
 
 export type MeetingAnswerData = z.output<typeof meetingAnswerSchema>;
+
+/** PUT /prices (task 4.12): a price for a kind of service, or one exact service of it. */
+export const servicePriceSchema = z.object({
+  kind: z.enum(['VISIT', 'OPERATION', 'LAB_TEST', 'IMAGING', 'DRUG', 'BED_DAY'], 'validation.required'),
+  code: z.string().trim().max(60).default(''),
+  name: requiredText(120),
+  price: z.coerce.number('validation.invalid').min(0, 'validation.invalid').max(1_000_000_000),
+});
+
+export type ServicePriceInput = z.input<typeof servicePriceSchema>;

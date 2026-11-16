@@ -10,6 +10,7 @@ import {
   staffedModalities,
   startImaging,
 } from '../services/imaging.service.js';
+import { chargeImaging } from '../services/charge.service.js';
 
 // Radiology (task 3.7): each request reaches the radiologists of its type only.
 // Their list, taking a study, and which types have a radiologist at all; the
@@ -40,7 +41,9 @@ imagingRouter.post('/:id/report', requireRole('RADIOLOGIST'), imagingUpload, asy
   const { id } = z.object({ id: z.uuid() }).parse(req.params);
   const input = imagingReportSchema.parse(req.body);
   const files = ((req.files as Express.Multer.File[] | undefined) ?? []).map((f) => f.buffer);
-  res.json({ study: await reportImaging(db, auth.hospitalId, auth.userId, id, input, files) });
+  const study = await reportImaging(db, auth.hospitalId, auth.userId, id, input, files);
+  await chargeImaging(db, auth.hospitalId, id);
+  res.json({ study });
 });
 
 imagingRouter.get('/:id/images/:index', async (req, res) => {

@@ -61,3 +61,16 @@ export type ServicePriceView = {
   name: string;
   price: number;
 };
+
+/**
+ * Built-in prices (Syrian pounds) when the hospital's price list has none for
+ * a service (4.12). The accountant sets the real ones.
+ */
+export const DEFAULT_PRICES: Record<ServiceKind, number> = {
+  VISIT: 50_000,
+  OPERATION: 2_000_000,
+  LAB_TEST: 25_000,
+  IMAGING: 100_000,
+  DRUG: 10_000,
+  BED_DAY: 150_000,
+};

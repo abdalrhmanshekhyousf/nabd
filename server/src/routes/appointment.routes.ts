@@ -15,6 +15,7 @@ import {
   myAppointments,
   patientAtDesk,
 } from '../services/appointment.service.js';
+import { chargeAppointment, dropCharge } from '../services/charge.service.js';
 
 // Appointments (task 3.20): a doctor's free slots, and booking one. Patients
 // book for themselves (3.22), reception and the admin for a patient (4.2).
@@ -56,6 +57,7 @@ appointmentRouter.post('/', requireRole('PATIENT', 'RECEPTIONIST', 'ADMIN'), asy
   const { auth, db } = session(req);
   const input = bookAppointmentSchema.parse(req.body);
   const appointment = await bookAppointment(db, auth.hospitalId, auth, input);
+  await chargeAppointment(db, auth.hospitalId, appointment.id);
   await refreshVisit(db, auth.hospitalId, appointment);
   res.status(201).json({ appointment });
 });
@@ -111,6 +113,7 @@ appointmentRouter.delete(
     const { auth, db } = session(req);
     const { id } = z.object({ id: z.uuid() }).parse(req.params);
     const appointment = await cancelAppointment(db, auth, id);
+    await dropCharge(db, 'VISIT', id);
     await refreshVisit(db, auth.hospitalId, appointment);
     res.json({ appointment });
   },

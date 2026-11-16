@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { authenticate, requireRole, session } from '../middleware/auth.js';
 import { optionalReportUpload } from '../middleware/upload.js';
 import { labBoard, labResultFile, recordLabResult, startLabTest } from '../services/lab.service.js';
+import { chargeLabTest } from '../services/charge.service.js';
 
 // The lab (task 3.5): its board of ordered tests, taking one, and recording
 // the result into the patient's file. The result file is served to those
@@ -42,6 +43,7 @@ labRouter.post(
       input,
       req.file?.buffer ?? null,
     );
+    await chargeLabTest(db, auth.hospitalId, id);
     res.json({ test });
   },
 );

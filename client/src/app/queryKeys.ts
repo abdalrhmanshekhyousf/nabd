@@ -90,5 +90,7 @@ export const queryKeys = {
   meetings: ['meetings'] as const,
   myMeetings: ['meetings', 'mine'] as const,
   meetingDoctors: ['staff', { role: 'DOCTOR', for: 'meetings' }] as const,
+  /** The price list (task 4.12). */
+  prices: ['prices'] as const,
   publicHospitals: (search: string) => ['public-hospitals', search] as const,
 };

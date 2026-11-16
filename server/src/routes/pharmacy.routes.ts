@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { authenticate, requireRole, session } from '../middleware/auth.js';
 import { dispensePrescription, pharmacyBoard } from '../services/pharmacy.service.js';
+import { chargePrescription } from '../services/charge.service.js';
 
 // The pharmacy (task 3.10): incoming prescriptions and dispensing them, which
 // takes the medicines out of stock and records them in the patient's file.
@@ -19,5 +20,7 @@ pharmacyRouter.post('/prescriptions/:id/dispense', async (req, res) => {
   const { auth, db } = session(req);
   const { id } = z.object({ id: z.uuid() }).parse(req.params);
   const input = dispenseSchema.parse(req.body);
-  res.json(await dispensePrescription(db, auth.hospitalId, auth.userId, id, input));
+  const dispensed = await dispensePrescription(db, auth.hospitalId, auth.userId, id, input);
+  await chargePrescription(db, auth.hospitalId, id);
+  res.json(dispensed);
 });

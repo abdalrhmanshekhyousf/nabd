@@ -26,6 +26,7 @@ import {
   setErStatus,
   transferVisit,
 } from '../services/er.service.js';
+import { chargeErVisit } from '../services/charge.service.js';
 
 // The emergency room (phase 2): emergency nurses only.
 export const erRouter = Router();
@@ -44,6 +45,7 @@ erRouter.post('/visits', async (req, res) => {
   const departmentId = await requireErNurse(db, auth.userId);
   const input = quickRegistrationSchema.parse(req.body);
   const visit = await registerArrival(db, auth.hospitalId, auth.userId, input);
+  await chargeErVisit(db, auth.hospitalId, visit.id);
   // The waiting list (2.15) of the emergency department updates live.
   emitRefresh(rooms.department(departmentId), [['er-queue']]);
   res.status(201).json({ visit });

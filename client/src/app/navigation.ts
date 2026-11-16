@@ -1,4 +1,5 @@
 import {
+  Tags,
   Activity,
   Ambulance,
   BedDouble,
@@ -202,6 +203,7 @@ export const NAV_BY_ROLE: Record<Role, NavGroup[]> = {
         { path: 'invoices', labelKey: 'nav.invoices', icon: Receipt, phase: 4 },
         { path: 'payments', labelKey: 'nav.payments', icon: Wallet, phase: 4 },
         { path: 'monthly-report', labelKey: 'nav.monthlyReport', icon: FileText, phase: 4 },
+        { path: 'prices', labelKey: 'nav.prices', icon: Tags, phase: 4 },
       ],
     },
     { labelKey: 'navGroups.requests', items: [leave] },

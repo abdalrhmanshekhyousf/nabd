@@ -16,6 +16,7 @@ import {
   registerErArrival,
   searchPatients,
 } from '../services/reception.service.js';
+import { chargeErVisit } from '../services/charge.service.js';
 
 // Reception (task 4.1): finding a patient, registering a new one with their
 // file (and account if they want one), and opening an account later.
@@ -48,6 +49,7 @@ receptionRouter.post('/er-arrivals', async (req, res) => {
   const { auth, db } = session(req);
   const input = quickRegistrationSchema.parse(req.body);
   const { visit, departmentId } = await registerErArrival(db, auth.hospitalId, input);
+  await chargeErVisit(db, auth.hospitalId, visit.id);
   emitRefresh(rooms.department(departmentId), [['er-queue']]);
   emitRefresh(rooms.role(auth.hospitalId, 'RECEPTIONIST'), [['reception']]);
   res.status(201).json({ visit });
