@@ -640,6 +640,15 @@ export const en: Translation = {
       CANCELLED: 'Cancelled',
     },
   },
+  myInvoices: {
+    title: 'My invoices',
+    description:
+      'Your invoices from the hospital, what each covers and what is still due. Print them or save them as PDF.',
+    due: 'Still due',
+    notInvoiced: 'Not invoiced yet',
+    list: 'Invoices',
+    none: 'No invoices yet.',
+  },
   payments: {
     title: 'Payments',
     description:

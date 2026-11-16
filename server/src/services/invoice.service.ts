@@ -228,3 +228,19 @@ export async function recordPayment(
   });
   return getInvoice(db, invoiceId);
 }
+
+/** The patient's own invoices (4.15), and what is not invoiced yet. */
+export async function myInvoices(db: ScopedPrisma, patientId: string) {
+  const [invoices, open] = await Promise.all([
+    db.invoice.findMany({
+      where: { patientId, status: { not: 'CANCELLED' } },
+      include: invoiceInclude,
+      orderBy: { issuedAt: 'desc' },
+    }),
+    db.invoiceItem.findMany({
+      where: { patientId, invoiceId: null },
+      orderBy: { createdAt: 'asc' },
+    }),
+  ]);
+  return { invoices: invoices.map(toInvoiceView), open: open.map(toChargeView) };
+}

@@ -171,3 +171,42 @@ describe('payments (task 4.14)', () => {
     expect(await prisma.payment.count({ where: { invoiceId: invoice.id } })).toBe(1);
   });
 });
+
+describe('my invoices (task 4.15)', () => {
+  it('the patient sees their invoices and what is not invoiced yet; only their own', async () => {
+    const b = await books();
+    const user = await createUser(b.id, {
+      email: 'p-' + crypto.randomUUID() + '@nabd.test',
+      password: 'x',
+      role: 'PATIENT',
+    });
+    await prisma.patient.update({ where: { id: b.patient.id }, data: { userId: user.id } });
+    const mine = {
+      Authorization:
+        'Bearer ' + signAccessToken({ sub: user.id, hospitalId: b.id, role: 'PATIENT' }),
+    };
+    await b.charge('VISIT', 'v1');
+    await request(app).post('/api/invoices').set(b.auth).send({ patientId: b.patient.id });
+    await b.charge('LAB_TEST', 't1');
+    const res = (await request(app).get('/api/patients/me/invoices').set(mine)).body;
+    expect(res.invoices.map((i: { number: number; total: number }) => [i.number, i.total])).toEqual(
+      [[1, 50000]],
+    );
+    expect(res.open.map((c: { kind: string }) => c.kind)).toEqual(['LAB_TEST']);
+    const other = await prisma.patient.create({ data: { hospitalId: b.id, fullName: 'x' } });
+    const otherUser = await createUser(b.id, {
+      email: 'o-' + crypto.randomUUID() + '@nabd.test',
+      password: 'x',
+      role: 'PATIENT',
+    });
+    await prisma.patient.update({ where: { id: other.id }, data: { userId: otherUser.id } });
+    const theirs = {
+      Authorization:
+        'Bearer ' + signAccessToken({ sub: otherUser.id, hospitalId: b.id, role: 'PATIENT' }),
+    };
+    expect((await request(app).get('/api/patients/me/invoices').set(theirs)).body).toEqual({
+      invoices: [],
+      open: [],
+    });
+  });
+});

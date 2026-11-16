@@ -95,6 +95,8 @@ export const queryKeys = {
   /** Patients' accounts and invoices (task 4.13); the server refreshes ['accounts']. */
   accounts: (search: string) => ['accounts', 'list', search] as const,
   account: (patientId: string) => ['accounts', 'one', patientId] as const,
+  /** The patient's own invoices (task 4.15). */
+  myInvoices: ['accounts', 'mine'] as const,
   /** Owed or paid invoices (task 4.14), under accounts. */
   invoices: (status: string, search: string) => ['accounts', 'invoices', status, search] as const,
   publicHospitals: (search: string) => ['public-hospitals', search] as const,

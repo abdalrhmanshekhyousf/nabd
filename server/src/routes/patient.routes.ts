@@ -2,6 +2,8 @@ import { reminderSchema, reminderUpdateSchema } from '@nabd/shared';
 import { Router } from 'express';
 import { z } from 'zod';
 import { authenticate, requireRole, session } from '../middleware/auth.js';
+import { patientOfUser } from '../services/appointment.service.js';
+import { myInvoices } from '../services/invoice.service.js';
 import { myOwnFile } from '../services/medicalRecord.service.js';
 import {
   createReminder,
@@ -22,6 +24,12 @@ patientRouter.get('/me/file', async (req, res) => {
 
 // My medicines and their reminders (task 3.26).
 const idParam = z.object({ id: z.uuid() });
+
+/** My invoices (task 4.15): to print, and what is still due. */
+patientRouter.get('/me/invoices', async (req, res) => {
+  const { auth, db } = session(req);
+  res.json(await myInvoices(db, await patientOfUser(db, auth.userId)));
+});
 
 patientRouter.get('/me/medications', async (req, res) => {
   const { auth, db } = session(req);

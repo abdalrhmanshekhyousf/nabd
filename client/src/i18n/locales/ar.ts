@@ -635,6 +635,14 @@ export const ar = {
       CANCELLED: 'ملغاة',
     },
   },
+  myInvoices: {
+    title: 'فواتيري',
+    description: 'فواتيرك من المستشفى، شو بتغطي كل وحدة وشو باقي عليها. فيك تطبعها أو تحفظها PDF.',
+    due: 'الباقي عليك',
+    notInvoiced: 'خدمات لسا ما انفوترت',
+    list: 'الفواتير',
+    none: 'ما في فواتير لسا.',
+  },
   payments: {
     title: 'الدفعات',
     description:
