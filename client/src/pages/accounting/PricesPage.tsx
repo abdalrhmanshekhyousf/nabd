@@ -18,12 +18,18 @@ import { calm, enter } from '@/lib/motion';
 import { notify } from '@/lib/notify';
 import { playSound } from '@/lib/sound';
 
-type List = { prices: ServicePriceView[]; defaults: Record<ServiceKind, number> };
+type List = {
+  prices: ServicePriceView[];
+  defaults: Record<ServiceKind, number>;
+  /** Every medicine in stock, each priced on its own. */
+  drugs: { id: string; name: string; unit: string }[];
+};
+
+/** Lab tests and medicines are priced one by one, in their own lists. */
+const ITEMIZED: ServiceKind[] = ['LAB_TEST', 'DRUG'];
 
 /** The services that can have their own price, per kind. */
 function codesOf(kind: ServiceKind, t: (key: string) => string) {
-  if (kind === 'LAB_TEST')
-    return LAB_TEST_CODES.map((code) => ({ value: code, label: t(`labTests.codes.${code}`) }));
   if (kind === 'IMAGING')
     return RADIOLOGY_MODALITIES.map((code) => ({ value: code, label: t(`modalities.${code}`) }));
   if (kind === 'VISIT') return [{ value: 'EMERGENCY', label: t('prices.emergencyVisit') }];
@@ -35,7 +41,7 @@ function KindCard({ kind, list }: { kind: ServiceKind; list: List }) {
   const queryClient = useQueryClient();
   const own = list.prices.filter((row) => row.kind === kind);
   const base = own.find((row) => !row.code);
-  const exact = own.filter((row) => row.code);
+  const exact = ITEMIZED.includes(kind) ? [] : own.filter((row) => row.code);
   const codes = codesOf(kind, t as (key: string) => string).filter(
     (option) => !exact.some((row) => row.code === option.value),
   );
@@ -181,6 +187,128 @@ function KindCard({ kind, list }: { kind: ServiceKind; list: List }) {
 // The hospital's price list (task 4.12): what each kind of service costs, and
 // the exact price of a lab test, an imaging modality or an ER visit. Every
 // service a patient gets is charged to their account at these prices.
+/** One line of an itemized list: its price, saved when changed. */
+function ItemRow({
+  kind,
+  code,
+  name,
+  unit,
+  price,
+  own,
+}: {
+  kind: ServiceKind;
+  code: string;
+  name: string;
+  unit?: string;
+  price: number;
+  own: boolean;
+}) {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const [value, setValue] = useState(String(price));
+  const changed = value !== String(price) && value !== '' && Number(value) >= 0;
+  const save = useMutation({
+    mutationFn: async () =>
+      api.put('/prices', { kind, code, name, price: value }, { skipErrorToast: true }),
+    onSuccess: () => {
+      playSound('success');
+      notify.success(t('prices.saved'));
+      void queryClient.invalidateQueries({ queryKey: queryKeys.prices });
+    },
+    onError: (failure) => {
+      playSound('error');
+      notify.error(describeApiError(failure).message);
+    },
+  });
+  return (
+    <li className="flex items-center gap-2 px-3 py-2">
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm text-foreground">{name}</span>
+        <span className="block text-xs text-muted">
+          {unit ? `${t('prices.per', { unit })} · ` : ''}
+          {own ? t('prices.own') : t('prices.usual')}
+        </span>
+      </span>
+      <form
+        className="flex shrink-0 items-center gap-1.5"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (changed) save.mutate();
+        }}
+      >
+        <input
+          type="number"
+          min={0}
+          inputMode="numeric"
+          aria-label={t('prices.priceOf', { name })}
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+          className="h-9 w-28 rounded-lg border border-border bg-surface px-2 text-sm tabular-nums focus-visible:border-accent focus-visible:outline-none"
+        />
+        <Button
+          type="submit"
+          size="icon"
+          className="size-9"
+          disabled={!changed}
+          loading={save.isPending}
+          aria-label={t('prices.saveOne', { name })}
+        >
+          <Save className="size-4" />
+        </Button>
+      </form>
+    </li>
+  );
+}
+
+/** Every lab test or every medicine with its price, searchable. */
+function ItemPrices({ kind, list }: { kind: 'LAB_TEST' | 'DRUG'; list: List }) {
+  const { t } = useTranslation();
+  const [search, setSearch] = useState('');
+  const own = new Map(
+    list.prices.filter((row) => row.kind === kind && row.code).map((row) => [row.code, row.price]),
+  );
+  const base =
+    list.prices.find((row) => row.kind === kind && !row.code)?.price ?? list.defaults[kind];
+  const items =
+    kind === 'LAB_TEST'
+      ? LAB_TEST_CODES.map((code) => ({ code, name: t(`labTests.codes.${code}`), unit: undefined }))
+      : (list.drugs ?? []).map((drug) => ({ code: drug.id, name: drug.name, unit: drug.unit }));
+  const needle = search.trim().toLowerCase();
+  const shown = needle ? items.filter((item) => item.name.toLowerCase().includes(needle)) : items;
+  const title = t(`prices.every.${kind}`);
+  return (
+    <Card aria-label={title} className="space-y-3 p-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="space-y-0.5">
+          <h3 className="font-semibold text-foreground">{title}</h3>
+          <p className="text-xs text-muted">{t('prices.everyHint', { count: items.length })}</p>
+        </div>
+        <div className="w-full sm:w-64">
+          <Input
+            label={t('prices.find')}
+            placeholder={t('prices.find')}
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+        </div>
+      </div>
+      <ul className="max-h-96 divide-y divide-border overflow-y-auto rounded-xl border border-border">
+        {shown.map((item) => (
+          <ItemRow
+            key={`${item.code}-${own.get(item.code) ?? base}`}
+            kind={kind}
+            code={item.code}
+            name={item.name}
+            unit={item.unit}
+            price={own.get(item.code) ?? base}
+            own={own.has(item.code)}
+          />
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
 export function PricesPage() {
   const { t } = useTranslation();
   const { data } = useQuery({
@@ -193,16 +321,22 @@ export function PricesPage() {
         <h2 className="text-xl font-bold text-foreground">{t('prices.title')}</h2>
         <p className="text-sm text-muted">{t('prices.description')}</p>
       </motion.div>
-      {!data ? (
+      {!data?.prices ? (
         <div className="flex justify-center py-16">
           <Spinner />
         </div>
       ) : (
-        <motion.div {...enter(1)} className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {SERVICE_KINDS.map((kind) => (
-            <KindCard key={kind} kind={kind} list={data} />
-          ))}
-        </motion.div>
+        <>
+          <motion.div {...enter(1)} className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {SERVICE_KINDS.map((kind) => (
+              <KindCard key={kind} kind={kind} list={data} />
+            ))}
+          </motion.div>
+          <motion.div {...enter(2)} className="grid gap-4 lg:grid-cols-2">
+            <ItemPrices kind="LAB_TEST" list={data} />
+            <ItemPrices kind="DRUG" list={data} />
+          </motion.div>
+        </>
       )}
     </div>
   );

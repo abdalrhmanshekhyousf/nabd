@@ -8,6 +8,7 @@
 import {
   addLocalDays,
   DEFAULT_PRICES,
+  LAB_TEST_CODES,
   headRoleFor,
   zonedDate,
   zonedInstant,
@@ -144,6 +145,39 @@ export async function seedPhaseFour(hospitalId: string) {
     await prisma.servicePrice.upsert({
       where: { hospitalId_kind_code: { hospitalId, kind: row.kind, code: row.code } },
       create: { hospitalId, ...row },
+      update: {},
+    });
+  }
+  // Every lab test and every medicine in stock has its own price.
+  const stable = (text: string) =>
+    [...text].reduce((sum, ch) => (sum * 31 + ch.charCodeAt(0)) % 997, 7);
+  for (const code of LAB_TEST_CODES) {
+    await prisma.servicePrice.upsert({
+      where: { hospitalId_kind_code: { hospitalId, kind: 'LAB_TEST', code } },
+      create: {
+        hospitalId,
+        kind: 'LAB_TEST',
+        code,
+        name: code,
+        price: 15_000 + (stable(code) % 16) * 5_000,
+      },
+      update: {},
+    });
+  }
+  const medicines = await prisma.inventoryItem.findMany({
+    where: { hospitalId, category: 'DRUG' },
+    select: { id: true, name: true },
+  });
+  for (const medicine of medicines) {
+    await prisma.servicePrice.upsert({
+      where: { hospitalId_kind_code: { hospitalId, kind: 'DRUG', code: medicine.id } },
+      create: {
+        hospitalId,
+        kind: 'DRUG',
+        code: medicine.id,
+        name: medicine.name,
+        price: 3_000 + (stable(medicine.name) % 15) * 2_500,
+      },
       update: {},
     });
   }

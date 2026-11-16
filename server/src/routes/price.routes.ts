@@ -13,8 +13,15 @@ priceRouter.use(authenticate, requireRole('ACCOUNTANT', 'ADMIN'));
 priceRouter.get('/', async (req, res) => {
   const { db } = session(req);
   const rows = await db.servicePrice.findMany({ orderBy: [{ kind: 'asc' }, { code: 'asc' }] });
+  // Every medicine in stock gets its own price (by its stock item).
+  const drugs = await db.inventoryItem.findMany({
+    where: { category: 'DRUG' },
+    select: { id: true, name: true, unit: true },
+    orderBy: { name: 'asc' },
+  });
   res.json({
     prices: rows.map((row) => ({ ...row, price: Number(row.price) })),
+    drugs,
     // What applies to a kind with no price of its own.
     defaults: Object.fromEntries(SERVICE_KINDS.map((kind) => [kind, DEFAULT_PRICES[kind]])),
   });
