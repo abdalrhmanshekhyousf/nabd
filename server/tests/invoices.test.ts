@@ -210,3 +210,51 @@ describe('my invoices (task 4.15)', () => {
     });
   });
 });
+
+describe('the monthly revenue report (task 4.16)', () => {
+  it('works out money received, invoices and services, and sends it to the admin', async () => {
+    const b = await books();
+    const admin = await createUser(b.id, {
+      email: `a-${crypto.randomUUID()}@nabd.test`,
+      password: 'x',
+      role: 'ADMIN',
+    });
+    await b.charge('VISIT', 'v1');
+    await b.charge('LAB_TEST', 't1');
+    const invoice = (
+      await request(app).post('/api/invoices').set(b.auth).send({ patientId: b.patient.id })
+    ).body.invoice;
+    await request(app)
+      .post(`/api/invoices/${invoice.id}/payments`)
+      .set(b.auth)
+      .send({ amount: 30000, method: 'CASH' });
+    const from = new Date(Date.now() - 86_400_000).toISOString();
+    const to = new Date(Date.now() + 86_400_000).toISOString();
+    const preview = (await request(app).get('/api/reports/preview').query({ from, to }).set(b.auth))
+      .body.data;
+    expect(preview).toMatchObject({
+      received: 30000,
+      byMethod: [{ method: 'CASH', amount: 30000 }],
+      invoices: { issued: 1, issuedTotal: 75000, paid: 0 },
+      outstanding: 45000,
+    });
+    expect(preview.byService.map((s: { kind: string }) => s.kind)).toEqual(['VISIT', 'LAB_TEST']);
+    const sent = await request(app)
+      .post('/api/reports')
+      .set(b.auth)
+      .send({ kind: 'REVENUE', from, to, notes: null });
+    expect(sent.status).toBe(201);
+    expect(
+      (await prisma.notification.findMany({ where: { userId: admin.id } })).map((n) => n.type),
+    ).toEqual(['REPORT_SUBMITTED']);
+    // The accountant cannot send the pharmacy's report.
+    expect(
+      (
+        await request(app)
+          .post('/api/reports')
+          .set(b.auth)
+          .send({ kind: 'PHARMACY', from, to, notes: null })
+      ).status,
+    ).toBe(403);
+  });
+});

@@ -198,6 +198,7 @@ enum LabPriority {
 // report joins in 4.19.
 enum ReportKind {
   PHARMACY
+  REVENUE
 }
 
 // Matches NOTIFICATION_TYPES in @nabd/shared (task 2.2).

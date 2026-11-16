@@ -1,12 +1,20 @@
-import type { PharmacyReportData } from '@nabd/shared';
+import type { PharmacyReportData, RevenueReportData } from '@nabd/shared';
 import { motion } from 'framer-motion';
-import { AlertTriangle, PackageMinus, PackagePlus, PackageX } from 'lucide-react';
+import {
+  AlertTriangle,
+  Banknote,
+  PackageMinus,
+  PackagePlus,
+  PackageX,
+  Stethoscope,
+} from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
+import { formatMoney } from '@/lib/money';
 import { calm } from '@/lib/motion';
 
-function Figure({ label, value, tone }: { label: string; value: number; tone: string }) {
+function Figure({ label, value, tone }: { label: string; value: number | string; tone: string }) {
   return (
     <div className="rounded-xl border border-border bg-surface p-3">
       <p className={cn('text-2xl font-bold tabular-nums', tone)}>{value}</p>
@@ -58,9 +66,104 @@ function Row({ name, value, tone }: { name: string; value: string; tone?: string
   );
 }
 
+// What the accountant's monthly report says (task 4.16): money received (by
+// method), invoices issued, services given (by kind), and what is still owed.
+function RevenueBody({
+  data,
+  notes,
+  still,
+}: {
+  data: RevenueReportData;
+  notes?: string | null;
+  still: boolean;
+}) {
+  const { t, i18n } = useTranslation();
+  const money = (amount: number) => formatMoney(amount, i18n.language);
+  return (
+    <motion.div
+      initial={still ? false : { opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={calm}
+      className="space-y-5"
+    >
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <Figure label={t('revenue.received')} value={money(data.received)} tone="text-success" />
+        <Figure
+          label={t('revenue.issued', { count: data.invoices.issued })}
+          value={money(data.invoices.issuedTotal)}
+          tone="text-info"
+        />
+        <Figure
+          label={t('revenue.paidInvoices')}
+          value={data.invoices.paid}
+          tone="text-foreground"
+        />
+        <Figure
+          label={t('revenue.outstanding')}
+          value={money(data.outstanding)}
+          tone={data.outstanding ? 'text-warning' : 'text-foreground'}
+        />
+      </div>
+      {notes && (
+        <div className="rounded-lg bg-accent/8 px-3 py-2 text-sm">
+          <p className="mb-0.5 text-xs font-semibold text-accent">{t('reports.notesTitle')}</p>
+          <p className="whitespace-pre-line text-foreground">{notes}</p>
+        </div>
+      )}
+      <div className="grid gap-5 lg:grid-cols-2">
+        <Section
+          title={t('revenue.byService')}
+          icon={<Stethoscope className="size-4 text-accent" aria-hidden="true" />}
+          empty={data.byService.length === 0}
+        >
+          {data.byService.map((row) => (
+            <Row
+              key={row.kind}
+              name={`${t(`prices.kinds.${row.kind}`)} (${row.count})`}
+              value={money(row.amount)}
+            />
+          ))}
+        </Section>
+        <Section
+          title={t('revenue.byMethod')}
+          icon={<Banknote className="size-4 text-success" aria-hidden="true" />}
+          empty={data.byMethod.length === 0}
+        >
+          {data.byMethod.map((row) => (
+            <Row
+              key={row.method}
+              name={t(`payments.methods.${row.method}`)}
+              value={money(row.amount)}
+            />
+          ))}
+        </Section>
+      </div>
+    </motion.div>
+  );
+}
+
+/** A report of either kind, by the shape of its figures. */
+export function ReportBody({
+  data,
+  notes,
+  still = false,
+  unavailableEditor,
+}: {
+  data: PharmacyReportData | RevenueReportData;
+  notes?: string | null;
+  still?: boolean;
+  unavailableEditor?: ReactNode;
+}) {
+  return 'outstanding' in data ? (
+    <RevenueBody data={data} notes={notes} still={still} />
+  ) : (
+    <PharmacyBody data={data} notes={notes} still={still} unavailableEditor={unavailableEditor} />
+  );
+}
+
 // What a pharmacy report says (task 3.11): the prescriptions, what went out,
 // what was asked for but missing, what came in, and what is running low.
-export function ReportBody({
+function PharmacyBody({
   data,
   notes,
   still = false,

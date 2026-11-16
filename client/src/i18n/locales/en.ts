@@ -1051,8 +1051,24 @@ export const en: Translation = {
     noneReceived: 'No questions from colleagues.',
     noneSent: 'You have not sent any consultations.',
   },
+  revenue: {
+    title: 'Monthly report',
+    description:
+      'The period’s revenue: money received, invoices issued, services given, and what is still owed. Send it to the admin with your notes.',
+    received: 'Received',
+    issued_zero: 'No invoices issued',
+    issued_one: '{{count}} invoice issued',
+    issued_two: '{{count}} invoices issued',
+    issued_few: '{{count}} invoices issued',
+    issued_many: '{{count}} invoices issued',
+    issued_other: '{{count}} invoices issued',
+    paidInvoices: 'Invoices paid in full',
+    outstanding: 'Still owed (now)',
+    byService: 'Services given',
+    byMethod: 'By payment method',
+  },
   reports: {
-    kinds: { PHARMACY: 'Pharmacy' },
+    kinds: { PHARMACY: 'Pharmacy', REVENUE: 'Revenue' },
     title: 'Pharmacy reports',
     description:
       'Pick a period, check the figures and send the report to the admin with your notes.',

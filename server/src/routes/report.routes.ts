@@ -14,7 +14,7 @@ import {
 // sends the pharmacy's report for a period; the admin reads them all.
 export const reportRouter = Router();
 
-reportRouter.use(authenticate, requireRole('PHARMACIST', 'ADMIN'));
+reportRouter.use(authenticate, requireRole('PHARMACIST', 'ACCOUNTANT', 'ADMIN'));
 
 reportRouter.get('/preview', async (req, res) => {
   const { auth, db } = session(req);

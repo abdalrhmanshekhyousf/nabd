@@ -1,6 +1,7 @@
 import type {
   PharmacyReportData,
   ReportKind,
+  RevenueReportData,
   ReportView,
   Role,
   SubmitReportData,
@@ -12,7 +13,11 @@ import { emitRefresh, rooms } from '../realtime/realtime.js';
 import { sendNotification } from './notification.service.js';
 
 /** The report each role writes (task 3.11); the admin reads them all. */
-const KIND_OF_ROLE: Partial<Record<Role, ReportKind>> = { PHARMACIST: 'PHARMACY' };
+const KIND_OF_ROLE: Partial<Record<Role, ReportKind>> = {
+  PHARMACIST: 'PHARMACY',
+  ACCOUNTANT: 'REVENUE',
+};
+const ROLE_OF_KIND: Record<ReportKind, Role> = { PHARMACY: 'PHARMACIST', REVENUE: 'ACCOUNTANT' };
 
 export function reportKindFor(role: Role, asked?: ReportKind): ReportKind {
   const own = KIND_OF_ROLE[role];
@@ -101,7 +106,7 @@ function toView(report: Report): ReportView {
     kind: report.kind,
     periodFrom: report.periodFrom.toISOString(),
     periodTo: report.periodTo.toISOString(),
-    data: report.data as PharmacyReportData,
+    data: report.data as PharmacyReportData | RevenueReportData,
     notes: report.notes,
     authorName: report.authorName,
     readAt: report.readAt?.toISOString() ?? null,
@@ -111,9 +116,55 @@ function toView(report: Report): ReportView {
 
 /** What the report would say, before sending it. */
 export function previewReport(db: ScopedPrisma, kind: ReportKind, from: Date, to: Date) {
-  // One kind for now; the accountant's monthly report joins in 4.19.
-  void kind;
-  return pharmacyFigures(db, from, to);
+  return kind === 'REVENUE' ? revenueFigures(db, from, to) : pharmacyFigures(db, from, to);
+}
+
+/** The accountant's monthly figures (task 4.16). Money as numbers. */
+export async function revenueFigures(
+  db: ScopedPrisma,
+  from: Date,
+  to: Date,
+): Promise<RevenueReportData> {
+  const inPeriod = { gte: from, lt: to };
+  const [methods, issued, paidInvoices, services, owed] = await Promise.all([
+    db.payment.groupBy({ by: ['method'], where: { paidAt: inPeriod }, _sum: { amount: true } }),
+    db.invoice.aggregate({
+      where: { issuedAt: inPeriod, status: { not: 'CANCELLED' } },
+      _count: { _all: true },
+      _sum: { total: true },
+    }),
+    db.invoice.count({ where: { issuedAt: inPeriod, status: 'PAID' } }),
+    db.invoiceItem.groupBy({
+      by: ['kind'],
+      where: { createdAt: inPeriod },
+      _sum: { total: true },
+      _count: { _all: true },
+    }),
+    db.invoice.findMany({
+      where: { status: { in: ['ISSUED', 'PARTIALLY_PAID'] } },
+      select: { total: true, paid: true },
+    }),
+  ]);
+  const byMethod = methods
+    .map((row) => ({ method: row.method, amount: Number(row._sum.amount ?? 0) }))
+    .sort((a, b) => b.amount - a.amount);
+  return {
+    received: byMethod.reduce((sum, row) => sum + row.amount, 0),
+    byMethod,
+    invoices: {
+      issued: issued._count._all,
+      issuedTotal: Number(issued._sum.total ?? 0),
+      paid: paidInvoices,
+    },
+    byService: services
+      .map((row) => ({
+        kind: row.kind,
+        amount: Number(row._sum.total ?? 0),
+        count: row._count._all,
+      }))
+      .sort((a, b) => b.amount - a.amount),
+    outstanding: owed.reduce((sum, row) => sum + Number(row.total) - Number(row.paid), 0),
+  };
 }
 
 /**
@@ -151,7 +202,7 @@ export async function submitReport(
     link: `/admin/reports?open=${report.id}`,
   });
   emitRefresh(rooms.role(hospitalId, 'ADMIN'), [['reports']]);
-  emitRefresh(rooms.role(hospitalId, 'PHARMACIST'), [['reports']]);
+  emitRefresh(rooms.role(hospitalId, ROLE_OF_KIND[kind]), [['reports']]);
   return toView(report);
 }
 
