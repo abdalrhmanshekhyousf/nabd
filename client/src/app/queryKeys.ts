@@ -106,5 +106,7 @@ export const queryKeys = {
   overview: ['overview'] as const,
   /** The admin's activity log (task 4.22). */
   audit: (filters: object) => ['audit', filters] as const,
+  /** A role's home figures (after 4.24). */
+  roleHome: ['home'] as const,
   publicHospitals: (search: string) => ['public-hospitals', search] as const,
 };

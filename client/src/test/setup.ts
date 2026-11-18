@@ -8,7 +8,8 @@ import { fakeSockets } from './fakeSocket';
 // findBy* waits up to 1s by default; the whole suite running at once (three
 // workspaces in parallel) can take longer to render a page. Passing queries
 // still return as soon as the element appears.
-configure({ asyncUtilTimeout: 3000 });
+// Pages load on first open (task 5.3), which can add a moment in tests.
+configure({ asyncUtilTimeout: 8000 });
 
 // jsdom has no matchMedia; this fake lets tests flip the device theme.
 vi.stubGlobal('matchMedia', setSystemDarkMode.matchMedia);

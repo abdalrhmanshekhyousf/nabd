@@ -125,3 +125,18 @@ export type AuditEntry = {
   ip: string | null;
   createdAt: string;
 };
+
+/** A figure on a role's home (after 4.24): what it counts, and where it leads. */
+export type HomeTile = {
+  key: string;
+  /** A count or an amount; null for a link-only tile or a date. */
+  value: number | null;
+  money?: boolean;
+  /** A time to show instead of a number (the next visit). */
+  at?: string | null;
+  detail?: string | null;
+  /** A second number under the first (how many invoices owe it). */
+  hint?: number;
+  to: string;
+  alert?: boolean;
+};
