@@ -101,8 +101,8 @@ describe('DepartmentRequestsPage (task 4.6)', () => {
     const form = await screen.findByRole('form', { name: 'طلب شراء' });
     await user.click(await within(form).findByRole('button', { name: /سيتامول/ }));
     // Short by 2 of a minimum of 10: ask for 18 to be well stocked.
-    expect(within(form).getByLabelText('الكمية')).toHaveValue(18);
-    await user.type(within(form).getByLabelText('سعر الوحدة'), '2500');
+    expect(within(form).getAllByLabelText('الكمية').at(-1)).toHaveValue(18);
+    await user.type(within(form).getAllByLabelText('سعر الوحدة').at(-1)!, '2500');
     expect(form).toHaveTextContent('ل.س');
     await user.click(within(form).getByRole('button', { name: 'إرسال للمدير' }));
 
