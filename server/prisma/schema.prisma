@@ -631,6 +631,7 @@ model PrescriptionItem {
   reminders MedicationReminder[]
 
   @@index([prescriptionId])
+  @@index([hospitalId])
 }
 
 // ─── Emergency room (task 2.10) ───────────────────────────────────────────────
@@ -704,6 +705,7 @@ model DoctorCall {
 
   @@index([doctorId, status])
   @@index([triageId])
+  @@index([hospitalId])
 }
 
 // ─── Operating rooms and cleaning (task 2.18) ─────────────────────────────────
@@ -762,6 +764,7 @@ model OperatingRoomStatusChange {
   changedBy     User?             @relation("RoomStatusChanger", fields: [changedById], references: [id], onDelete: SetNull)
 
   @@index([operatingRoomId, createdAt])
+  @@index([hospitalId])
 }
 
 // A cleaning or sterilization job for the cleaners of a department (2.23–2.25,
@@ -917,6 +920,7 @@ model StockMovement {
 
   @@index([itemId, createdAt])
   @@index([hospitalId, createdAt])
+  @@index([prescriptionItemId])
 }
 
 // ─── Reminders (tasks 3.26–3.27) ─────────────────────────────────────────────
@@ -937,6 +941,7 @@ model PushSubscription {
   user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([hospitalId])
 }
 
 // A patient's reminder to take a medicine (task 3.26): at these local times
@@ -1023,6 +1028,7 @@ model DoctorVacation {
   createdBy User?    @relation("VacationSetter", fields: [createdById], references: [id], onDelete: SetNull)
 
   @@index([doctorId, endDate])
+  @@index([hospitalId])
 }
 
 // A patient's visit to a doctor at a time. One booked visit per doctor and
@@ -1053,6 +1059,7 @@ model Appointment {
 
   @@index([hospitalId, doctorId, startsAt])
   @@index([patientId, startsAt])
+  @@index([hospitalId, startsAt])
 }
 
 // ─── Beds (tasks 3.15–3.18) ──────────────────────────────────────────────────
@@ -1107,6 +1114,7 @@ model BedStatusChange {
   changedBy  User?          @relation("BedStatusChanger", fields: [changedById], references: [id], onDelete: SetNull)
 
   @@index([bedId, createdAt])
+  @@index([hospitalId])
 }
 
 // ─── Consultations (tasks 3.12–3.14) ─────────────────────────────────────────
@@ -1191,6 +1199,7 @@ model Notification {
 
   @@index([userId, readAt])
   @@index([hospitalId])
+  @@index([userId, createdAt])
 }
 
 // Only a hash of the token is stored, so a leaked database cannot be used to log in.
@@ -1285,6 +1294,7 @@ model PurchaseItem {
   request  PurchaseRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
 
   @@index([requestId])
+  @@index([hospitalId])
 }
 
 enum RepairUrgency {
@@ -1451,6 +1461,8 @@ model InvoiceItem {
 
   @@unique([hospitalId, kind, sourceId])
   @@index([patientId, invoiceId])
+  @@index([hospitalId, invoiceId])
+  @@index([hospitalId, createdAt])
 }
 
 // An invoice the accountant issues for a patient's open charges (4.13);

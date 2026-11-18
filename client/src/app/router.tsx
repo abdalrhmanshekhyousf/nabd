@@ -6,60 +6,123 @@ import { ROLES, type Role } from '@/app/session';
 import { HomeRedirect, PublicOnly, RequireAuth, RequireRole } from '@/components/auth/guards';
 import { AppShell } from '@/layouts/AppShell';
 import { RootLayout } from '@/layouts/RootLayout';
-import { DepartmentsPage } from '@/pages/admin/DepartmentsPage';
-import { HospitalSettingsPage } from '@/pages/admin/HospitalSettingsPage';
-import { OperatingRoomsPage } from '@/pages/admin/OperatingRoomsPage';
-import { RoomsPage } from '@/pages/admin/RoomsPage';
-import { StaffPage } from '@/pages/admin/StaffPage';
-import { AssignmentsPage } from '@/pages/admin/AssignmentsPage';
-import { ComingSoonPage } from '@/pages/ComingSoonPage';
-import { DashboardPage } from '@/pages/DashboardPage';
-import { LoginPage } from '@/pages/LoginPage';
-import { NotFoundPage } from '@/pages/NotFoundPage';
-import { DoctorCallsPage } from '@/pages/doctor/DoctorCallsPage';
-import { DoctorPatientsPage } from '@/pages/doctor/DoctorPatientsPage';
-import { OrBookingsPage } from '@/pages/doctor/OrBookingsPage';
-import { OrLivePage } from '@/pages/OrLivePage';
-import { BedMapPage } from '@/pages/BedMapPage';
-import { InventoryPage } from '@/pages/InventoryPage';
-import { LabBoardPage } from '@/pages/lab/LabBoardPage';
-import { PharmacyPage } from '@/pages/pharmacy/PharmacyPage';
-import { PharmacyReportsPage } from '@/pages/pharmacy/PharmacyReportsPage';
-import { ReportsPage } from '@/pages/admin/ReportsPage';
-import { RadiologyBoardPage } from '@/pages/radiology/RadiologyBoardPage';
-import { NurseCleaningPage } from '@/pages/nurse/NurseCleaningPage';
-import { WardPage } from '@/pages/nurse/WardPage';
-import { OrBoardPage } from '@/pages/nurse/OrBoardPage';
-import { CleanerTasksPage } from '@/pages/cleaner/CleanerTasksPage';
-import { PatientFilePage } from '@/pages/doctor/PatientFilePage';
-import { AppointmentsPage } from '@/pages/patient/AppointmentsPage';
-import { MedicalFilePage } from '@/pages/patient/MedicalFilePage';
-import { RegisterPatientPage } from '@/pages/reception/RegisterPatientPage';
-import { DeskAppointmentsPage } from '@/pages/reception/DeskAppointmentsPage';
-import { ReceptionEmergencyPage } from '@/pages/reception/ReceptionEmergencyPage';
-import { DepartmentRequestsPage } from '@/pages/requests/DepartmentRequestsPage';
-import { ApprovalsPage } from '@/pages/admin/ApprovalsPage';
-import { AdminComplaintsPage } from '@/pages/admin/ComplaintsPage';
-import { MeetingsPage } from '@/pages/admin/MeetingsPage';
-import { DoctorMeetingsPage } from '@/pages/doctor/MeetingsPage';
-import { PricesPage } from '@/pages/accounting/PricesPage';
-import { InvoicesPage } from '@/pages/accounting/InvoicesPage';
-import { PaymentsPage } from '@/pages/accounting/PaymentsPage';
-import { MyInvoicesPage } from '@/pages/patient/InvoicesPage';
-import { MonthlyReportPage } from '@/pages/accounting/MonthlyReportPage';
-import { ProfitPage } from '@/pages/admin/ProfitPage';
-import { ActivityPage } from '@/pages/admin/ActivityPage';
-import { ComplaintsPage } from '@/pages/patient/ComplaintsPage';
-import { LeavePage } from '@/pages/requests/LeavePage';
-import { MedicationsPage } from '@/pages/patient/MedicationsPage';
-import { ConsultationsPage } from '@/pages/doctor/ConsultationsPage';
-import { SchedulePage } from '@/pages/doctor/SchedulePage';
-import { ConsultationFilePage } from '@/pages/doctor/ConsultationFilePage';
-import { ErQueuePage } from '@/pages/nurse/ErQueuePage';
-import { NewCasePage } from '@/pages/nurse/NewCasePage';
-import { TriagePage } from '@/pages/nurse/TriagePage';
-import { PatientRegisterPage } from '@/pages/PatientRegisterPage';
-import { RegisterPage } from '@/pages/RegisterPage';
+import { lazyPage } from './lazyPage';
+
+// Every page is loaded when first opened (task 5.3).
+const DepartmentsPage = lazyPage(() => import('@/pages/admin/DepartmentsPage'), 'DepartmentsPage');
+const HospitalSettingsPage = lazyPage(
+  () => import('@/pages/admin/HospitalSettingsPage'),
+  'HospitalSettingsPage',
+);
+const OperatingRoomsPage = lazyPage(
+  () => import('@/pages/admin/OperatingRoomsPage'),
+  'OperatingRoomsPage',
+);
+const RoomsPage = lazyPage(() => import('@/pages/admin/RoomsPage'), 'RoomsPage');
+const StaffPage = lazyPage(() => import('@/pages/admin/StaffPage'), 'StaffPage');
+const AssignmentsPage = lazyPage(() => import('@/pages/admin/AssignmentsPage'), 'AssignmentsPage');
+const ComingSoonPage = lazyPage(() => import('@/pages/ComingSoonPage'), 'ComingSoonPage');
+const DashboardPage = lazyPage(() => import('@/pages/DashboardPage'), 'DashboardPage');
+const LoginPage = lazyPage(() => import('@/pages/LoginPage'), 'LoginPage');
+const NotFoundPage = lazyPage(() => import('@/pages/NotFoundPage'), 'NotFoundPage');
+const DoctorCallsPage = lazyPage(() => import('@/pages/doctor/DoctorCallsPage'), 'DoctorCallsPage');
+const DoctorPatientsPage = lazyPage(
+  () => import('@/pages/doctor/DoctorPatientsPage'),
+  'DoctorPatientsPage',
+);
+const OrBookingsPage = lazyPage(() => import('@/pages/doctor/OrBookingsPage'), 'OrBookingsPage');
+const OrLivePage = lazyPage(() => import('@/pages/OrLivePage'), 'OrLivePage');
+const BedMapPage = lazyPage(() => import('@/pages/BedMapPage'), 'BedMapPage');
+const InventoryPage = lazyPage(() => import('@/pages/InventoryPage'), 'InventoryPage');
+const LabBoardPage = lazyPage(() => import('@/pages/lab/LabBoardPage'), 'LabBoardPage');
+const PharmacyPage = lazyPage(() => import('@/pages/pharmacy/PharmacyPage'), 'PharmacyPage');
+const PharmacyReportsPage = lazyPage(
+  () => import('@/pages/pharmacy/PharmacyReportsPage'),
+  'PharmacyReportsPage',
+);
+const ReportsPage = lazyPage(() => import('@/pages/admin/ReportsPage'), 'ReportsPage');
+const RadiologyBoardPage = lazyPage(
+  () => import('@/pages/radiology/RadiologyBoardPage'),
+  'RadiologyBoardPage',
+);
+const NurseCleaningPage = lazyPage(
+  () => import('@/pages/nurse/NurseCleaningPage'),
+  'NurseCleaningPage',
+);
+const WardPage = lazyPage(() => import('@/pages/nurse/WardPage'), 'WardPage');
+const OrBoardPage = lazyPage(() => import('@/pages/nurse/OrBoardPage'), 'OrBoardPage');
+const CleanerTasksPage = lazyPage(
+  () => import('@/pages/cleaner/CleanerTasksPage'),
+  'CleanerTasksPage',
+);
+const PatientFilePage = lazyPage(() => import('@/pages/doctor/PatientFilePage'), 'PatientFilePage');
+const AppointmentsPage = lazyPage(
+  () => import('@/pages/patient/AppointmentsPage'),
+  'AppointmentsPage',
+);
+const MedicalFilePage = lazyPage(
+  () => import('@/pages/patient/MedicalFilePage'),
+  'MedicalFilePage',
+);
+const RegisterPatientPage = lazyPage(
+  () => import('@/pages/reception/RegisterPatientPage'),
+  'RegisterPatientPage',
+);
+const DeskAppointmentsPage = lazyPage(
+  () => import('@/pages/reception/DeskAppointmentsPage'),
+  'DeskAppointmentsPage',
+);
+const ReceptionEmergencyPage = lazyPage(
+  () => import('@/pages/reception/ReceptionEmergencyPage'),
+  'ReceptionEmergencyPage',
+);
+const DepartmentRequestsPage = lazyPage(
+  () => import('@/pages/requests/DepartmentRequestsPage'),
+  'DepartmentRequestsPage',
+);
+const ApprovalsPage = lazyPage(() => import('@/pages/admin/ApprovalsPage'), 'ApprovalsPage');
+const AdminComplaintsPage = lazyPage(
+  () => import('@/pages/admin/ComplaintsPage'),
+  'AdminComplaintsPage',
+);
+const MeetingsPage = lazyPage(() => import('@/pages/admin/MeetingsPage'), 'MeetingsPage');
+const DoctorMeetingsPage = lazyPage(
+  () => import('@/pages/doctor/MeetingsPage'),
+  'DoctorMeetingsPage',
+);
+const PricesPage = lazyPage(() => import('@/pages/accounting/PricesPage'), 'PricesPage');
+const InvoicesPage = lazyPage(() => import('@/pages/accounting/InvoicesPage'), 'InvoicesPage');
+const PaymentsPage = lazyPage(() => import('@/pages/accounting/PaymentsPage'), 'PaymentsPage');
+const MyInvoicesPage = lazyPage(() => import('@/pages/patient/InvoicesPage'), 'MyInvoicesPage');
+const MonthlyReportPage = lazyPage(
+  () => import('@/pages/accounting/MonthlyReportPage'),
+  'MonthlyReportPage',
+);
+const ProfitPage = lazyPage(() => import('@/pages/admin/ProfitPage'), 'ProfitPage');
+const ActivityPage = lazyPage(() => import('@/pages/admin/ActivityPage'), 'ActivityPage');
+const ComplaintsPage = lazyPage(() => import('@/pages/patient/ComplaintsPage'), 'ComplaintsPage');
+const LeavePage = lazyPage(() => import('@/pages/requests/LeavePage'), 'LeavePage');
+const MedicationsPage = lazyPage(
+  () => import('@/pages/patient/MedicationsPage'),
+  'MedicationsPage',
+);
+const ConsultationsPage = lazyPage(
+  () => import('@/pages/doctor/ConsultationsPage'),
+  'ConsultationsPage',
+);
+const SchedulePage = lazyPage(() => import('@/pages/doctor/SchedulePage'), 'SchedulePage');
+const ConsultationFilePage = lazyPage(
+  () => import('@/pages/doctor/ConsultationFilePage'),
+  'ConsultationFilePage',
+);
+const ErQueuePage = lazyPage(() => import('@/pages/nurse/ErQueuePage'), 'ErQueuePage');
+const NewCasePage = lazyPage(() => import('@/pages/nurse/NewCasePage'), 'NewCasePage');
+const TriagePage = lazyPage(() => import('@/pages/nurse/TriagePage'), 'TriagePage');
+const PatientRegisterPage = lazyPage(
+  () => import('@/pages/PatientRegisterPage'),
+  'PatientRegisterPage',
+);
+const RegisterPage = lazyPage(() => import('@/pages/RegisterPage'), 'RegisterPage');
 
 // Development-only pages; the dynamic import keeps them out of production bundles.
 const devRoutes: RouteObject[] = import.meta.env.DEV

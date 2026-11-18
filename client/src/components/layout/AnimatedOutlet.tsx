@@ -1,5 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
+import { Suspense } from 'react';
 import { useLocation, useMatches, useOutlet } from 'react-router';
+import { Spinner } from '@/components/ui';
 import { EASE_CALM } from '@/lib/motion';
 
 type AnimatedOutletProps = {
@@ -30,7 +32,16 @@ export function AnimatedOutlet({ scope, className }: AnimatedOutletProps) {
         animate={{ opacity: 1, y: 0, transition: { duration: 0.35, ease: EASE_CALM } }}
         exit={{ opacity: 0, y: -6, transition: { duration: 0.15, ease: 'easeIn' } }}
       >
-        {outlet}
+        {/* A page not loaded yet (task 5.3) shows a calm spinner meanwhile. */}
+        <Suspense
+          fallback={
+            <div className="flex justify-center py-16">
+              <Spinner />
+            </div>
+          }
+        >
+          {outlet}
+        </Suspense>
       </motion.div>
     </AnimatePresence>
   );
