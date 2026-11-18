@@ -1,4 +1,4 @@
-import { DEFAULT_PRICES, zonedInstant } from '@nabd/shared';
+import { DEFAULT_PRICES, zonedDate, zonedInstant } from '@nabd/shared';
 import request from 'supertest';
 import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app.js';
@@ -195,7 +195,8 @@ describe('the admin home (task 4.20)', () => {
       password: 'x',
       role: 'PATIENT',
     });
-    const today = new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00Z');
+    // The hospital's own day, as the overview counts it (not the UTC one).
+    const today = new Date(`${zonedDate(new Date())}T00:00:00Z`);
     await prisma.leaveRequest.createMany({
       data: [
         {
