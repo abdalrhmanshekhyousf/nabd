@@ -37,7 +37,7 @@ function Tile({ tile }: { tile: HomeTile }) {
         )}
       >
         <span className="flex items-center justify-between gap-2 text-sm text-muted">
-          {t(`home.tiles.${tile.key as "calls"}`)}
+          {t(`home.tiles.${tile.key as 'calls'}`)}
           <ArrowLeft
             className="size-4 shrink-0 text-muted/60 transition-transform group-hover:-translate-x-0.5 ltr:rotate-180"
             aria-hidden="true"
