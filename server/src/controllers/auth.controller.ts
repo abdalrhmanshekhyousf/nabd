@@ -9,7 +9,9 @@ export const REFRESH_COOKIE = 'nabd_refresh';
 const cookieOptions: CookieOptions = {
   httpOnly: true,
   secure: env.isProduction,
-  sameSite: 'strict',
+  // Online the app and the API are on different sites (task 5.4): the cookie
+  // must cross between them, so only over HTTPS and to the allowed origin.
+  sameSite: env.isProduction ? 'none' : 'strict',
   path: '/api/auth',
 };
 

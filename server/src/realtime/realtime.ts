@@ -71,7 +71,7 @@ let io: Server | null = null;
 /** Starts Socket.io on the API's HTTP server, on the same port. */
 export function attachRealtime(httpServer: HttpServer) {
   io = new Server(httpServer, {
-    cors: { origin: env.clientUrl, credentials: true },
+    cors: { origin: env.clientOrigins, credentials: true },
   });
 
   // Same access token as the API: no token, a bad one, or a disabled account

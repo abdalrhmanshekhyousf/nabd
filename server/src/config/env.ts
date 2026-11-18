@@ -32,6 +32,11 @@ export const env = {
   isTest: nodeEnv === 'test',
   port,
   clientUrl: process.env.CLIENT_URL ?? 'http://localhost:5173',
+  /** Every origin allowed to call the API: CLIENT_URL, or several separated by commas. */
+  clientOrigins: (process.env.CLIENT_URL ?? 'http://localhost:5173')
+    .split(',')
+    .map((origin) => origin.trim().replace(/\/$/, ''))
+    .filter(Boolean),
   databaseUrl: process.env.DATABASE_URL ?? '',
   jwtAccessSecret,
   /** Short-lived on purpose; the client refreshes it silently (task 1.17). */

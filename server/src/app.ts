@@ -46,7 +46,9 @@ export function createApp() {
   const app = express();
 
   app.use(helmet());
-  app.use(cors({ origin: env.clientUrl, credentials: true }));
+  // Behind the host's proxy online (task 5.4): the real address for limits and logs.
+  if (env.isProduction) app.set('trust proxy', 1);
+  app.use(cors({ origin: env.clientOrigins, credentials: true }));
   app.use(express.json({ limit: '1mb' }));
   app.use(cookieParser());
   if (!env.isTest) {
