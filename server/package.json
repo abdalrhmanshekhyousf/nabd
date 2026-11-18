@@ -16,7 +16,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "db:seed": "prisma db seed",
-    "db:reset": "prisma migrate reset"
+    "db:reset": "prisma migrate reset",
+    "docs:api": "tsx scripts/api-docs.ts"
   },
   "dependencies": {
     "@nabd/shared": "^0.1.0",
