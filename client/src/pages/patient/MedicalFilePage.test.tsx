@@ -155,7 +155,7 @@ describe('MedicalFilePage (task 3.23)', () => {
     await waitFor(() => expect(print).toHaveBeenCalled());
     window.dispatchEvent(new Event('afterprint'));
     await waitFor(() => expect(screen.queryByTestId('file-sheet')).toBeNull());
-    expect(document.body).not.toHaveClass('printing');
+    await waitFor(() => expect(document.body).not.toHaveClass('printing'));
     print.mockRestore();
   });
 });

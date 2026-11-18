@@ -155,7 +155,7 @@ describe('PharmacyReportsPage (task 3.11)', () => {
     await waitFor(() => expect(print).toHaveBeenCalled());
     window.dispatchEvent(new Event('afterprint'));
     await waitFor(() => expect(screen.queryByTestId('print-sheet')).not.toBeInTheDocument());
-    expect(document.body).not.toHaveClass('printing');
+    await waitFor(() => expect(document.body).not.toHaveClass('printing'));
     print.mockRestore();
   });
 
